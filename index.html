@@ -278,6 +278,9 @@
 <div id="modal-root"></div>
 <div class="toast-root" id="toast-root"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script id="app-script">
 (function(){
   'use strict';
@@ -527,8 +530,11 @@
       saved:['saved','Saved just now'],
       saving:['saving','Saving…'],
       local:['saving','Saved on this device only'],
+      connecting:['saving','Connecting…'],
+      synced:['saved','Synced across devices'],
+      offline:['saving','Offline — will sync when back online'],
       readonly:['','Read-only view'],
-      err:['err','Retrying save…'],
+      err:['err','Could not reach the cloud — saved on this device'],
       idle:['saved','Up to date']
     };
     var m = map[syncStatus] || map.idle;
@@ -581,7 +587,7 @@
 
   function bannerHTML(){
     if(readOnly) return '<div class="banner bad">You\'re viewing a read-only copy of this ledger — changes here won\'t be saved.</div>';
-    if(localMode && !standaloneMode) return '<div class="banner">This view can\'t reach shared storage — changes are saved only on this device\'s browser.</div>';
+    if(localMode && !cloudMode) return '<div class="banner">This device couldn\'t reach the shared farm database — changes are saved only here until it reconnects.</div>';
     return '';
   }
   function renderBanner(){
@@ -943,24 +949,59 @@
     setTimeout(function(){ el.remove(); }, 2600);
   }
 
-  /* ============================= MUTATE + PUBLISH ============================= */
+  /* ============================= MUTATE + SYNC ============================= */
   function mutate(fn){ fn(state); render(); scheduleSave(); }
   function persistLocalFallback(){ try{ localStorage.setItem('coop-ledger-state', JSON.stringify(state)); }catch(e){ toast('Could not save — your browser storage may be full or blocked.'); } }
   function scheduleSave(){
-    // Standalone build: localStorage writes are cheap and local, so save
-    // immediately rather than debouncing — no risk of losing an entry if
-    // the tab is closed right after saving it.
+    // Always keep an instant local copy — works offline, and is the only
+    // copy at all if the cloud database can't be reached.
     persistLocalFallback();
-    setSyncStatus('local');
+    if(!cloudMode || !db){ setSyncStatus('local'); return; }
+    setSyncStatus('saving');
+    db.collection(FARM_COLLECTION).doc(FARM_DOC).set(state).catch(function(){
+      // Firestore already queued this write locally and will retry once
+      // back online — the onSnapshot listener below reflects that as
+      // 'offline'. A genuine failure (e.g. rules reject it) falls back
+      // to noting it's only saved on this device for now.
+      setSyncStatus('err');
+    });
   }
   function initArtifact(){
-    // This build is a standalone, self-hosted page (no Claude platform
-    // present), so storage is always this browser's localStorage. That is
-    // this build's intended design, not a degraded fallback — see
-    // bannerHTML(), which stays quiet about it.
     standaloneMode = true;
-    localMode = true;
-    setSyncStatus('local');
+    if(!(window.firebase && firebase.apps)){
+      // Firebase SDK didn't load (offline on first-ever visit, or blocked) — carry on locally.
+      localMode = true;
+      setSyncStatus('local');
+      return;
+    }
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      try{ db.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
+      cloudMode = true;
+      setSyncStatus('connecting');
+      db.collection(FARM_COLLECTION).doc(FARM_DOC).onSnapshot(function(snap){
+        if(snap.exists){
+          state = migrateState(snap.data());
+          persistLocalFallback();
+          render();
+          setSyncStatus(snap.metadata.fromCache ? 'offline' : 'synced');
+        } else {
+          // Nobody has saved to the shared farm document yet — seed it with
+          // whatever this device currently has (the backup that was baked
+          // into this build, or an existing local copy), so every other
+          // device that opens the app afterward starts from the same data.
+          db.collection(FARM_COLLECTION).doc(FARM_DOC).set(state).catch(function(){});
+        }
+      }, function(){
+        cloudMode = false;
+        localMode = true;
+        setSyncStatus('err');
+      });
+    }catch(e){
+      localMode = true;
+      setSyncStatus('local');
+    }
   }
   function nativeDownload(filename, data){
     try{
@@ -1199,6 +1240,21 @@
   }
 
   /* ============================= BOOTSTRAP ============================= */
+  // Firebase project: kenokip-farm. The apiKey below isn't a secret — Firebase
+  // web apps are meant to ship it client-side; access is actually controlled
+  // by the Firestore security rules set on the project, which restrict reads
+  // and writes to just this one shared document.
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAEsReYhd4No6-_TxmzLaTZef9J8cTFe4",
+    authDomain: "kenokip-farm.firebaseapp.com",
+    projectId: "kenokip-farm",
+    storageBucket: "kenokip-farm.firebasestorage.app",
+    messagingSenderId: "386891888391",
+    appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
+  };
+  var FARM_COLLECTION = 'farms';
+  var FARM_DOC = 'kenokip';
+
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
   var ui = { section: getSavedSection(), periods:{overview:'week'} };
@@ -1206,6 +1262,8 @@
   var readOnly = false;
   var localMode = false;
   var standaloneMode = false;
+  var cloudMode = false;
+  var db = null;
   var artifactApi = null;
   var saveTimer = null;
 
