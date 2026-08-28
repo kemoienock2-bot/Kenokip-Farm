@@ -280,6 +280,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
 <script id="app-script">
 (function(){
@@ -298,7 +299,9 @@
     trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>',
     empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="13" rx="6" ry="8"/></svg>',
-    history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3.5 2"/></svg>'
+    history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3.5 2"/></svg>',
+    finance:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M9 10v9M15 10v9M19 10v9"/><path d="M3 19h18"/></svg>',
+    lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -554,6 +557,7 @@
       ['eggs','Eggs',ICONS.eggs],
       ['expenses','Expenses',ICONS.expenses],
       ['income','Income',ICONS.income],
+      ['finance','Finance',ICONS.finance],
       ['settings','Settings',ICONS.settings]
     ];
     rail.innerHTML =
@@ -915,12 +919,135 @@
     '</form>';
   }
 
+  /* ============================= FINANCE (owner-only bank ledger) ============================= */
+  function defaultFinanceState(){ return { openingBalance:0, openingDate: todayISO(), transactions:[] }; }
+  function financeState(){
+    if(!state.finance || !Array.isArray(state.finance.transactions)) state.finance = defaultFinanceState();
+    return state.finance;
+  }
+  function financeBalance(){
+    var f = financeState();
+    var net = f.transactions.reduce(function(a,t){ return a + (t.type==='deposit'?t.amount:-t.amount); }, 0);
+    return (f.openingBalance||0) + net;
+  }
+  function financeTopbarActions(){
+    if(isOwner){
+      return currencySelectHTML()+
+        '<button class="btn" data-action="open-set-opening">Opening balance</button>'+
+        addBtn('open-add-finance','Add transaction')+
+        '<button class="btn ghost" data-action="owner-signout">Sign out</button>';
+    }
+    return currencySelectHTML()+'<button class="btn primary" data-action="open-owner-signin">'+ICONS.lock+'Sign in</button>';
+  }
+  function financePanel(){
+    var f = financeState();
+    var r = getRange('month');
+    var txns = f.transactions.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var inThisMonth = txns.filter(function(t){ return t.type==='deposit' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
+    var outThisMonth = txns.filter(function(t){ return t.type==='withdrawal' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
+    var balance = financeBalance();
+
+    var lockNote = isOwner
+      ? '<div class="banner">You\'re signed in — you can add, edit, and delete entries here. Everyone else using this app sees these numbers but can\'t change them.</div>'
+      : '<div class="banner">This section is read-only for you — only the signed-in owner can add or edit entries here.</div>';
+
+    var rows = txns.map(function(t){
+      var good = t.type==='deposit';
+      return '<tr><td>'+fmtDate(parseISO(t.date))+'</td>'+
+        '<td><span class="pill" style="background:'+(good?'var(--good-tint)':'var(--bad-tint)')+';color:'+(good?'var(--good)':'var(--bad)')+'">'+(good?'Deposit':'Withdrawal')+'</span></td>'+
+        '<td class="num">'+fmtMoney(t.amount)+'</td>'+
+        '<td>'+esc(t.note||'—')+'</td>'+
+        '<td><div class="row-actions">'+
+          (isOwner ? '<button class="icon-btn" data-action="edit-finance:'+t.id+'">'+ICONS.edit+'</button><button class="icon-btn" data-action="delete-finance:'+t.id+'">'+ICONS.trash+'</button>' : '')+
+        '</div></td></tr>';
+    }).join('');
+
+    return lockNote+
+    '<div class="grid stats">'+
+      statTile('Bank balance', fmtMoney(balance), '<span class="hint">Poultry-only account</span>')+
+      statTile('In this month', fmtMoney(inThisMonth), '')+
+      statTile('Out this month', fmtMoney(outThisMonth), '')+
+    '</div>'+
+    '<div class="card"><div class="card-title"><h3>Transactions</h3><span class="hint">'+txns.length+' recorded'+(f.openingDate?' · opening balance set '+fmtDate(parseISO(f.openingDate)):'')+'</span></div>'+
+      '<div class="table-wrap">'+
+      (txns.length ? '<table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No transactions recorded yet.</div></div>')+
+      '</div></div>';
+  }
+  function financeFormHtml(id){
+    var f = financeState();
+    var t = id ? f.transactions.find(function(x){return x.id===id;}) : null;
+    var curAmount = t ? (t.amount * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
+    return '<div class="modal-head"><h3>'+(t?'Edit transaction':'Add transaction')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="finance">'+
+      '<input type="hidden" name="id" value="'+(t?t.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Type</label><select class="field" name="type">'+
+          '<option value="deposit" '+(!t||t.type==='deposit'?'selected':'')+'>Deposit (money in)</option>'+
+          '<option value="withdrawal" '+(t&&t.type==='withdrawal'?'selected':'')+'>Withdrawal (money out)</option>'+
+        '</select></div>'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(t?t.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+      '</div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Amount</label><input class="field" type="number" min="0" step="0.01" name="amount" value="'+curAmount+'" required></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(t?esc(t.note||''):'')+'" placeholder="e.g. Egg sales deposit, feed supplier payment"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(t?'Save changes':'Add transaction')+'</button></div>'+
+    '</form>';
+  }
+  function openingBalanceFormHtml(){
+    var f = financeState();
+    var curAmount = ((f.openingBalance||0) * rateOf(state.settings.displayCurrency)).toFixed(2);
+    return '<div class="modal-head"><h3>Set opening balance</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="finance-opening">'+
+      '<p class="hint">The balance this account had before you started tracking transactions here — the app adds deposits and subtracts withdrawals from it.</p>'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Opening balance</label><input class="field" type="number" step="0.01" name="amount" value="'+curAmount+'" required></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>As of date</label><input class="field" type="date" name="date" value="'+(f.openingDate||todayISO())+'" max="'+todayISO()+'"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
+  function ownerSignInModalHtml(){
+    return '<div class="modal-head"><h3>Sign in as owner</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Only you should have this password. Signing in unlocks editing in Finance on this device until you sign out.</p>'+
+    '<form data-form="owner-signin">'+
+      '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" autocomplete="username" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Password</label><input class="field" type="password" name="password" autocomplete="current-password" required></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Sign in</button></div>'+
+    '</form>';
+  }
+  function mutateFinance(fn){
+    if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); return; }
+    fn(financeState());
+    render();
+    if(!cloudMode || !db){ toast('Finance needs the shared database connection — try again once online.'); return; }
+    db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).set(state.finance).catch(function(){ toast('Could not save — check your connection.'); });
+  }
+  function initFinanceSync(){
+    if(financeSyncStarted || !db) return;
+    financeSyncStarted = true;
+    db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).onSnapshot(function(snap){
+      if(snap.exists){
+        state.finance = Object.assign(defaultFinanceState(), snap.data());
+        if(!Array.isArray(state.finance.transactions)) state.finance.transactions = [];
+        render();
+      } else if(isOwner){
+        state.finance = defaultFinanceState();
+        db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).set(state.finance).catch(function(){});
+      }
+    }, function(){ /* reads are open by rule; a failure here just leaves Finance showing its last-known data */ });
+  }
+
   var SECTIONS = {
     overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML()); }, panel:overviewPanel },
     flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', addBtn('open-add-flock','Add birds')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs')); }, panel:eggsPanel },
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
+    finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel }
   };
 
@@ -998,10 +1125,24 @@
         localMode = true;
         setSyncStatus('err');
       });
+      if(firebase.auth){
+        firebase.auth().onAuthStateChanged(function(user){
+          isOwner = !!user;
+          initFinanceSync();
+          render();
+        });
+      } else {
+        initFinanceSync();
+      }
     }catch(e){
       localMode = true;
       setSyncStatus('local');
     }
+  }
+  function signOutOwner(){
+    if(window.firebase && firebase.auth){ firebase.auth().signOut(); }
+    closeModal();
+    toast('Signed out.');
   }
   function nativeDownload(filename, data){
     try{
@@ -1111,6 +1252,26 @@
         break;
       }
       case 'export-backup': doExportBackup(); break;
+      case 'open-owner-signin': openModal(ownerSignInModalHtml()); break;
+      case 'owner-signout': signOutOwner(); break;
+      case 'open-add-finance':
+        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        openModal(financeFormHtml());
+        break;
+      case 'edit-finance':
+        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        openModal(financeFormHtml(a1));
+        break;
+      case 'delete-finance':
+        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        confirmModal('Delete this transaction? This can\'t be undone.', function(){
+          mutateFinance(function(f){ f.transactions = f.transactions.filter(function(x){return x.id!==a1;}); });
+        });
+        break;
+      case 'open-set-opening':
+        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        openModal(openingBalanceFormHtml());
+        break;
       default: break;
     }
   }
@@ -1237,6 +1398,38 @@
       toast('Category added.');
       return;
     }
+    if(name==='finance'){
+      var tid = val('id') || null;
+      var ttype = val('type'), tdate = val('date'), tcurrency = val('currency');
+      var tamountRaw = Number(val('amount')||0), tnote = val('note') || '';
+      mutateFinance(function(f){
+        var amount = fromCurrency(tamountRaw, tcurrency);
+        if(tid){ var x = f.transactions.find(function(i){return i.id===tid;}); if(x){ x.date=tdate; x.type=ttype; x.amount=amount; x.note=tnote; } }
+        else f.transactions.push({id:uid('fin'), date:tdate, type:ttype, amount:amount, note:tnote});
+      });
+      closeModal(); toast('Saved.');
+      return;
+    }
+    if(name==='finance-opening'){
+      var oDate = val('date') || todayISO(), oCurrency = val('currency');
+      var oAmountRaw = Number(val('amount')||0);
+      mutateFinance(function(f){
+        f.openingBalance = fromCurrency(oAmountRaw, oCurrency);
+        f.openingDate = oDate;
+      });
+      closeModal(); toast('Opening balance saved.');
+      return;
+    }
+    if(name==='owner-signin'){
+      var oEmail = (val('email')||'').trim(), oPassword = val('password')||'';
+      if(!(window.firebase && firebase.auth)){ toast('Sign-in isn\'t available right now — check your connection.'); return; }
+      firebase.auth().signInWithEmailAndPassword(oEmail, oPassword).then(function(){
+        closeModal(); toast('Signed in.');
+      }).catch(function(err){
+        toast('Sign-in failed — ' + (err && err.code==='auth/invalid-credential' ? 'check your email and password.' : (err && err.message) || 'please try again.'));
+      });
+      return;
+    }
   }
 
   /* ============================= BOOTSTRAP ============================= */
@@ -1254,6 +1447,8 @@
   };
   var FARM_COLLECTION = 'farms';
   var FARM_DOC = 'kenokip';
+  var FINANCE_COLLECTION = 'finance';
+  var FINANCE_DOC = 'kenokip';
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
@@ -1264,6 +1459,8 @@
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
+  var isOwner = false;
+  var financeSyncStarted = false;
   var artifactApi = null;
   var saveTimer = null;
 

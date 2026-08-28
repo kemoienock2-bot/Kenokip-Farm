@@ -2,7 +2,7 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v2';
+var CACHE_NAME = 'kenokip-farm-v3';
 var APP_SHELL = [
   './',
   './index.html',
@@ -17,7 +17,8 @@ var APP_SHELL = [
   // at least once while online can still load it — and use its offline
   // write queue — with zero signal.
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js'
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js'
 ];
 
 self.addEventListener('install', function(event){
