@@ -281,6 +281,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 
 <script id="app-script">
 (function(){
@@ -364,7 +365,7 @@
         expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Equipment & Housing','Utilities','Transport','Other'],
         incomeCategories:['Egg Sales','Bird Sales','Manure','Other']
       },
-      flock:[], eggs:[], expenses:[], incomes:[]
+      flock:[], eggs:[], eggLosses:[], expenses:[], incomes:[]
     };
   }
   function migrateState(data){
@@ -376,6 +377,7 @@
     merged.settings.incomeCategories = (data&&data.settings&&data.settings.incomeCategories) || base.settings.incomeCategories;
     merged.flock = Array.isArray(data&&data.flock) ? data.flock : [];
     merged.eggs = Array.isArray(data&&data.eggs) ? data.eggs : [];
+    merged.eggLosses = Array.isArray(data&&data.eggLosses) ? data.eggLosses : [];
     merged.expenses = Array.isArray(data&&data.expenses) ? data.expenses : [];
     merged.incomes = Array.isArray(data&&data.incomes) ? data.incomes : [];
     return merged;
@@ -427,6 +429,33 @@
   function ageGroupForWeeks(w){ return w<=8 ? 'chick' : (w<=20 ? 'grower' : 'layer'); }
   function ageGroupLabel(k){ return k==='chick'?'Chicks':(k==='grower'?'Growers':'Layers'); }
   function genderLabel(g){ return g==='female'?'hen':(g==='male'?'rooster':'unsexed bird'); }
+  function removalReasonLabel(r){ return {sold:'Sold', died:'Died', predator:'Taken by predators', consumed:'Consumed at home', culled:'Culled', other:'Other'}[r] || 'Other'; }
+  function lossesByReason(){
+    var map = {};
+    state.flock.forEach(function(b){
+      (b.removals||[]).forEach(function(r){
+        if(r.reason==='resexed') return;
+        var key = r.reason || 'other';
+        map[key] = (map[key]||0) + r.count;
+      });
+    });
+    return Object.entries(map).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return [removalReasonLabel(e[0]), e[1]]; });
+  }
+  function eggLossReasonLabel(r){ return {breakage:'Breakage', consumed:'Consumed at home', brooding:'Given for brooding', other:'Other'}[r] || 'Other'; }
+  function eggLossesByReason(){
+    var map = {};
+    (state.eggLosses||[]).forEach(function(x){ map[x.reason]=(map[x.reason]||0)+x.count; });
+    return Object.entries(map).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return [eggLossReasonLabel(e[0]), e[1]]; });
+  }
+  function totalEggsLost(){ return (state.eggLosses||[]).reduce(function(a,x){return a+x.count;},0); }
+  function totalEggsLaid(){ return state.eggs.reduce(function(a,x){return a+x.total;},0); }
+  function countBars(entries){
+    if(!entries.length) return '<div class="empty">Nothing recorded yet.</div>';
+    var max = entries[0][1] || 1;
+    return entries.map(function(e){
+      return '<div class="bar-row"><div class="bar-label">'+esc(e[0])+'</div><div class="bar-track"><div class="bar-fill" style="width:'+Math.max(4,(e[1]/max)*100)+'%"></div></div><div class="bar-amt num">'+e[1]+'</div></div>';
+    }).join('');
+  }
   function buildInventory(){
     var groups = {chick:{female:0,male:0,unsexed:0},grower:{female:0,male:0,unsexed:0},layer:{female:0,male:0,unsexed:0}};
     state.flock.forEach(function(b){
@@ -509,13 +538,14 @@
   function buildActivity(){
     var items=[];
     state.eggs.forEach(function(e){ items.push({date:e.date,type:'egg',text:'Logged '+e.total+' eggs'}); });
+    (state.eggLosses||[]).forEach(function(x){ items.push({date:x.date,type:'egg',text:'Lost '+x.count+' egg'+(x.count>1?'s':'')+' — '+eggLossReasonLabel(x.reason)}); });
     state.expenses.forEach(function(e){ items.push({date:e.date,type:'expense',text:'Spent '+fmtMoney(e.amount)+' on '+e.category}); });
     state.incomes.forEach(function(e){ items.push({date:e.date,type:'income',text:'Earned '+fmtMoney(e.amount)+' from '+e.category}); });
     state.flock.forEach(function(b){
       if(!b.resex) items.push({date:b.dateAdded,type:'flock',text:'Added '+b.count+' '+genderLabel(b.gender)+(b.count>1?'s':'')});
       (b.removals||[]).forEach(function(r){
         if(r.reason==='resexed') return;
-        var verb = r.reason==='sold'?'Sold':(r.reason==='died'?'Lost':'Removed');
+        var verb = r.reason==='sold'?'Sold':(r.reason==='died'?'Lost':(r.reason==='predator'?'Lost to a predator':(r.reason==='consumed'?'Used':(r.reason==='culled'?'Culled':'Removed'))));
         items.push({date:r.date,type:'flock',text:verb+' '+r.count+' bird'+(r.count>1?'s':'')});
       });
     });
@@ -606,6 +636,16 @@
   }
 
   /* ============================= OVERVIEW ============================= */
+  function totalMoney(list){ return list.reduce(function(a,x){return a+x.amount;},0); }
+  function earliestRecordISO(){
+    var dates = [];
+    state.eggs.forEach(function(x){ dates.push(x.date); });
+    state.expenses.forEach(function(x){ dates.push(x.date); });
+    state.incomes.forEach(function(x){ dates.push(x.date); });
+    state.flock.forEach(function(b){ dates.push(b.dateAdded); });
+    if(!dates.length) return null;
+    return dates.reduce(function(a,b){ return a<b?a:b; });
+  }
   function overviewPanel(){
     var isEmpty = state.flock.length===0 && state.eggs.length===0 && state.expenses.length===0 && state.incomes.length===0;
     var period = ui.periods.overview;
@@ -619,12 +659,23 @@
     var totalNow = birdsAsOf(todayISO());
     var lr = layRatePct(r.startISO, r.endISO);
 
+    var allTimeIncome = totalMoney(state.incomes), allTimeExpense = totalMoney(state.expenses);
+    var allTimeProfit = allTimeIncome - allTimeExpense;
+    var allTimeColor = allTimeProfit<0 ? 'var(--bad)' : (allTimeProfit>0 ? 'var(--good)' : 'var(--ink)');
+    var allTimeLabel = allTimeProfit<0 ? 'All-time deficit' : (allTimeProfit>0 ? 'All-time profit' : 'All-time — breaking even');
+    var since = earliestRecordISO();
+
     var last14 = [];
     for(var i=13;i>=0;i--){ var iso = toISO(addDays(new Date(),-i)); last14.push(sumEggs(iso,iso)); }
     var expBreak = breakdownByCategory(state.expenses, r.startISO, r.endISO).slice(0,5);
     var activity = buildActivity().slice(0,7);
 
     return (isEmpty ? '<div class="banner">Welcome to your ledger — start in <strong>&nbsp;Flock&nbsp;</strong> to add your birds, then log eggs and expenses as you go.</div>' : '') +
+    '<div class="card">'+
+      '<div class="card-title"><h3>'+allTimeLabel+'</h3><span class="hint">'+(since?'Since '+fmtDate(parseISO(since)):'This never changes with the period filter below')+'</span></div>'+
+      '<div class="stat-value num" style="font-size:32px; color:'+allTimeColor+'">'+fmtMoney(Math.abs(allTimeProfit))+'</div>'+
+      '<div class="hint" style="margin-top:6px">Total income '+fmtMoney(allTimeIncome)+' · Total expenses '+fmtMoney(allTimeExpense)+'</div>'+
+    '</div>'+
     '<div class="grid stats">'+
       statTile('Profit · '+r.label, fmtMoney(profitCur), deltaBadge(profitCur,profitPrev))+
       statTile('Expenses · '+r.label, fmtMoney(expenseCur), deltaBadge(expenseCur,expensePrev,true))+
@@ -680,6 +731,9 @@
       '</tr>';
     }).join('');
 
+    var lossEntries = lossesByReason();
+    var totalLost = lossEntries.reduce(function(a,e){return a+e[1];},0);
+
     return '<div class="banner">'+totalNow.toLocaleString()+' birds on the farm today.</div>'+
       '<div class="grid two">'+groupsHTML+'</div>'+
       '<div class="card"><div class="card-title"><h3>Batches</h3><span class="hint">'+batches.length+' recorded</span></div>'+
@@ -687,7 +741,10 @@
         (batches.length ?
           '<table><thead><tr><th>Added</th><th>Gender</th><th>Age</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
           : '<div class="empty">'+ICONS.empty+'<div>No birds recorded yet. Use the '+'+ '+'button above — or on any Chicks / Growers / Layers card — to add your first batch.</div></div>')+
-        '</div></div>';
+        '</div></div>'+
+      '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
+        countBars(lossEntries)+
+      '</div>';
   }
 
   function historyModalHtml(batchId){
@@ -695,7 +752,7 @@
     if(!b) return '<div class="modal-head"><h3>History</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div><p class="hint">Batch not found.</p>';
     var list = (b.removals||[]).slice().sort(function(a,b2){ return a.date<b2.date?1:-1; });
     var rows = list.map(function(r){
-      var label = r.reason==='resexed' ? 'Sexed as new batch' : (r.reason==='sold'?'Sold':(r.reason==='died'?'Died':(r.reason==='culled'?'Culled':'Removed')));
+      var label = r.reason==='resexed' ? 'Sexed as new batch' : removalReasonLabel(r.reason);
       return '<div class="kv-row"><div><div>'+label+' · '+r.count+' bird'+(r.count>1?'s':'')+'</div><div class="hint">'+fmtDate(parseISO(r.date))+(r.note?' · '+esc(r.note):'')+'</div></div>'+
         '<button class="icon-btn" data-action="delete-removal:'+b.id+':'+r.id+'" title="Undo this entry" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button></div>';
     }).join('');
@@ -736,7 +793,12 @@
       '<p class="hint">From this batch: '+max+' bird'+(max===1?'':'s')+' currently ('+genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+').</p>'+
       '<div class="field-grid">'+
         '<div class="field-row"><label>Reason</label><select class="field" name="reason" data-change="removal-reason">'+
-          '<option value="sold">Sold</option><option value="died">Died</option><option value="culled">Culled</option><option value="other">Other</option>'+
+          '<option value="sold">Sold</option>'+
+          '<option value="died">Died</option>'+
+          '<option value="predator">Taken by predators</option>'+
+          '<option value="consumed">Consumed at home</option>'+
+          '<option value="culled">Culled</option>'+
+          '<option value="other">Other</option>'+
         '</select></div>'+
         '<div class="field-row"><label>Number of birds</label><input class="field" type="number" min="1" max="'+max+'" name="count" value="1" required></div>'+
         '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
@@ -785,7 +847,22 @@
       '</div></td></tr>';
     }).join('');
 
-    return '<div class="grid two">'+
+    var laidAll = totalEggsLaid(), lostAll = totalEggsLost(), availableAll = laidAll - lostAll;
+    var lossEntries = state.eggLosses.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var lossRows = lossEntries.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+eggLossReasonLabel(x.reason)+'</td><td>'+esc(x.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+
+    return '<div class="grid stats">'+
+      statTile('Eggs laid, all time', laidAll.toLocaleString()+' eggs', '')+
+      statTile('Eggs lost, all time', lostAll.toLocaleString()+' eggs', '')+
+      statTile('Eggs available', Math.max(0,availableAll).toLocaleString()+' eggs', '<span class="hint">Laid minus lost</span>')+
+    '</div>'+
+    '<div class="grid two">'+
       '<div class="card"><div class="card-title"><h3>Last 30 days</h3><span class="hint">'+last30.reduce(function(a,b){return a+b;},0)+' eggs</span></div>'+sparklineSVG(last30)+'</div>'+
       '<div class="card"><div class="card-title"><h3>By week</h3></div>'+
         weeks.map(function(x){ return '<div class="kv-row"><span>'+x.label+'</span><span class="num">'+x.total.toLocaleString()+' eggs · avg '+(x.total/7).toFixed(1)+'/day</span></div>'; }).join('')+
@@ -798,6 +875,13 @@
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No eggs logged yet.</div></div>')+
+      '</div></div>'+
+    '<div class="card"><div class="card-title"><h3>Egg losses</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">Breakage, home use, or given for brooding</span>'+
+      '<button class="icon-btn" data-action="open-add-eggloss" title="Log an egg loss" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
+      countBars(eggLossesByReason())+
+      '<div class="table-wrap" style="margin-top:14px">'+
+      (lossEntries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Reason</th><th>Note</th><th></th></tr></thead><tbody>'+lossRows+'</tbody></table>'
+        : '<div class="empty">No egg losses recorded yet.</div>')+
       '</div></div>';
   }
   function eggFormHtml(id){
@@ -811,6 +895,25 @@
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(e?esc(e.note||''):'')+'" placeholder="Optional"></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(e?'Save changes':'Add entry')+'</button></div>'+
+    '</form>';
+  }
+  function eggLossFormHtml(id){
+    var x = id ? state.eggLosses.find(function(i){return i.id===id;}) : null;
+    return '<div class="modal-head"><h3>'+(x?'Edit egg loss':'Log egg loss')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="eggloss">'+
+      '<input type="hidden" name="id" value="'+(x?x.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Reason</label><select class="field" name="reason">'+
+          '<option value="breakage" '+(!x||x.reason==='breakage'?'selected':'')+'>Breakage</option>'+
+          '<option value="consumed" '+(x&&x.reason==='consumed'?'selected':'')+'>Consumed at home</option>'+
+          '<option value="brooding" '+(x&&x.reason==='brooding'?'selected':'')+'>Given to a hen for brooding</option>'+
+          '<option value="other" '+(x&&x.reason==='other'?'selected':'')+'>Other</option>'+
+        '</select></div>'+
+        '<div class="field-row"><label>Number of eggs</label><input class="field" type="number" min="1" name="count" value="'+(x?x.count:'')+'" required autofocus></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add entry')+'</button></div>'+
     '</form>';
   }
 
@@ -934,6 +1037,7 @@
     if(isOwner){
       return currencySelectHTML()+
         '<button class="btn" data-action="open-set-opening">Opening balance</button>'+
+        (mpesaEnabled ? '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>' : '')+
         addBtn('open-add-finance','Add transaction')+
         '<button class="btn ghost" data-action="owner-signout">Sign out</button>';
     }
@@ -948,7 +1052,7 @@
     var balance = financeBalance();
 
     var lockNote = isOwner
-      ? '<div class="banner">You\'re signed in — you can add, edit, and delete entries here. Everyone else using this app sees these numbers but can\'t change them.</div>'
+      ? '<div class="banner">You\'re signed in — you can add, edit, and delete entries here. Everyone else using this app sees these numbers but can\'t change them.'+(mpesaEnabled?' Payments made straight to the farm\'s M-Pesa till are picked up automatically.':'')+'</div>'
       : '<div class="banner">This section is read-only for you — only the signed-in owner can add or edit entries here.</div>';
 
     var rows = txns.map(function(t){
@@ -1017,6 +1121,15 @@
       '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" autocomplete="username" required autofocus></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Password</label><input class="field" type="password" name="password" autocomplete="current-password" required></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Sign in</button></div>'+
+    '</form>';
+  }
+  function mpesaDepositFormHtml(){
+    return '<div class="modal-head"><h3>Add via M-Pesa</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Enter an amount and the Safaricom number to pay from. You\'ll get the normal M-Pesa prompt on that phone — enter your PIN there, not here. The balance updates itself once M-Pesa confirms it.</p>'+
+    '<form data-form="mpesa-deposit">'+
+      '<div class="field-row"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Phone number</label><input class="field" type="tel" name="phone" placeholder="0712345678" value="'+esc(state.settings.ownerPhone||'')+'" required></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-deposit-submit">Send M-Pesa prompt</button></div>'+
     '</form>';
   }
   function mutateFinance(fn){
@@ -1104,6 +1217,7 @@
     try{
       if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
+      mpesaEnabled = !!firebase.functions;
       try{ db.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
       cloudMode = true;
       setSyncStatus('connecting');
@@ -1198,6 +1312,9 @@
       case 'open-add-egg': openModal(eggFormHtml()); break;
       case 'edit-egg': openModal(eggFormHtml(a1)); break;
       case 'delete-egg': confirmModal('Delete this entry? This can\'t be undone.', function(){ mutate(function(s){ s.eggs = s.eggs.filter(function(x){return x.id!==a1;}); }); }); break;
+      case 'open-add-eggloss': openModal(eggLossFormHtml()); break;
+      case 'edit-eggloss': openModal(eggLossFormHtml(a1)); break;
+      case 'delete-eggloss': confirmModal('Delete this entry? This can\'t be undone.', function(){ mutate(function(s){ s.eggLosses = s.eggLosses.filter(function(x){return x.id!==a1;}); }); }); break;
       case 'open-add-flock': openModal(flockFormHtml(null, a1)); break;
       case 'edit-flock': openModal(flockFormHtml(a1)); break;
       case 'delete-flock':
@@ -1272,6 +1389,11 @@
         if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
         openModal(openingBalanceFormHtml());
         break;
+      case 'open-mpesa-deposit':
+        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        openModal(mpesaDepositFormHtml());
+        break;
       default: break;
     }
   }
@@ -1301,6 +1423,18 @@
         }
       });
       closeModal(); toast('Egg log saved.');
+      return;
+    }
+    if(name==='eggloss'){
+      var elId = val('id') || null;
+      var elReason = val('reason'), elCount = Math.max(1, Number(val('count')||0));
+      var elDate = val('date'), elNote = val('note') || '';
+      mutate(function(s){
+        if(!Array.isArray(s.eggLosses)) s.eggLosses = [];
+        if(elId){ var x = s.eggLosses.find(function(i){return i.id===elId;}); if(x){ x.date=elDate; x.reason=elReason; x.count=elCount; x.note=elNote; } }
+        else s.eggLosses.push({id:uid('eggloss'), date:elDate, reason:elReason, count:elCount, note:elNote});
+      });
+      closeModal(); toast(elId?'Saved.':'Egg loss logged.');
       return;
     }
     if(name==='flock'){
@@ -1430,6 +1564,21 @@
       });
       return;
     }
+    if(name==='mpesa-deposit'){
+      if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
+      var mAmount = Number(val('amount')||0), mPhone = (val('phone')||'').trim();
+      var submitBtn = document.getElementById('mpesa-deposit-submit');
+      if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Sending prompt…'; }
+      mutate(function(s){ s.settings.ownerPhone = mPhone; });
+      firebase.functions().httpsCallable('initiateDeposit')({ amount: mAmount, phone: mPhone }).then(function(res){
+        closeModal();
+        toast((res.data && res.data.message) || 'Check your phone for the M-Pesa prompt.');
+      }).catch(function(err){
+        if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Send M-Pesa prompt'; }
+        toast('Could not start the deposit — ' + ((err && err.message) || 'try again.'));
+      });
+      return;
+    }
   }
 
   /* ============================= BOOTSTRAP ============================= */
@@ -1460,6 +1609,7 @@
   var cloudMode = false;
   var db = null;
   var isOwner = false;
+  var mpesaEnabled = false;
   var financeSyncStarted = false;
   var artifactApi = null;
   var saveTimer = null;
