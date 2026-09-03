@@ -1082,7 +1082,10 @@
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
       (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 5 minutes of inactivity.' : '')+
       '</p>'+
-      '<button class="btn" data-action="signout">Sign out</button>'+
+      '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
+        '<button class="btn" data-action="open-change-password">Change password</button>'+
+        '<button class="btn ghost" data-action="signout">Sign out</button>'+
+      '</div>'+
     '</div>';
   }
 
@@ -1255,6 +1258,15 @@
         '<option value="farmhand">Farmhand</option>'+
       '</select></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create account</button></div>'+
+    '</form>';
+  }
+  function changePasswordFormHtml(){
+    return '<div class="modal-head"><h3>Change password</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="change-password">'+
+      '<div class="field-row"><label>Current password</label><input class="field" type="password" name="current" autocomplete="current-password" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>New password</label><input class="field" type="password" name="new1" minlength="6" placeholder="At least 6 characters" autocomplete="new-password" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Confirm new password</label><input class="field" type="password" name="new2" minlength="6" autocomplete="new-password" required></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
   function teamPanel(){
@@ -1687,6 +1699,10 @@
         if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
         openModal(staffFormHtml());
         break;
+      case 'open-change-password':
+        if(!currentUser){ toast('Sign in first.'); break; }
+        openModal(changePasswordFormHtml());
+        break;
       case 'toggle-staff': {
         if(!isAdmin()) break;
         var staffUser = teamUsers.find(function(x){ return x.uid===a1; });
@@ -1898,6 +1914,27 @@
       firebase.functions().httpsCallable('createStaffAccount')({email:sEmail, password:sPassword, jobTitle:sJobTitle}).then(function(){
         closeModal(); toast('Account created — share the email and password with them.');
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
+      return;
+    }
+    if(name==='change-password'){
+      if(!currentUser || !(window.firebase && firebase.auth && firebase.auth().currentUser)){ toast('Sign in first.'); return; }
+      var curPass = val('current')||'', newPass1 = val('new1')||'', newPass2 = val('new2')||'';
+      if(newPass1.length<6){ toast('New password needs at least 6 characters.'); return; }
+      if(newPass1!==newPass2){ toast('New passwords don\'t match.'); return; }
+      var pwUser = firebase.auth().currentUser;
+      var pwCred = firebase.auth.EmailAuthProvider.credential(pwUser.email, curPass);
+      var pwBtn = form.querySelector('button[type="submit"]');
+      if(pwBtn){ pwBtn.disabled = true; pwBtn.textContent = 'Saving…'; }
+      pwUser.reauthenticateWithCredential(pwCred).then(function(){
+        return pwUser.updatePassword(newPass1);
+      }).then(function(){
+        closeModal(); toast('Password changed.');
+      }).catch(function(err){
+        if(pwBtn){ pwBtn.disabled = false; pwBtn.textContent = 'Save'; }
+        var code = err && err.code;
+        var msg = (code==='auth/wrong-password' || code==='auth/invalid-credential') ? 'Current password is incorrect.' : ((err && err.message) || 'Could not change your password.');
+        toast(msg);
+      });
       return;
     }
     if(name==='mpesa-deposit'){
