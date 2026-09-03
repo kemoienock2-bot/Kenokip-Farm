@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Flock / Eggs / Expenses / Income / Settings — the general farm record.
+    // Anyone can read it (including guests, with no account at all), but
+    // writing now requires SOME signed-in account (administrator or any
+    // employee). This is the one deliberate tightening from before: it used
+    // to be `allow write: if true` (fully public), which is what let anyone
+    // edit it with no account. Guests can no longer write here at all.
+    match /farms/kenokip {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Finance — money. Only the administrator and Financial Staff can even
+    // read it (this is what makes it fully invisible to everyone else,
+    // including guests and other employees). Nothing may write here
+    // directly, from anyone, ever — the only writes come from the
+    // roles.js Cloud Functions (proposeFinanceEntry, reviewFinanceEntry,
+    // editFinanceEntry, deleteFinanceEntry, setOpeningBalance), which run
+    // with admin privileges and enforce the approval workflow in code.
+    match /finance/kenokip {
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' ||
+         (request.auth.token.role == 'employee' && request.auth.token.jobTitle == 'financial'));
+      allow write: if false;
+    }
+
+    // Team accounts. The administrator can see everyone; any signed-in
+    // person can see their own record (so the app can show their role).
+    // Only the createStaffAccount / updateStaffAccount / deleteStaffAccount
+    // Cloud Functions may write here.
+    match /users/{uid} {
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.uid == uid);
+      allow write: if false;
+    }
+
+    // Access log (who signed in, when, from where). Administrator-only —
+    // only the logAccess Cloud Function may write here.
+    match /accessLogs/{id} {
+      allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow write: if false;
+    }
+
+    // Internal bookkeeping for the one-time admin bootstrap. No client ever
+    // needs to read or write this directly — only the bootstrapFirstAdmin
+    // Cloud Function touches it (via the Admin SDK, which isn't subject to
+    // these rules at all).
+    match /meta/roles {
+      allow read, write: if false;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

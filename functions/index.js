@@ -13,7 +13,7 @@
 //   it up and the balance updates itself.
 //
 // Flow 2 — someone else pays the till directly from their own phone:
-//   Safaricom calls mpesaC2BConfirmation automatically -> we write the
+//   Safaricom calls c2bConfirmation automatically -> we write the
 //   transaction -> same real-time update in the app.
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
@@ -25,6 +25,9 @@ const { stkPush } = require('./daraja');
 admin.initializeApp();
 const db = admin.firestore();
 
+// Accounts, roles, Finance approvals, and access logging — see roles.js.
+Object.assign(exports, require('./roles')(admin, db));
+
 const MPESA_CONSUMER_KEY = defineSecret('MPESA_CONSUMER_KEY');
 const MPESA_CONSUMER_SECRET = defineSecret('MPESA_CONSUMER_SECRET');
 const MPESA_SHORTCODE = defineSecret('MPESA_SHORTCODE');
@@ -34,6 +37,16 @@ const MPESA_CALLBACK_BASE_URL = defineSecret('MPESA_CALLBACK_BASE_URL'); // e.g.
 const MPESA_ACCOUNT_TYPE = defineSecret('MPESA_ACCOUNT_TYPE'); // "till" (Buy Goods) or "paybill"
 
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE];
+
+// Secrets set via `echo value| firebase functions:secrets:set NAME --data-file -`
+// (a common workaround on Windows when the interactive prompt won't accept a
+// paste) come through with a trailing newline, since `echo` always appends
+// one. That extra whitespace silently breaks things like the Base64 Basic
+// Auth header sent to Safaricom, so every secret is trimmed before use.
+function sval(secretRef, fallback) {
+  const v = (secretRef.value() || '').trim();
+  return v || fallback || '';
+}
 
 const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 
@@ -73,22 +86,25 @@ async function addTransactionIfNew(txn) {
 // entered there, on Safaricom's own screen, never in this app.
 exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }, async (request) => {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Sign in as the farm owner first.');
+    throw new HttpsError('unauthenticated', 'Sign in as the administrator first.');
+  }
+  if (request.auth.token.role !== 'administrator') {
+    throw new HttpsError('permission-denied', 'Only the administrator can start M-Pesa deposits.');
   }
   const amount = Number(request.data && request.data.amount);
   const phone = normalizePhone(request.data && request.data.phone);
   if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
   if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
 
-  const callbackUrl = `${MPESA_CALLBACK_BASE_URL.value()}/mpesaStkCallback`;
+  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback`;
   try {
     const result = await stkPush({
-      env: MPESA_ENV.value() || 'sandbox',
-      consumerKey: MPESA_CONSUMER_KEY.value(),
-      consumerSecret: MPESA_CONSUMER_SECRET.value(),
-      shortcode: MPESA_SHORTCODE.value(),
-      passkey: MPESA_PASSKEY.value(),
-      accountType: MPESA_ACCOUNT_TYPE.value() || 'till',
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      shortcode: sval(MPESA_SHORTCODE),
+      passkey: sval(MPESA_PASSKEY),
+      accountType: sval(MPESA_ACCOUNT_TYPE, 'till'),
       phone,
       amount,
       callbackUrl,
@@ -140,13 +156,13 @@ exports.mpesaStkCallback = onRequest({ secrets: [] }, async (req, res) => {
 // Safaricom asks this before accepting any direct payment into the till —
 // return 0 to accept. Add checks here later if you ever want to reject
 // something (e.g. cap a single payment amount).
-exports.mpesaC2BValidation = onRequest({}, async (req, res) => {
+exports.c2bValidation = onRequest({}, async (req, res) => {
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });
 
 // Safaricom calls this automatically whenever someone pays the till
 // directly from their own phone (not through our STK push flow above).
-exports.mpesaC2BConfirmation = onRequest({}, async (req, res) => {
+exports.c2bConfirmation = onRequest({}, async (req, res) => {
   try {
     const b = req.body || {};
     const payer = [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ');
@@ -159,7 +175,7 @@ exports.mpesaC2BConfirmation = onRequest({}, async (req, res) => {
       source: 'mpesa-c2b',
     });
   } catch (err) {
-    logger.error('mpesaC2BConfirmation error', err);
+    logger.error('c2bConfirmation error', err);
   }
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });

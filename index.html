@@ -230,7 +230,7 @@
   .modal-close:hover{ background:var(--surface-2); }
   .modal-foot{ display:flex; justify-content:flex-end; gap:8px; margin-top:4px; }
 
-  .toast-root{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:80; align-items:center; }
+  .toast-root{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:110; align-items:center; }
   .toast{ background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-size:13px; font-weight:600; box-shadow:var(--shadow); }
 
   .banner{ display:flex; align-items:center; gap:10px; background:var(--accent-tint); color:var(--accent-ink); border-radius:var(--radius-sm); padding:10px 14px; font-size:13px; font-weight:600; }
@@ -250,6 +250,19 @@
   .kv-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-soft); }
   .kv-row:last-child{ border-bottom:none; }
 
+  .auth-gate{ position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px; }
+  .auth-gate[hidden]{ display:none; }
+  .auth-card{ width:100%; max-width:400px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); padding:30px 26px; text-align:center; }
+  .auth-card .brand-mark{ width:44px; height:44px; margin:0 auto 14px; display:block; }
+  .auth-card h1{ font-size:22px; margin-bottom:6px; }
+  .auth-card p.hint{ margin:0 0 22px; }
+  .auth-card .btn{ width:100%; justify-content:center; margin-bottom:10px; }
+  .role-pill{ display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; background:var(--surface-2); color:var(--ink-2); }
+  .role-pill.admin{ background:var(--accent-tint); color:var(--accent-ink); }
+  .role-pill.pending{ background:var(--bad-tint); color:var(--bad); }
+  .role-pill.approved{ background:var(--good-tint); color:var(--good); }
+  .role-pill.rejected{ background:var(--bad-tint); color:var(--bad); text-decoration:line-through; }
+
   @media (max-width:860px){
     .app{ flex-direction:column; }
     .rail{ width:100%; flex-direction:row; align-items:center; padding:12px 14px; gap:14px; border-right:none; border-bottom:1px solid var(--border-soft); }
@@ -268,6 +281,7 @@
 <script id="app-state" type="application/json">{"version":1,"settings":{"displayCurrency":"KES","traySize":10,"currencies":{"KES":{"symbol":"KSh","rate":1,"decimals":0},"USD":{"symbol":"$","rate":0.0077,"decimals":2},"UGX":{"symbol":"USh","rate":28.5,"decimals":0},"TZS":{"symbol":"TSh","rate":19.9,"decimals":0},"EUR":{"symbol":"\u20ac","rate":0.0071,"decimals":2}},"expenseCategories":["Feed","Vaccines & Medication","Labour","Chicks / Restocking","Equipment & Housing","Utilities","Transport","Other"],"incomeCategories":["Egg Sales","Bird Sales","Manure","Other"]},"flock":[{"id":"batch_0gig5ddd4pn","gender":"female","count":18,"dateAdded":"2025-11-27","birthDate":"2025-11-27","source":"Hatched on the farm","removals":[]},{"id":"batch_rjdrk3hjwi3","gender":"male","count":8,"dateAdded":"2025-11-27","birthDate":"2025-11-27","source":"Hatched on the farm","removals":[]},{"id":"batch_l31b5hhmir9","gender":"unsexed","count":30,"dateAdded":"2026-06-13","birthDate":"2026-06-13","source":"Hatched on the farm","removals":[]},{"id":"batch_arxyf8hn409","gender":"unsexed","count":6,"dateAdded":"2026-08-15","birthDate":"2026-08-15","source":"Hatched on the farm","removals":[]}],"eggs":[{"id":"egg_yssm7wdj7b6","date":"2026-08-26","total":8,"note":"4 hens didn't lay"},{"id":"egg_k1nssbktf1m","date":"2026-08-27","total":8,"note":"4 hens didn't lay"},{"id":"egg_61kc6ekuvjy","date":"2026-08-25","total":7,"note":"5 hens didn't lay"},{"id":"egg_l8ut4qkwtpf","date":"2026-08-24","total":7,"note":"5 hens didn't lay"},{"id":"egg_j7ziuqkxto9","date":"2026-08-23","total":3,"note":"4 hens didn't lay 5 eggs consumed for dinner"}],"expenses":[{"id":"exp_g83uuli2xt9","date":"2026-07-13","category":"Vaccines & Medication","amount":600,"note":"vaccination and medication (multivitamins)"},{"id":"exp_rhfmzxi61nf","date":"2026-07-13","category":"Equipment & Housing","amount":500,"note":"feeding troughs"},{"id":"exp_zkq6wvip3nz","date":"2026-08-09","category":"Feed","amount":28770,"note":"Layers, Growers, Chick mash + maize jarm"}],"incomes":[{"id":"inc_q49gh0jbqci","date":"2026-08-06","category":"Egg Sales","amount":1000,"note":"Evans for brooding (machine)"},{"id":"inc_4oa144jd4ou","date":"2026-08-04","category":"Egg Sales","amount":840,"note":"Kapchanga"},{"id":"inc_oetf39jfvmk","date":"2026-08-27","category":"Egg Sales","amount":450,"note":"locals"},{"id":"inc_57079vjh538","date":"2026-08-27","category":"Egg Sales","amount":480,"note":"locals"}]}</script>
 </div>
 
+<div id="auth-gate" class="auth-gate" hidden></div>
 <div class="app" id="app">
   <nav class="rail" id="rail"></nav>
   <div class="main">
@@ -302,7 +316,9 @@
     empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="13" rx="6" ry="8"/></svg>',
     history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3.5 2"/></svg>',
     finance:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M9 10v9M15 10v9M19 10v9"/><path d="M3 19h18"/></svg>',
-    lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
+    lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+    team:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.4"/><path d="M15.5 14.2c2.6.4 4.5 2.6 4.5 5.3"/></svg>',
+    pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -586,10 +602,11 @@
       ['flock','Flock',ICONS.flock],
       ['eggs','Eggs',ICONS.eggs],
       ['expenses','Expenses',ICONS.expenses],
-      ['income','Income',ICONS.income],
-      ['finance','Finance',ICONS.finance],
-      ['settings','Settings',ICONS.settings]
+      ['income','Income',ICONS.income]
     ];
+    if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
+    items.push(['settings','Settings',ICONS.settings]);
+    if(isAdmin()) items.push(['team','Team',ICONS.team]);
     rail.innerHTML =
       '<div class="brand">'+
         '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>'+
@@ -600,7 +617,19 @@
           return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-action="nav:'+it[0]+'">'+it[2]+'<span>'+it[1]+'</span></button></li>';
         }).join('')+
       '</ul>'+
-      '<div class="rail-foot"><div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
+      '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
+  }
+  function accountFootHTML(){
+    if(currentUser){
+      return '<div style="margin-bottom:2px"><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span>'+
+        '<div class="hint" style="margin:6px 0 8px; word-break:break-all">'+esc(currentUser.email||'')+'</div>'+
+        '<button class="btn ghost sm" data-action="signout" style="width:100%">Sign out</button></div>';
+    }
+    if(guestMode){
+      return '<div style="margin-bottom:2px"><span class="role-pill">Guest</span>'+
+        '<button class="btn ghost sm" data-action="guest-signin" style="width:100%;margin-top:8px">Sign in</button></div>';
+    }
+    return '';
   }
   function topbarHTML(title,sub,right){
     return '<div><h2>'+title+'</h2><div class="topbar-sub">'+(sub||'')+'</div></div><div class="topbar-actions">'+(right||'')+'</div>';
@@ -629,6 +658,8 @@
     if(el) el.innerHTML = bannerHTML();
   }
   function render(){
+    updateAuthGate();
+    if(!sectionAllowed(ui.section)){ ui.section = 'overview'; saveUIPref(); }
     renderNav();
     var sec = SECTIONS[ui.section] || SECTIONS.overview;
     document.getElementById('topbar').innerHTML = sec.topbar();
@@ -988,7 +1019,8 @@
       '</div></td></tr>';
     }).join('');
 
-    return '<div class="card">'+
+    return accountCardHTML()+
+    '<div class="card">'+
       '<div class="card-title"><h3>Currencies</h3><span class="hint">Rates are set by you — there\'s no internet access to fetch live rates.</span></div>'+
       '<div class="table-wrap"><table><thead><tr><th>Code</th><th>Symbol</th><th class="num">Rate (per 1 KES)</th><th class="num">Decimals</th><th></th></tr></thead><tbody>'+currRows+'</tbody></table></div>'+
       '<div style="margin-top:14px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap">'+
@@ -1022,7 +1054,220 @@
     '</form>';
   }
 
-  /* ============================= FINANCE (owner-only bank ledger) ============================= */
+  /* ============================= ROLES & ACCESS ============================= */
+  // currentUser: null (signed out / guest) or { uid, email, role, jobTitle }.
+  // role is 'administrator' or 'employee'; jobTitle (employees only) is one
+  // of JOB_TITLES below. These mirror the Firebase Auth custom claims set by
+  // the roles.js Cloud Functions — the claims are the actual source of
+  // truth (and what Firestore security rules check), this is just a local
+  // copy for rendering.
+  var JOB_TITLE_LABELS = { supervisor:'Supervisor', vet:'Vet / Doctor', financial:'Financial Staff', farmhand:'Farmhand' };
+  function jobTitleLabel(jt){ return JOB_TITLE_LABELS[jt] || jt || '—'; }
+  function roleLabel(u){
+    if(!u) return 'Guest';
+    return u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
+  }
+  function isAdmin(){ return !!currentUser && currentUser.role==='administrator'; }
+  function isFinancialStaffUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='financial'; }
+  function canSeeFinance(){ return isAdmin() || isFinancialStaffUser(); }
+  function canProposeFinance(){ return canSeeFinance(); }
+  function sectionAllowed(key){
+    if(key==='finance') return canSeeFinance();
+    if(key==='team') return isAdmin();
+    return true;
+  }
+  function accountCardHTML(){
+    if(!currentUser) return '';
+    return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
+      '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
+      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 5 minutes of inactivity.' : '')+
+      '</p>'+
+      '<button class="btn" data-action="signout">Sign out</button>'+
+    '</div>';
+  }
+
+  /* ---- sign-in gate (shown before the app is usable) ---- */
+  var authGateMode = 'welcome'; // 'welcome' | 'signin'
+  var authGateError = '';
+  function updateAuthGate(){
+    var gate = document.getElementById('auth-gate');
+    if(!gate) return;
+    if(currentUser || guestMode){ gate.hidden = true; gate.innerHTML = ''; return; }
+    gate.hidden = false;
+    gate.innerHTML = authGateHtml();
+  }
+  function authGateHtml(){
+    var brandMark = '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>';
+    if(authGateMode==='signin'){
+      return '<div class="auth-card">'+brandMark+
+        '<h1>Sign in</h1><p class="hint">Administrator and employee accounts only — guests don\'t need a password.</p>'+
+        (authGateError ? '<div class="banner bad" style="text-align:left; margin-bottom:14px">'+esc(authGateError)+'</div>' : '')+
+        '<form data-form="signin" style="text-align:left">'+
+          '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" autocomplete="username" required autofocus></div>'+
+          '<div class="field-row" style="margin-top:12px"><label>Password</label><input class="field" type="password" name="password" autocomplete="current-password" required></div>'+
+          '<button class="btn primary" type="submit" style="width:100%; margin-top:16px">Sign in</button>'+
+        '</form>'+
+        '<button class="btn ghost" data-action="auth-gate-back">Back</button>'+
+      '</div>';
+    }
+    return '<div class="auth-card">'+brandMark+
+      '<h1>Kenokip Farm</h1><p class="hint">Poultry Keeping — sign in to your account, or continue as a guest to view the farm\'s records.</p>'+
+      '<button class="btn primary" data-action="auth-gate-signin">'+ICONS.lock+'Sign in</button>'+
+      '<button class="btn" data-action="auth-gate-guest">Continue as Guest</button>'+
+    '</div>';
+  }
+
+  /* ---- idle auto sign-out (accounts that can touch Finance only) ---- */
+  function idleTimeoutApplies(){ return isAdmin() || isFinancialStaffUser(); }
+  function resetIdleTimer(){
+    if(!idleTimeoutApplies()) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function(){
+      toast('Signed out after 5 minutes of inactivity — for the safety of financial data.');
+      firebase.auth().signOut();
+    }, IDLE_LIMIT_MS);
+  }
+  function startIdleTimer(){
+    stopIdleTimer();
+    if(!idleTimeoutApplies()) return;
+    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
+      document.addEventListener(evt, resetIdleTimer, {passive:true});
+    });
+    resetIdleTimer();
+  }
+  function stopIdleTimer(){
+    clearTimeout(idleTimer);
+    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
+      document.removeEventListener(evt, resetIdleTimer);
+    });
+  }
+
+  /* ---- access logging (who signed in, from where) ---- */
+  function captureAccessLog(){
+    if(!(window.firebase && firebase.functions)) return;
+    var send = function(loc){ firebase.functions().httpsCallable('logAccess')(loc).catch(function(){}); };
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        send({ locationStatus:'granted', lat:pos.coords.latitude, lng:pos.coords.longitude });
+      }, function(){
+        send({ locationStatus:'denied' });
+      }, { timeout:8000, maximumAge:60000 });
+    } else {
+      send({ locationStatus:'unsupported' });
+    }
+  }
+
+  /* ---- sign-in flow (bootstrap-first-admin, then normal role resolution) ---- */
+  function finishSignIn(user, claims){
+    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null };
+    guestMode = false;
+    readOnly = false;
+    if(ui.section==='finance' && !canSeeFinance()) ui.section = 'overview';
+    if(ui.section==='team' && !isAdmin()) ui.section = 'overview';
+    saveUIPref();
+    if(canSeeFinance()) initFinanceSync();
+    if(isAdmin()) initUsersSync();
+    captureAccessLog();
+    startIdleTimer();
+    render();
+  }
+  function handleSignedInUser(user, claims){
+    if(claims && claims.role){ finishSignIn(user, claims); return; }
+    // No role claim yet — this is either the very first sign-in ever (which
+    // becomes Administrator automatically) or an account that was removed /
+    // never set up by the administrator.
+    firebase.functions().httpsCallable('bootstrapFirstAdmin')().then(function(){
+      return user.getIdTokenResult(true);
+    }).then(function(res){
+      if(res.claims && res.claims.role){ finishSignIn(user, res.claims); }
+      else {
+        authGateError = 'Almost done — please sign in once more to finish setting up your account.';
+        authGateMode = 'signin';
+        firebase.auth().signOut();
+      }
+    }).catch(function(){
+      authGateError = 'This account isn\'t set up yet — ask the administrator to add you as a team member.';
+      authGateMode = 'signin';
+      firebase.auth().signOut();
+    });
+  }
+
+  /* ---- team management (administrator only) ---- */
+  function initUsersSync(){
+    if(usersSyncStarted || !db || !isAdmin()) return;
+    usersSyncStarted = true;
+    db.collection('users').onSnapshot(function(snap){
+      teamUsers = [];
+      snap.forEach(function(doc){ teamUsers.push(Object.assign({uid:doc.id}, doc.data())); });
+      if(ui.section==='team') render();
+    }, function(){ /* rules restrict this to the administrator; a failure here just leaves the list showing its last-known data */ });
+    db.collection('accessLogs').orderBy('at','desc').limit(50).onSnapshot(function(snap){
+      accessLogs = [];
+      snap.forEach(function(doc){ accessLogs.push(Object.assign({id:doc.id}, doc.data())); });
+      if(ui.section==='team') render();
+    }, function(){});
+  }
+  function staffFormHtml(){
+    return '<div class="modal-head"><h3>Add team member</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Creates a sign-in for an employee. Share the email and password with them directly — there\'s no self-registration.</p>'+
+    '<form data-form="add-staff">'+
+      '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Temporary password</label><input class="field" type="text" name="password" minlength="6" placeholder="At least 6 characters" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Role</label><select class="field" name="jobTitle">'+
+        '<option value="supervisor">Supervisor</option>'+
+        '<option value="vet">Vet / Doctor</option>'+
+        '<option value="financial">Financial Staff</option>'+
+        '<option value="farmhand">Farmhand</option>'+
+      '</select></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create account</button></div>'+
+    '</form>';
+  }
+  function teamPanel(){
+    if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
+    var rows = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); }).map(function(u){
+      var isSelf = u.uid === currentUser.uid;
+      return '<tr><td>'+esc(u.email||'—')+'</td>'+
+        '<td><span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'</span></td>'+
+        '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
+        '<td><div class="row-actions">'+
+          (u.role==='administrator' || isSelf ? '<span class="hint">—</span>' :
+            '<button class="btn sm" data-action="toggle-staff:'+u.uid+'">'+(u.disabled?'Enable':'Disable')+'</button>'+
+            '<button class="icon-btn" data-action="delete-staff:'+u.uid+'">'+ICONS.trash+'</button>')+
+        '</div></td></tr>';
+    }).join('');
+
+    var pending = financeState().transactions.filter(function(t){ return t.status==='pending'; });
+    var pendingRows = pending.map(function(t){
+      return '<tr><td>'+fmtDate(parseISO(t.date))+'</td>'+
+        '<td>'+(t.type==='deposit'?'Deposit':'Withdrawal')+'</td>'+
+        '<td class="num">'+fmtMoney(t.amount)+'</td>'+
+        '<td>'+esc(t.note||'—')+'</td>'+
+        '<td>'+esc(t.proposedByEmail||'—')+'</td>'+
+        '<td><div class="row-actions">'+
+          '<button class="btn sm primary" data-action="review-finance:'+t.id+':approve">Approve</button>'+
+          '<button class="btn sm danger" data-action="review-finance:'+t.id+':reject">Reject</button>'+
+        '</div></td></tr>';
+    }).join('');
+
+    var accessRows = accessLogs.map(function(l){
+      var when = (l.at && l.at.toDate) ? fmtDate(l.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      var loc = (typeof l.lat==='number' && typeof l.lng==='number') ? l.lat.toFixed(4)+', '+l.lng.toFixed(4) : (l.locationStatus==='denied' ? 'Location denied' : (l.locationStatus==='unsupported' ? 'Unsupported' : 'Unknown'));
+      return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(l.role==='administrator'?'Administrator':jobTitleLabel(l.jobTitle))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td></tr>';
+    }).join('');
+
+    return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
+        '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
+      '</div>' : '')+
+      '<div class="card"><div class="card-title"><h3>Team</h3><span class="hint">'+teamUsers.length+' account'+(teamUsers.length===1?'':'s')+'</span></div>'+
+        '<div class="table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+        '<div style="margin-top:14px"><button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">Last 50 sign-ins, with device location when shared</span></div>'+
+        '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
+      '</div>';
+  }
+
+  /* ============================= FINANCE (administrator + financial staff, approval-gated) ============================= */
   function defaultFinanceState(){ return { openingBalance:0, openingDate: todayISO(), transactions:[] }; }
   function financeState(){
     if(!state.finance || !Array.isArray(state.finance.transactions)) state.finance = defaultFinanceState();
@@ -1030,39 +1275,51 @@
   }
   function financeBalance(){
     var f = financeState();
-    var net = f.transactions.reduce(function(a,t){ return a + (t.type==='deposit'?t.amount:-t.amount); }, 0);
+    var net = f.transactions.reduce(function(a,t){
+      var status = t.status || 'approved'; // legacy entries (from before approvals existed) count as approved
+      if(status !== 'approved') return a;
+      return a + (t.type==='deposit'?t.amount:-t.amount);
+    }, 0);
     return (f.openingBalance||0) + net;
   }
   function financeTopbarActions(){
-    if(isOwner){
-      return currencySelectHTML()+
-        '<button class="btn" data-action="open-set-opening">Opening balance</button>'+
-        (mpesaEnabled ? '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>' : '')+
-        addBtn('open-add-finance','Add transaction')+
-        '<button class="btn ghost" data-action="owner-signout">Sign out</button>';
+    if(!canSeeFinance()) return '';
+    var actions = currencySelectHTML();
+    if(isAdmin()){
+      actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
+      if(mpesaEnabled) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
     }
-    return currencySelectHTML()+'<button class="btn primary" data-action="open-owner-signin">'+ICONS.lock+'Sign in</button>';
+    actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'Propose transaction');
+    return actions;
   }
   function financePanel(){
+    if(!canSeeFinance()) return '<div class="empty">'+ICONS.empty+'<div>Finance isn\'t available for your account.</div></div>';
     var f = financeState();
     var r = getRange('month');
-    var txns = f.transactions.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var inThisMonth = txns.filter(function(t){ return t.type==='deposit' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
-    var outThisMonth = txns.filter(function(t){ return t.type==='withdrawal' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
+    var visible = f.transactions.filter(function(t){
+      var status = t.status || 'approved';
+      return status==='approved' || isAdmin() || t.proposedBy===currentUser.uid;
+    });
+    var txns = visible.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var approved = txns.filter(function(t){ return (t.status||'approved')==='approved'; });
+    var inThisMonth = approved.filter(function(t){ return t.type==='deposit' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
+    var outThisMonth = approved.filter(function(t){ return t.type==='withdrawal' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
     var balance = financeBalance();
 
-    var lockNote = isOwner
-      ? '<div class="banner">You\'re signed in — you can add, edit, and delete entries here. Everyone else using this app sees these numbers but can\'t change them.'+(mpesaEnabled?' Payments made straight to the farm\'s M-Pesa till are picked up automatically.':'')+'</div>'
-      : '<div class="banner">This section is read-only for you — only the signed-in owner can add or edit entries here.</div>';
+    var lockNote = isAdmin()
+      ? '<div class="banner">You can add, edit, approve, and delete entries here.'+(mpesaEnabled?' Payments made straight to the farm\'s M-Pesa till are picked up automatically.':'')+'</div>'
+      : '<div class="banner">Entries you add here wait for the administrator\'s approval before they count toward the balance.</div>';
 
     var rows = txns.map(function(t){
+      var status = t.status || 'approved';
       var good = t.type==='deposit';
+      var statusPill = status==='pending' ? ' <span class="role-pill pending">Pending</span>' : (status==='rejected' ? ' <span class="role-pill rejected">Rejected</span>' : '');
       return '<tr><td>'+fmtDate(parseISO(t.date))+'</td>'+
-        '<td><span class="pill" style="background:'+(good?'var(--good-tint)':'var(--bad-tint)')+';color:'+(good?'var(--good)':'var(--bad)')+'">'+(good?'Deposit':'Withdrawal')+'</span></td>'+
+        '<td><span class="pill" style="background:'+(good?'var(--good-tint)':'var(--bad-tint)')+';color:'+(good?'var(--good)':'var(--bad)')+'">'+(good?'Deposit':'Withdrawal')+'</span>'+statusPill+'</td>'+
         '<td class="num">'+fmtMoney(t.amount)+'</td>'+
         '<td>'+esc(t.note||'—')+'</td>'+
         '<td><div class="row-actions">'+
-          (isOwner ? '<button class="icon-btn" data-action="edit-finance:'+t.id+'">'+ICONS.edit+'</button><button class="icon-btn" data-action="delete-finance:'+t.id+'">'+ICONS.trash+'</button>' : '')+
+          (isAdmin() ? '<button class="icon-btn" data-action="edit-finance:'+t.id+'">'+ICONS.edit+'</button><button class="icon-btn" data-action="delete-finance:'+t.id+'">'+ICONS.trash+'</button>' : '')+
         '</div></td></tr>';
     }).join('');
 
@@ -1082,7 +1339,8 @@
     var f = financeState();
     var t = id ? f.transactions.find(function(x){return x.id===id;}) : null;
     var curAmount = t ? (t.amount * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
-    return '<div class="modal-head"><h3>'+(t?'Edit transaction':'Add transaction')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    return '<div class="modal-head"><h3>'+(t?'Edit transaction':(isAdmin()?'Add transaction':'Propose transaction'))+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    (!t && !isAdmin() ? '<p class="hint">This will be sent to the administrator for approval before it affects the balance.</p>' : '')+
     '<form data-form="finance">'+
       '<input type="hidden" name="id" value="'+(t?t.id:'')+'">'+
       '<div class="field-grid">'+
@@ -1097,7 +1355,7 @@
         '<div class="field-row"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(t?esc(t.note||''):'')+'" placeholder="e.g. Egg sales deposit, feed supplier payment"></div>'+
-      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(t?'Save changes':'Add transaction')+'</button></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(t?'Save changes':(isAdmin()?'Add transaction':'Send for approval'))+'</button></div>'+
     '</form>';
   }
   function openingBalanceFormHtml(){
@@ -1114,15 +1372,6 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
-  function ownerSignInModalHtml(){
-    return '<div class="modal-head"><h3>Sign in as owner</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    '<p class="hint">Only you should have this password. Signing in unlocks editing in Finance on this device until you sign out.</p>'+
-    '<form data-form="owner-signin">'+
-      '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" autocomplete="username" required autofocus></div>'+
-      '<div class="field-row" style="margin-top:12px"><label>Password</label><input class="field" type="password" name="password" autocomplete="current-password" required></div>'+
-      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Sign in</button></div>'+
-    '</form>';
-  }
   function mpesaDepositFormHtml(){
     return '<div class="modal-head"><h3>Add via M-Pesa</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">Enter an amount and the Safaricom number to pay from. You\'ll get the normal M-Pesa prompt on that phone — enter your PIN there, not here. The balance updates itself once M-Pesa confirms it.</p>'+
@@ -1132,26 +1381,14 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-deposit-submit">Send M-Pesa prompt</button></div>'+
     '</form>';
   }
-  function mutateFinance(fn){
-    if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); return; }
-    fn(financeState());
-    render();
-    if(!cloudMode || !db){ toast('Finance needs the shared database connection — try again once online.'); return; }
-    db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).set(state.finance).catch(function(){ toast('Could not save — check your connection.'); });
-  }
   function initFinanceSync(){
     if(financeSyncStarted || !db) return;
     financeSyncStarted = true;
     db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).onSnapshot(function(snap){
-      if(snap.exists){
-        state.finance = Object.assign(defaultFinanceState(), snap.data());
-        if(!Array.isArray(state.finance.transactions)) state.finance.transactions = [];
-        render();
-      } else if(isOwner){
-        state.finance = defaultFinanceState();
-        db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).set(state.finance).catch(function(){});
-      }
-    }, function(){ /* reads are open by rule; a failure here just leaves Finance showing its last-known data */ });
+      state.finance = snap.exists ? Object.assign(defaultFinanceState(), snap.data()) : defaultFinanceState();
+      if(!Array.isArray(state.finance.transactions)) state.finance.transactions = [];
+      render();
+    }, function(){ /* Finance reads are restricted by rule to administrator/financial staff; a failure here just leaves Finance showing its last-known data */ });
   }
 
   var SECTIONS = {
@@ -1161,7 +1398,8 @@
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
     finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
-    settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel }
+    settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
+    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel }
   };
 
   /* ============================= MODAL / TOAST ============================= */
@@ -1209,9 +1447,12 @@
   function initArtifact(){
     standaloneMode = true;
     if(!(window.firebase && firebase.apps)){
-      // Firebase SDK didn't load (offline on first-ever visit, or blocked) — carry on locally.
+      // Firebase SDK didn't load (offline on first-ever visit, or blocked) —
+      // sign-in needs Firebase Auth, so only Guest (view-only) access works
+      // until connectivity returns.
       localMode = true;
       setSyncStatus('local');
+      updateAuthGate();
       return;
     }
     try{
@@ -1241,22 +1482,27 @@
       });
       if(firebase.auth){
         firebase.auth().onAuthStateChanged(function(user){
-          isOwner = !!user;
-          initFinanceSync();
-          render();
+          stopIdleTimer();
+          if(!user){
+            currentUser = null;
+            readOnly = guestMode;
+            render();
+            return;
+          }
+          user.getIdTokenResult(false).then(function(res){
+            handleSignedInUser(user, res.claims || {});
+          }).catch(function(){
+            firebase.auth().signOut();
+          });
         });
       } else {
-        initFinanceSync();
+        updateAuthGate();
       }
     }catch(e){
       localMode = true;
       setSyncStatus('local');
+      updateAuthGate();
     }
-  }
-  function signOutOwner(){
-    if(window.firebase && firebase.auth){ firebase.auth().signOut(); }
-    closeModal();
-    toast('Signed out.');
   }
   function nativeDownload(filename, data){
     try{
@@ -1369,31 +1615,62 @@
         break;
       }
       case 'export-backup': doExportBackup(); break;
-      case 'open-owner-signin': openModal(ownerSignInModalHtml()); break;
-      case 'owner-signout': signOutOwner(); break;
+      case 'signout': firebase.auth().signOut(); toast('Signed out.'); break;
+      case 'guest-signin': guestMode = false; readOnly = false; authGateMode = 'welcome'; authGateError=''; render(); break;
+      case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; updateAuthGate(); break;
+      case 'auth-gate-back': authGateMode = 'welcome'; authGateError = ''; updateAuthGate(); break;
+      case 'auth-gate-guest': guestMode = true; readOnly = true; render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
       case 'open-add-finance':
-        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!canProposeFinance()){ toast('Sign in as the administrator or financial staff to add Finance entries.'); break; }
         openModal(financeFormHtml());
         break;
       case 'edit-finance':
-        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!isAdmin()){ toast('Only the administrator can edit entries.'); break; }
         openModal(financeFormHtml(a1));
         break;
       case 'delete-finance':
-        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!isAdmin()){ toast('Only the administrator can delete entries.'); break; }
         confirmModal('Delete this transaction? This can\'t be undone.', function(){
-          mutateFinance(function(f){ f.transactions = f.transactions.filter(function(x){return x.id!==a1;}); });
+          firebase.functions().httpsCallable('deleteFinanceEntry')({id:a1}).then(function(){ toast('Deleted.'); }).catch(function(err){ toast((err&&err.message)||'Could not delete.'); });
         });
         break;
       case 'open-set-opening':
-        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!isAdmin()){ toast('Only the administrator can set this.'); break; }
         openModal(openingBalanceFormHtml());
         break;
       case 'open-mpesa-deposit':
-        if(!isOwner){ toast('Sign in first — only the owner can edit Finance.'); break; }
+        if(!isAdmin()){ toast('Only the administrator can start M-Pesa deposits.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
         openModal(mpesaDepositFormHtml());
         break;
+      case 'open-add-staff':
+        if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
+        openModal(staffFormHtml());
+        break;
+      case 'toggle-staff': {
+        if(!isAdmin()) break;
+        var staffUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!staffUser) break;
+        var nextDisabled = !staffUser.disabled;
+        firebase.functions().httpsCallable('updateStaffAccount')({uid:a1, disabled:nextDisabled}).then(function(){
+          toast(nextDisabled ? 'Account disabled.' : 'Account enabled.');
+        }).catch(function(err){ toast((err&&err.message)||'Could not update that account.'); });
+        break;
+      }
+      case 'delete-staff':
+        if(!isAdmin()) break;
+        confirmModal('Remove this team member\'s account? They will no longer be able to sign in.', function(){
+          firebase.functions().httpsCallable('deleteStaffAccount')({uid:a1}).then(function(){ toast('Account removed.'); }).catch(function(err){ toast((err&&err.message)||'Could not remove that account.'); });
+        }, {confirmLabel:'Remove'});
+        break;
+      case 'review-finance': {
+        if(!isAdmin()) break;
+        var decision = a2==='reject' ? 'reject' : 'approve';
+        firebase.functions().httpsCallable('reviewFinanceEntry')({id:a1, decision:decision}).then(function(){
+          toast(decision==='approve' ? 'Approved.' : 'Rejected.');
+        }).catch(function(err){ toast((err&&err.message)||'Could not review that entry.'); });
+        break;
+      }
       default: break;
     }
   }
@@ -1533,38 +1810,58 @@
       return;
     }
     if(name==='finance'){
+      if(!canProposeFinance()){ toast('Sign in as the administrator or financial staff first.'); return; }
       var tid = val('id') || null;
       var ttype = val('type'), tdate = val('date'), tcurrency = val('currency');
       var tamountRaw = Number(val('amount')||0), tnote = val('note') || '';
-      mutateFinance(function(f){
-        var amount = fromCurrency(tamountRaw, tcurrency);
-        if(tid){ var x = f.transactions.find(function(i){return i.id===tid;}); if(x){ x.date=tdate; x.type=ttype; x.amount=amount; x.note=tnote; } }
-        else f.transactions.push({id:uid('fin'), date:tdate, type:ttype, amount:amount, note:tnote});
-      });
-      closeModal(); toast('Saved.');
+      var amount = fromCurrency(tamountRaw, tcurrency);
+      if(tid){
+        if(!isAdmin()){ toast('Only the administrator can edit entries.'); return; }
+        firebase.functions().httpsCallable('editFinanceEntry')({id:tid, type:ttype, date:tdate, amount:amount, note:tnote}).then(function(){
+          closeModal(); toast('Saved.');
+        }).catch(function(err){ toast((err&&err.message)||'Could not save.'); });
+      } else {
+        firebase.functions().httpsCallable('proposeFinanceEntry')({type:ttype, date:tdate, amount:amount, note:tnote}).then(function(res){
+          closeModal();
+          toast((res.data && res.data.status==='pending') ? 'Sent for the administrator\'s approval.' : 'Added.');
+        }).catch(function(err){ toast((err&&err.message)||'Could not add.'); });
+      }
       return;
     }
     if(name==='finance-opening'){
+      if(!isAdmin()){ toast('Only the administrator can set this.'); return; }
       var oDate = val('date') || todayISO(), oCurrency = val('currency');
       var oAmountRaw = Number(val('amount')||0);
-      mutateFinance(function(f){
-        f.openingBalance = fromCurrency(oAmountRaw, oCurrency);
-        f.openingDate = oDate;
-      });
-      closeModal(); toast('Opening balance saved.');
+      var oAmount = fromCurrency(oAmountRaw, oCurrency);
+      firebase.functions().httpsCallable('setOpeningBalance')({amount:oAmount, date:oDate}).then(function(){
+        closeModal(); toast('Opening balance saved.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not save.'); });
       return;
     }
-    if(name==='owner-signin'){
-      var oEmail = (val('email')||'').trim(), oPassword = val('password')||'';
-      if(!(window.firebase && firebase.auth)){ toast('Sign-in isn\'t available right now — check your connection.'); return; }
-      firebase.auth().signInWithEmailAndPassword(oEmail, oPassword).then(function(){
-        closeModal(); toast('Signed in.');
+    if(name==='signin'){
+      var sgEmail = (val('email')||'').trim(), sgPassword = val('password')||'';
+      if(!(window.firebase && firebase.auth)){ authGateError = 'Sign-in isn\'t available right now — check your connection.'; updateAuthGate(); return; }
+      var signinBtn = form.querySelector('button[type="submit"]');
+      if(signinBtn){ signinBtn.disabled = true; signinBtn.textContent = 'Signing in…'; }
+      firebase.auth().signInWithEmailAndPassword(sgEmail, sgPassword).then(function(){
+        authGateError = '';
       }).catch(function(err){
-        toast('Sign-in failed — ' + (err && err.code==='auth/invalid-credential' ? 'check your email and password.' : (err && err.message) || 'please try again.'));
+        authGateError = 'Sign-in failed — ' + (err && err.code==='auth/invalid-credential' ? 'check your email and password.' : (err && err.code==='auth/user-disabled' ? 'this account has been disabled.' : (err && err.message) || 'please try again.'));
+        authGateMode = 'signin';
+        updateAuthGate();
       });
+      return;
+    }
+    if(name==='add-staff'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle');
+      firebase.functions().httpsCallable('createStaffAccount')({email:sEmail, password:sPassword, jobTitle:sJobTitle}).then(function(){
+        closeModal(); toast('Account created — share the email and password with them.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
       return;
     }
     if(name==='mpesa-deposit'){
+      if(!isAdmin()){ toast('Only the administrator can start M-Pesa deposits.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
       var mAmount = Number(val('amount')||0), mPhone = (val('phone')||'').trim();
       var submitBtn = document.getElementById('mpesa-deposit-submit');
@@ -1608,9 +1905,15 @@
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
-  var isOwner = false;
+  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle }
+  var guestMode = false;
   var mpesaEnabled = false;
   var financeSyncStarted = false;
+  var usersSyncStarted = false;
+  var teamUsers = [];
+  var accessLogs = [];
+  var idleTimer = null;
+  var IDLE_LIMIT_MS = 5*60*1000;
   var artifactApi = null;
   var saveTimer = null;
 

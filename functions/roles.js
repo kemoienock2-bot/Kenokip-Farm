@@ -1,0 +1,274 @@
+// Kenokip Farm — accounts, roles, Finance approvals, and access logging.
+//
+// Everything money-related (Finance) is written ONLY from here (via the
+// Admin SDK), never directly from the app. That's what makes the "financial
+// staff can't send anything without the administrator's approval" rule
+// actually enforceable: the client can only ever call proposeFinanceEntry
+// (which marks non-admin entries "pending") or reviewFinanceEntry (which
+// only the administrator's role claim can invoke) — there's no path for a
+// non-admin client to write directly to the Finance document at all.
+//
+// Roles live as Firebase Auth "custom claims" ({role, jobTitle}) so they're
+// available instantly and securely in Firestore security rules
+// (request.auth.token.role) without an extra database read. A claim only
+// takes effect on that user's NEXT sign-in or forced token refresh — the
+// app calls getIdTokenResult(true) right after any call here that changes
+// its own role.
+
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const logger = require('firebase-functions/logger');
+
+const JOB_TITLES = ['supervisor', 'vet', 'financial', 'farmhand'];
+const JOB_TITLE_LABELS = { supervisor: 'Supervisor', vet: 'Vet / Doctor', financial: 'Financial Staff', farmhand: 'Farmhand' };
+
+function genId(prefix) {
+  return prefix + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5);
+}
+
+function requireAuth(request) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  return request.auth;
+}
+function requireAdmin(request) {
+  const auth = requireAuth(request);
+  if (auth.token.role !== 'administrator') {
+    throw new HttpsError('permission-denied', 'Only the administrator can do this.');
+  }
+  return auth;
+}
+function isFinancialStaff(auth) {
+  return auth.token.role === 'employee' && auth.token.jobTitle === 'financial';
+}
+function canProposeFinance(auth) {
+  return auth.token.role === 'administrator' || isFinancialStaff(auth);
+}
+
+module.exports = function (admin, db) {
+  const FINANCE_REF = db.collection('finance').doc('kenokip');
+  const META_REF = db.collection('meta').doc('roles');
+
+  async function mutateFinanceDoc(mutator) {
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(FINANCE_REF);
+      const data = snap.exists ? snap.data() : { openingBalance: 0, openingDate: new Date().toISOString().slice(0, 10), transactions: [] };
+      if (!Array.isArray(data.transactions)) data.transactions = [];
+      mutator(data);
+      t.set(FINANCE_REF, data, { merge: true });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Accounts & roles
+  // ---------------------------------------------------------------------
+
+  // One-time self-service bootstrap: the very first person to call this
+  // (meant to be you, right after creating your Firebase Auth account)
+  // becomes Administrator. It refuses to run again once an administrator
+  // exists, so it can safely stay in the app permanently.
+  const bootstrapFirstAdmin = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const metaSnap = await META_REF.get();
+    if (metaSnap.exists && metaSnap.data().adminCreated) {
+      throw new HttpsError('already-exists', 'An administrator already exists for this farm.');
+    }
+    await admin.auth().setCustomUserClaims(auth.uid, { role: 'administrator', jobTitle: null });
+    await db.collection('users').doc(auth.uid).set({
+      email: auth.token.email || null,
+      role: 'administrator',
+      jobTitle: null,
+      disabled: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: auth.uid,
+    });
+    await META_REF.set({ adminCreated: true, adminUid: auth.uid }, { merge: true });
+    return { ok: true, message: 'You are now the administrator. Sign out and back in once to finish.' };
+  });
+
+  // Administrator creates a login for an employee. Uses the Admin SDK, so
+  // (unlike createUserWithEmailAndPassword on the client) it does NOT sign
+  // the administrator out or switch the active session to the new account.
+  const createStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAdmin(request);
+    const email = String((request.data && request.data.email) || '').trim().toLowerCase();
+    const password = String((request.data && request.data.password) || '');
+    const jobTitle = String((request.data && request.data.jobTitle) || '');
+    if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
+    if (password.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
+    if (!JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
+
+    let userRecord;
+    try {
+      userRecord = await admin.auth().createUser({ email, password });
+    } catch (err) {
+      if (err.code === 'auth/email-already-exists') throw new HttpsError('already-exists', 'That email already has an account.');
+      logger.error('createStaffAccount failed', err);
+      throw new HttpsError('internal', 'Could not create the account.');
+    }
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'employee', jobTitle });
+    await db.collection('users').doc(userRecord.uid).set({
+      email,
+      role: 'employee',
+      jobTitle,
+      disabled: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: auth.uid,
+    });
+    return { ok: true, uid: userRecord.uid };
+  });
+
+  // Administrator changes an employee's job title, or enables/disables
+  // their access (disabling blocks sign-in immediately — no need to delete
+  // the account to revoke access).
+  const updateStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAdmin(request);
+    const uid = String((request.data && request.data.uid) || '');
+    if (!uid) throw new HttpsError('invalid-argument', 'Missing account.');
+    if (uid === auth.uid) throw new HttpsError('invalid-argument', "You can't change your own account here.");
+    const patch = {};
+    if (request.data && request.data.jobTitle !== undefined) {
+      if (!JOB_TITLES.includes(request.data.jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
+      patch.jobTitle = request.data.jobTitle;
+      await admin.auth().setCustomUserClaims(uid, { role: 'employee', jobTitle: request.data.jobTitle });
+    }
+    if (request.data && typeof request.data.disabled === 'boolean') {
+      patch.disabled = request.data.disabled;
+      await admin.auth().updateUser(uid, { disabled: request.data.disabled });
+    }
+    if (Object.keys(patch).length) await db.collection('users').doc(uid).set(patch, { merge: true });
+    return { ok: true };
+  });
+
+  // Administrator permanently removes an employee's account.
+  const deleteStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAdmin(request);
+    const uid = String((request.data && request.data.uid) || '');
+    if (!uid) throw new HttpsError('invalid-argument', 'Missing account.');
+    if (uid === auth.uid) throw new HttpsError('invalid-argument', "You can't delete your own account here.");
+    try { await admin.auth().deleteUser(uid); } catch (err) { logger.error('deleteStaffAccount auth error', err); }
+    await db.collection('users').doc(uid).delete();
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------
+  // Access logging (who signed in, from where)
+  // ---------------------------------------------------------------------
+
+  const logAccess = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const d = request.data || {};
+    const ua = (request.rawRequest && request.rawRequest.headers && request.rawRequest.headers['user-agent']) || null;
+    await db.collection('accessLogs').add({
+      uid: auth.uid,
+      email: auth.token.email || null,
+      role: auth.token.role || null,
+      jobTitle: auth.token.jobTitle || null,
+      at: admin.firestore.FieldValue.serverTimestamp(),
+      locationStatus: d.locationStatus || 'unknown',
+      lat: typeof d.lat === 'number' ? d.lat : null,
+      lng: typeof d.lng === 'number' ? d.lng : null,
+      userAgent: ua,
+    });
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------
+  // Finance — the only writable path for money data
+  // ---------------------------------------------------------------------
+
+  // Administrator: entry is final immediately.
+  // Financial Staff: entry is saved as "pending" and excluded from the
+  // balance until the administrator reviews it.
+  const proposeFinanceEntry = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    if (!canProposeFinance(auth)) throw new HttpsError('permission-denied', 'Only the administrator or financial staff can add Finance entries.');
+    const d = request.data || {};
+    const type = d.type === 'withdrawal' ? 'withdrawal' : 'deposit';
+    const amount = Number(d.amount);
+    const date = String(d.date || '').slice(0, 10);
+    const note = String(d.note || '').slice(0, 300);
+    if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new HttpsError('invalid-argument', 'Enter a valid date.');
+
+    const isAdmin = auth.token.role === 'administrator';
+    const entry = {
+      id: genId('fin'),
+      date, type, amount, note,
+      status: isAdmin ? 'approved' : 'pending',
+      proposedBy: auth.uid,
+      proposedByEmail: auth.token.email || null,
+    };
+    if (isAdmin) { entry.reviewedBy = auth.uid; entry.reviewedAt = new Date().toISOString(); }
+    await mutateFinanceDoc((data) => { data.transactions.push(entry); });
+    return { ok: true, id: entry.id, status: entry.status };
+  });
+
+  // Administrator approves or rejects a pending entry from financial staff.
+  const reviewFinanceEntry = onCall({ region: 'us-central1' }, async (request) => {
+    requireAdmin(request);
+    const d = request.data || {};
+    const id = String(d.id || '');
+    const decision = d.decision === 'reject' ? 'rejected' : 'approved';
+    if (!id) throw new HttpsError('invalid-argument', 'Missing entry.');
+    let found = false;
+    await mutateFinanceDoc((data) => {
+      const entry = data.transactions.find((x) => x.id === id);
+      if (!entry) return;
+      found = true;
+      entry.status = decision;
+      entry.reviewedBy = request.auth.uid;
+      entry.reviewedAt = new Date().toISOString();
+    });
+    if (!found) throw new HttpsError('not-found', 'That entry no longer exists.');
+    return { ok: true };
+  });
+
+  // Administrator edits any entry (approved or pending).
+  const editFinanceEntry = onCall({ region: 'us-central1' }, async (request) => {
+    requireAdmin(request);
+    const d = request.data || {};
+    const id = String(d.id || '');
+    if (!id) throw new HttpsError('invalid-argument', 'Missing entry.');
+    let found = false;
+    await mutateFinanceDoc((data) => {
+      const entry = data.transactions.find((x) => x.id === id);
+      if (!entry) return;
+      found = true;
+      if (d.type === 'deposit' || d.type === 'withdrawal') entry.type = d.type;
+      if (typeof d.amount === 'number' && d.amount > 0) entry.amount = d.amount;
+      if (typeof d.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) entry.date = d.date;
+      if (typeof d.note === 'string') entry.note = d.note.slice(0, 300);
+    });
+    if (!found) throw new HttpsError('not-found', 'That entry no longer exists.');
+    return { ok: true };
+  });
+
+  // Administrator deletes an entry outright.
+  const deleteFinanceEntry = onCall({ region: 'us-central1' }, async (request) => {
+    requireAdmin(request);
+    const id = String((request.data && request.data.id) || '');
+    if (!id) throw new HttpsError('invalid-argument', 'Missing entry.');
+    await mutateFinanceDoc((data) => { data.transactions = data.transactions.filter((x) => x.id !== id); });
+    return { ok: true };
+  });
+
+  // Administrator sets/updates the opening balance.
+  const setOpeningBalance = onCall({ region: 'us-central1' }, async (request) => {
+    requireAdmin(request);
+    const d = request.data || {};
+    const amount = Number(d.amount);
+    const date = String(d.date || '').slice(0, 10);
+    if (Number.isNaN(amount)) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new HttpsError('invalid-argument', 'Enter a valid date.');
+    await mutateFinanceDoc((data) => { data.openingBalance = amount; data.openingDate = date; });
+    return { ok: true };
+  });
+
+  return {
+    bootstrapFirstAdmin, createStaffAccount, updateStaffAccount, deleteStaffAccount,
+    logAccess,
+    proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
+  };
+};
+
+module.exports.JOB_TITLES = JOB_TITLES;
+module.exports.JOB_TITLE_LABELS = JOB_TITLE_LABELS;
