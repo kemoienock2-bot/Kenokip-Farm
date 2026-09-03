@@ -1,5 +1,15 @@
 # Setting up logins, roles, and Finance approvals
 
+> **Update:** the access log (Team tab, administrator-only) now turns a
+> sign-in's coordinates into an actual place name — e.g. "Kondele, Kisumu,
+> Kenya" — using a free map lookup, and also shows which device/browser was
+> used. If it still shows "Location denied" for someone, that means their
+> browser's location permission was declined, or (on iPhone/Android)
+> Location Services is off for that browser at the device level — not a bug
+> in the app. To pick this up: redeploy functions (`firebase deploy --only
+> functions`) and replace `index.html` and `sw.js` — no rules change needed
+> for this part.
+
 This adds the login screen you asked for, with three tiers:
 
 - **Administrator** (you) — sees and can do everything, including approving Finance entries and managing the team.

@@ -43,6 +43,33 @@ function canProposeFinance(auth) {
   return auth.token.role === 'administrator' || isFinancialStaff(auth);
 }
 
+// Turns a browser's User-Agent header into something readable in the access
+// log, e.g. "iPhone · Safari" or "Windows · Chrome". Best-effort string
+// matching, not a full parser — good enough for an audit log, not meant to
+// be exact for every possible browser/OS combination.
+function describeDevice(ua) {
+  if (!ua) return 'Unknown device';
+  let os = 'Unknown OS';
+  if (/iPhone/.test(ua)) os = 'iPhone';
+  else if (/iPad/.test(ua)) os = 'iPad';
+  else if (/Android/.test(ua)) {
+    const m = ua.match(/Android [\d.]+; ([^;)]+)/);
+    os = m ? m[1].trim() : 'Android';
+  } else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'Mac';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  let browser = 'Unknown browser';
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/OPR\//.test(ua) || /Opera/.test(ua)) browser = 'Opera';
+  else if (/CriOS\//.test(ua)) browser = 'Chrome';
+  else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+  return os + ' · ' + browser;
+}
+
 module.exports = function (admin, db) {
   const FINANCE_REF = db.collection('finance').doc('kenokip');
   const META_REF = db.collection('meta').doc('roles');
@@ -157,6 +184,13 @@ module.exports = function (admin, db) {
     const auth = requireAuth(request);
     const d = request.data || {};
     const ua = (request.rawRequest && request.rawRequest.headers && request.rawRequest.headers['user-agent']) || null;
+    // The place name (e.g. "Kondele, Kisumu, Kenya") is resolved client-side
+    // from the coordinates via OpenStreetMap's Nominatim — done in the
+    // browser rather than here because Nominatim blocks a lot of requests
+    // coming from cloud-server IPs. It's purely descriptive/audit data (who
+    // signed in and roughly where), so trusting the client's text here is
+    // fine — nothing security-sensitive depends on it.
+    const place = typeof d.place === 'string' ? d.place.slice(0, 200) : null;
     await db.collection('accessLogs').add({
       uid: auth.uid,
       email: auth.token.email || null,
@@ -166,6 +200,8 @@ module.exports = function (admin, db) {
       locationStatus: d.locationStatus || 'unknown',
       lat: typeof d.lat === 'number' ? d.lat : null,
       lng: typeof d.lng === 'number' ? d.lng : null,
+      place,
+      device: describeDevice(ua),
       userAgent: ua,
     });
     return { ok: true };

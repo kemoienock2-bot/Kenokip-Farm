@@ -1143,14 +1143,49 @@
   }
 
   /* ---- access logging (who signed in, from where) ---- */
+  // Turns coordinates into a place name (e.g. "Kondele, Kisumu, Kenya") using
+  // OpenStreetMap's free Nominatim service, done here in the browser (not in
+  // the Cloud Function) because Nominatim's usage policy blocks a lot of
+  // requests coming from cloud-server IP addresses, but is fine with normal
+  // browsers. Best-effort — if it fails or times out, the log just falls
+  // back to showing the raw coordinates.
+  function reverseGeocodePlace(lat, lng){
+    var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='+lat+'&lon='+lng+'&zoom=16&addressdetails=1';
+    var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 6000) : null;
+    return fetch(url, { headers:{ 'Accept':'application/json' }, signal: ctrl ? ctrl.signal : undefined })
+      .then(function(res){ return res.ok ? res.json() : null; })
+      .then(function(data){
+        if(timer) clearTimeout(timer);
+        if(!data) return null;
+        var a = data.address || {};
+        var specific = a.road || a.neighbourhood || a.suburb || a.village || a.town || null;
+        var city = a.city || a.town || a.county || null;
+        var country = a.country || null;
+        var parts = [specific, (specific && specific===city ? null : city), country].filter(Boolean);
+        return parts.length ? parts.join(', ') : (data.display_name || null);
+      })
+      .catch(function(){ if(timer) clearTimeout(timer); return null; });
+  }
   function captureAccessLog(){
     if(!(window.firebase && firebase.functions)) return;
     var send = function(loc){ firebase.functions().httpsCallable('logAccess')(loc).catch(function(){}); };
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(function(pos){
-        send({ locationStatus:'granted', lat:pos.coords.latitude, lng:pos.coords.longitude });
-      }, function(){
-        send({ locationStatus:'denied' });
+        var lat = pos.coords.latitude, lng = pos.coords.longitude;
+        reverseGeocodePlace(lat, lng).then(function(place){
+          send({ locationStatus:'granted', lat:lat, lng:lng, place: place||null });
+        });
+      }, function(err){
+        // Distinguish *why* it failed — "denied" specifically means the
+        // person (or their device's Location Services setting) said no;
+        // it's not a bug in the app.
+        var status = 'denied';
+        if(err){
+          if(err.code === err.TIMEOUT) status = 'timeout';
+          else if(err.code === err.POSITION_UNAVAILABLE) status = 'unavailable';
+        }
+        send({ locationStatus: status });
       }, { timeout:8000, maximumAge:60000 });
     } else {
       send({ locationStatus:'unsupported' });
@@ -1249,10 +1284,14 @@
         '</div></td></tr>';
     }).join('');
 
+    var LOCATION_STATUS_LABELS = { denied:'Location denied', unavailable:'Location unavailable', timeout:'Location timed out', unsupported:'Not supported on this device', unknown:'Unknown' };
     var accessRows = accessLogs.map(function(l){
       var when = (l.at && l.at.toDate) ? fmtDate(l.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-      var loc = (typeof l.lat==='number' && typeof l.lng==='number') ? l.lat.toFixed(4)+', '+l.lng.toFixed(4) : (l.locationStatus==='denied' ? 'Location denied' : (l.locationStatus==='unsupported' ? 'Unsupported' : 'Unknown'));
-      return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(l.role==='administrator'?'Administrator':jobTitleLabel(l.jobTitle))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td></tr>';
+      var loc;
+      if(l.place){ loc = l.place; }
+      else if(typeof l.lat==='number' && typeof l.lng==='number'){ loc = l.lat.toFixed(4)+', '+l.lng.toFixed(4); }
+      else { loc = LOCATION_STATUS_LABELS[l.locationStatus] || 'Unknown'; }
+      return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(l.role==='administrator'?'Administrator':jobTitleLabel(l.jobTitle))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td><td>'+esc(l.device||'—')+'</td></tr>';
     }).join('');
 
     return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
@@ -1262,8 +1301,9 @@
         '<div class="table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div style="margin-top:14px"><button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button></div>'+
       '</div>'+
-      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">Last 50 sign-ins, with device location when shared</span></div>'+
-        '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
+      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">Last 50 sign-ins — visible only to you</span></div>'+
+        '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
+        '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
       '</div>';
   }
 
