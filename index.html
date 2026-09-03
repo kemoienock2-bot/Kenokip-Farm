@@ -1090,8 +1090,9 @@
   }
 
   /* ---- sign-in gate (shown before the app is usable) ---- */
-  var authGateMode = 'welcome'; // 'welcome' | 'signin'
+  var authGateMode = 'welcome'; // 'welcome' | 'signin' | 'forgot'
   var authGateError = '';
+  var authGateNotice = '';
   function updateAuthGate(){
     var gate = document.getElementById('auth-gate');
     if(!gate) return;
@@ -1101,6 +1102,18 @@
   }
   function authGateHtml(){
     var brandMark = '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>';
+    if(authGateMode==='forgot'){
+      return '<div class="auth-card">'+brandMark+
+        '<h1>Reset your password</h1><p class="hint">Enter your account email — if it has an account, we\'ll send a link to set a new password.</p>'+
+        (authGateNotice ? '<div class="banner" style="text-align:left; margin-bottom:14px">'+esc(authGateNotice)+'</div>' : '')+
+        (authGateError ? '<div class="banner bad" style="text-align:left; margin-bottom:14px">'+esc(authGateError)+'</div>' : '')+
+        '<form data-form="forgot-password" style="text-align:left">'+
+          '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" autocomplete="username" required autofocus></div>'+
+          '<button class="btn primary" type="submit" style="width:100%; margin-top:16px">Send reset link</button>'+
+        '</form>'+
+        '<button class="btn ghost" data-action="auth-gate-back">Back</button>'+
+      '</div>';
+    }
     if(authGateMode==='signin'){
       return '<div class="auth-card">'+brandMark+
         '<h1>Sign in</h1><p class="hint">Administrator and employee accounts only — guests don\'t need a password.</p>'+
@@ -1110,6 +1123,7 @@
           '<div class="field-row" style="margin-top:12px"><label>Password</label><input class="field" type="password" name="password" autocomplete="current-password" required></div>'+
           '<button class="btn primary" type="submit" style="width:100%; margin-top:16px">Sign in</button>'+
         '</form>'+
+        '<button class="btn ghost" data-action="auth-gate-forgot">Forgot password?</button>'+
         '<button class="btn ghost" data-action="auth-gate-back">Back</button>'+
       '</div>';
     }
@@ -1269,6 +1283,15 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
+  function resetStaffPasswordFormHtml(uid, email){
+    return '<div class="modal-head"><h3>Reset password</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">There\'s no way to see '+esc(email||'this account')+'\'s existing password — Firebase never stores it in a readable form, not even for the administrator. This sets a new one instead, which you then share with them the same way as before.</p>'+
+    '<form data-form="reset-staff-password">'+
+      '<input type="hidden" name="uid" value="'+esc(uid)+'">'+
+      '<div class="field-row"><label>New password</label><input class="field" type="text" name="password" minlength="6" placeholder="At least 6 characters" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Set password</button></div>'+
+    '</form>';
+  }
   function teamPanel(){
     if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
     var rows = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); }).map(function(u){
@@ -1278,6 +1301,7 @@
         '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
         '<td><div class="row-actions">'+
           (u.role==='administrator' || isSelf ? '<span class="hint">—</span>' :
+            '<button class="btn sm" data-action="open-reset-password:'+u.uid+'">Reset password</button>'+
             '<button class="btn sm" data-action="toggle-staff:'+u.uid+'">'+(u.disabled?'Enable':'Disable')+'</button>'+
             '<button class="icon-btn" data-action="delete-staff:'+u.uid+'">'+ICONS.trash+'</button>')+
         '</div></td></tr>';
@@ -1669,8 +1693,9 @@
       case 'export-backup': doExportBackup(); break;
       case 'signout': firebase.auth().signOut(); toast('Signed out.'); break;
       case 'guest-signin': guestMode = false; readOnly = false; authGateMode = 'welcome'; authGateError=''; render(); break;
-      case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; updateAuthGate(); break;
-      case 'auth-gate-back': authGateMode = 'welcome'; authGateError = ''; updateAuthGate(); break;
+      case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
+      case 'auth-gate-forgot': authGateMode = 'forgot'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
+      case 'auth-gate-back': authGateMode = 'welcome'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-guest': guestMode = true; readOnly = true; render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
       case 'open-add-finance':
         if(!canProposeFinance()){ toast('Sign in as the administrator or financial staff to add Finance entries.'); break; }
@@ -1703,6 +1728,13 @@
         if(!currentUser){ toast('Sign in first.'); break; }
         openModal(changePasswordFormHtml());
         break;
+      case 'open-reset-password': {
+        if(!isAdmin()) break;
+        var resetUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!resetUser) break;
+        openModal(resetStaffPasswordFormHtml(a1, resetUser.email));
+        break;
+      }
       case 'toggle-staff': {
         if(!isAdmin()) break;
         var staffUser = teamUsers.find(function(x){ return x.uid===a1; });
@@ -1908,6 +1940,23 @@
       });
       return;
     }
+    if(name==='forgot-password'){
+      var fpEmail = (val('email')||'').trim();
+      if(!(window.firebase && firebase.auth)){ authGateError = 'Not available right now — check your connection.'; updateAuthGate(); return; }
+      var fpBtn = form.querySelector('button[type="submit"]');
+      if(fpBtn){ fpBtn.disabled = true; fpBtn.textContent = 'Sending…'; }
+      firebase.auth().sendPasswordResetEmail(fpEmail).then(function(){
+        authGateNotice = 'If an account exists for that email, a reset link is on its way.';
+        authGateError = '';
+        updateAuthGate();
+      }).catch(function(){
+        // Same message either way — don't reveal whether the email has an account.
+        authGateNotice = 'If an account exists for that email, a reset link is on its way.';
+        authGateError = '';
+        updateAuthGate();
+      });
+      return;
+    }
     if(name==='add-staff'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
       var sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle');
@@ -1935,6 +1984,15 @@
         var msg = (code==='auth/wrong-password' || code==='auth/invalid-credential') ? 'Current password is incorrect.' : ((err && err.message) || 'Could not change your password.');
         toast(msg);
       });
+      return;
+    }
+    if(name==='reset-staff-password'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var rUid = val('uid'), rPassword = val('password')||'';
+      if(rPassword.length<6){ toast('Password needs at least 6 characters.'); return; }
+      firebase.functions().httpsCallable('updateStaffAccount')({uid:rUid, password:rPassword}).then(function(){
+        closeModal(); toast('Password reset — share the new one with them.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not reset that password.'); });
       return;
     }
     if(name==='mpesa-deposit'){

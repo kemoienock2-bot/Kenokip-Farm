@@ -161,6 +161,16 @@ module.exports = function (admin, db) {
       patch.disabled = request.data.disabled;
       await admin.auth().updateUser(uid, { disabled: request.data.disabled });
     }
+    // Resets the account's password outright (there is no way to look up
+    // the existing one — Firebase never stores or exposes plaintext
+    // passwords, only a one-way hash, not even to the administrator). This
+    // is the correct fix for "I forgot a team member's password": set a new
+    // one and share it with them, the same as when the account was created.
+    if (request.data && typeof request.data.password === 'string') {
+      const newPassword = request.data.password;
+      if (newPassword.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
+      await admin.auth().updateUser(uid, { password: newPassword });
+    }
     if (Object.keys(patch).length) await db.collection('users').doc(uid).set(patch, { merge: true });
     return { ok: true };
   });
