@@ -125,7 +125,8 @@
   .brand-text h1{ font-size:19px; line-height:1.1; }
   .brand-text span{ display:block; font-size:11px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
   .nav-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
-  .nav-item{ display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); border:none; background:none; width:100%; text-align:left; color:var(--ink-2); font-weight:500; font-size:14px; }
+  .nav-item{ position:relative; display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); border:none; background:none; width:100%; text-align:left; color:var(--ink-2); font-weight:500; font-size:14px; }
+  .nav-badge{ position:absolute; top:3px; left:22px; background:var(--bad); color:#fff; font-size:10px; font-weight:700; line-height:1.4; padding:1px 5px; border-radius:999px; min-width:8px; text-align:center; }
   .nav-item svg{ width:18px; height:18px; flex:none; opacity:.85; }
   .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
   .nav-item.active{ background:var(--accent-tint); color:var(--accent-ink); font-weight:600; }
@@ -262,6 +263,22 @@
   .role-pill.pending{ background:var(--bad-tint); color:var(--bad); }
   .role-pill.approved{ background:var(--good-tint); color:var(--good); }
   .role-pill.rejected{ background:var(--bad-tint); color:var(--bad); text-decoration:line-through; }
+  .role-pill.important{ background:var(--accent-tint); color:var(--accent-ink); }
+  .role-pill.urgent{ background:var(--bad-tint); color:var(--bad); }
+
+  #urgent-alert{ position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:200; width:100%; max-width:440px; padding:0 16px; }
+  #urgent-alert[hidden]{ display:none; }
+  .urgent-alert-box{ display:flex; gap:12px; align-items:flex-start; background:var(--bad-tint); border:1px solid var(--bad); color:var(--bad); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); animation:urgent-pop .18s ease-out; }
+  .urgent-alert-box svg{ width:24px; height:24px; flex:none; margin-top:1px; }
+  .urgent-alert-text{ flex:1; font-size:13.5px; color:var(--ink); }
+  .urgent-alert-text strong{ display:block; margin-bottom:3px; color:var(--bad); }
+  .urgent-alert-actions{ display:flex; flex-direction:column; gap:6px; }
+  @keyframes urgent-pop{ from{ transform:scale(.92); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+  .message-row{ display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-soft); align-items:flex-start; }
+  .message-row:last-child{ border-bottom:none; }
+  .message-row.unread{ background:var(--accent-tint); margin:0 -20px; padding:10px 20px; border-radius:var(--radius-sm); border-bottom-color:transparent; }
+  .message-meta{ font-size:12px; color:var(--ink-3); margin-top:2px; }
 
   @media (max-width:860px){
     .app{ flex-direction:column; }
@@ -291,6 +308,7 @@
 </div>
 <div id="modal-root"></div>
 <div class="toast-root" id="toast-root"></div>
+<div id="urgent-alert" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -318,7 +336,9 @@
     finance:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M9 10v9M15 10v9M19 10v9"/><path d="M3 19h18"/></svg>',
     lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
     team:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.4"/><path d="M15.5 14.2c2.6.4 4.5 2.6 4.5 5.3"/></svg>',
-    pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>'
+    pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>',
+    bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>',
+    warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -605,8 +625,10 @@
       ['income','Income',ICONS.income]
     ];
     if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
+    if(currentUser) items.push(['messages','Messages',ICONS.bell]);
     items.push(['settings','Settings',ICONS.settings]);
     if(isAdmin()) items.push(['team','Team',ICONS.team]);
+    var unread = unreadMessageCount();
     rail.innerHTML =
       '<div class="brand">'+
         '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>'+
@@ -614,7 +636,8 @@
       '</div>'+
       '<ul class="nav-list">'+
         items.map(function(it){
-          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-action="nav:'+it[0]+'">'+it[2]+'<span>'+it[1]+'</span></button></li>';
+          var badge = (it[0]==='messages' && unread>0) ? '<span class="nav-badge">'+(unread>99?'99+':unread)+'</span>' : '';
+          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-action="nav:'+it[0]+'">'+it[2]+badge+'<span>'+it[1]+'</span></button></li>';
         }).join('')+
       '</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
@@ -1074,6 +1097,7 @@
   function sectionAllowed(key){
     if(key==='finance') return canSeeFinance();
     if(key==='team') return isAdmin();
+    if(key==='messages') return !!currentUser;
     return true;
   }
   function accountCardHTML(){
@@ -1082,6 +1106,10 @@
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
       (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 5 minutes of inactivity.' : '')+
       '</p>'+
+      '<form data-form="update-own-name" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">'+
+        '<div class="field-row" style="max-width:220px"><label>Your name (shown in messages)</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentUser.name||'')+'"></div>'+
+        '<button class="btn" type="submit">Save name</button>'+
+      '</form>'+
       '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
         '<button class="btn" data-action="open-change-password">Change password</button>'+
         '<button class="btn ghost" data-action="signout">Sign out</button>'+
@@ -1211,14 +1239,17 @@
 
   /* ---- sign-in flow (bootstrap-first-admin, then normal role resolution) ---- */
   function finishSignIn(user, claims){
-    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null };
+    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null };
     guestMode = false;
     readOnly = false;
     if(ui.section==='finance' && !canSeeFinance()) ui.section = 'overview';
     if(ui.section==='team' && !isAdmin()) ui.section = 'overview';
     saveUIPref();
     if(canSeeFinance()) initFinanceSync();
-    if(isAdmin()) initUsersSync();
+    initDirectorySync();
+    initMessagesSync();
+    initOwnProfileSync();
+    if(isAdmin()) initAdminLogsSync();
     captureAccessLog();
     startIdleTimer();
     render();
@@ -1244,16 +1275,21 @@
     });
   }
 
-  /* ---- team management (administrator only) ---- */
-  function initUsersSync(){
-    if(usersSyncStarted || !db || !isAdmin()) return;
-    usersSyncStarted = true;
+  /* ---- team directory (any signed-in account — needed to pick a message recipient) ---- */
+  function initDirectorySync(){
+    if(directorySyncStarted || !db || !currentUser) return;
+    directorySyncStarted = true;
     db.collection('users').onSnapshot(function(snap){
       teamUsers = [];
       snap.forEach(function(doc){ teamUsers.push(Object.assign({uid:doc.id}, doc.data())); });
-      if(ui.section==='team') render();
-    }, function(){ /* rules restrict this to the administrator; a failure here just leaves the list showing its last-known data */ });
-    db.collection('accessLogs').orderBy('at','desc').limit(50).onSnapshot(function(snap){
+      render();
+    }, function(){ /* a failure here just leaves the roster showing its last-known data */ });
+  }
+  /* ---- access log (administrator only) ---- */
+  function initAdminLogsSync(){
+    if(logsSyncStarted || !db || !isAdmin()) return;
+    logsSyncStarted = true;
+    db.collection('accessLogs').orderBy('at','desc').limit(200).onSnapshot(function(snap){
       accessLogs = [];
       snap.forEach(function(doc){ accessLogs.push(Object.assign({id:doc.id}, doc.data())); });
       if(ui.section==='team') render();
@@ -1263,7 +1299,8 @@
     return '<div class="modal-head"><h3>Add team member</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">Creates a sign-in for an employee. Share the email and password with them directly — there\'s no self-registration.</p>'+
     '<form data-form="add-staff">'+
-      '<div class="field-row"><label>Email</label><input class="field" type="email" name="email" required autofocus></div>'+
+      '<div class="field-row"><label>Name</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Email</label><input class="field" type="email" name="email" required></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Temporary password</label><input class="field" type="text" name="password" minlength="6" placeholder="At least 6 characters" required></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Role</label><select class="field" name="jobTitle">'+
         '<option value="supervisor">Supervisor</option>'+
@@ -1296,7 +1333,7 @@
     if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
     var rows = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); }).map(function(u){
       var isSelf = u.uid === currentUser.uid;
-      return '<tr><td>'+esc(u.email||'—')+'</td>'+
+      return '<tr><td>'+esc(u.name||'—')+'</td><td>'+esc(u.email||'—')+'</td>'+
         '<td><span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'</span></td>'+
         '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
         '<td><div class="row-actions">'+
@@ -1321,7 +1358,12 @@
     }).join('');
 
     var LOCATION_STATUS_LABELS = { denied:'Location denied', unavailable:'Location unavailable', timeout:'Location timed out', unsupported:'Not supported on this device', unknown:'Unknown' };
-    var accessRows = accessLogs.map(function(l){
+    var LOG_PAGE_SIZE = 10;
+    var totalLogPages = Math.max(1, Math.ceil(accessLogs.length / LOG_PAGE_SIZE));
+    if(accessLogPage >= totalLogPages) accessLogPage = totalLogPages - 1;
+    if(accessLogPage < 0) accessLogPage = 0;
+    var pagedLogs = accessLogs.slice(accessLogPage*LOG_PAGE_SIZE, accessLogPage*LOG_PAGE_SIZE + LOG_PAGE_SIZE);
+    var accessRows = pagedLogs.map(function(l){
       var when = (l.at && l.at.toDate) ? fmtDate(l.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
       var loc;
       if(l.place){ loc = l.place; }
@@ -1329,18 +1371,165 @@
       else { loc = LOCATION_STATUS_LABELS[l.locationStatus] || 'Unknown'; }
       return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(l.role==='administrator'?'Administrator':jobTitleLabel(l.jobTitle))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td><td>'+esc(l.device||'—')+'</td></tr>';
     }).join('');
+    var logPagerHtml = accessLogs.length ? '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:10px">'+
+        '<button class="btn sm" data-action="access-log-page:prev" '+(accessLogPage<=0?'disabled':'')+'>Prev</button>'+
+        '<span class="hint">Page '+(accessLogPage+1)+' of '+totalLogPages+'</span>'+
+        '<button class="btn sm" data-action="access-log-page:next" '+(accessLogPage>=totalLogPages-1?'disabled':'')+'>Next</button>'+
+      '</div>' : '';
 
     return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
       '</div>' : '')+
       '<div class="card"><div class="card-title"><h3>Team</h3><span class="hint">'+teamUsers.length+' account'+(teamUsers.length===1?'':'s')+'</span></div>'+
-        '<div class="table-wrap"><table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+        '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div style="margin-top:14px"><button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button></div>'+
       '</div>'+
-      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">Last 50 sign-ins — visible only to you</span></div>'+
+      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, 10 per page — visible only to you</span></div>'+
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
         '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
+        logPagerHtml+
       '</div>';
+  }
+
+  /* ============================= MESSAGING (team-wide broadcast + one-to-one) ============================= */
+  var urgentAlertQueue = [];
+  function playAlertSound(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return;
+      var ctx = new Ctx();
+      [0, 0.22, 0.44].forEach(function(delay){
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'square'; o.frequency.value = 880;
+        g.gain.value = 0.16;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime+delay);
+        o.stop(ctx.currentTime+delay+0.18);
+      });
+    }catch(e){}
+  }
+  function renderUrgentAlert(){
+    var el = document.getElementById('urgent-alert');
+    if(!el) return;
+    if(!urgentAlertQueue.length){ el.hidden = true; el.innerHTML = ''; return; }
+    var msg = urgentAlertQueue[0];
+    el.hidden = false;
+    el.innerHTML = '<div class="urgent-alert-box">'+ICONS.warning+
+      '<div class="urgent-alert-text"><strong>Urgent message from '+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
+      '<div class="urgent-alert-actions">'+
+        '<button class="btn sm primary" data-action="urgent-alert-view">View</button>'+
+        '<button class="btn sm ghost" data-action="urgent-alert-dismiss">Dismiss</button>'+
+      '</div></div>';
+  }
+  function triggerUrgentAlert(msg){
+    urgentAlertQueue.push(msg);
+    renderUrgentAlert();
+    playAlertSound();
+  }
+  function isMessageForMe(m){
+    if(!currentUser || m.fromUid===currentUser.uid) return false;
+    return m.toUid===currentUser.uid || m.toUid==='all';
+  }
+  function unreadMessageCount(){
+    if(!currentUser) return 0;
+    return messages.filter(function(m){ return isMessageForMe(m) && (m.readBy||[]).indexOf(currentUser.uid)===-1; }).length;
+  }
+  function initOwnProfileSync(){
+    if(!db || !currentUser) return;
+    db.collection('users').doc(currentUser.uid).onSnapshot(function(snap){
+      if(snap.exists && currentUser){
+        currentUser.name = snap.data().name || null;
+        render();
+      }
+    }, function(){});
+  }
+  function initMessagesSync(){
+    if(messagesSyncStarted || !db || !currentUser) return;
+    messagesSyncStarted = true;
+    var merged = {};
+    function applyAll(){
+      messages = Object.keys(merged).map(function(k){ return merged[k]; }).sort(function(a,b){
+        var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      render();
+    }
+    function makeHandler(){
+      var seenInitial = false;
+      return function(snap){
+        snap.docChanges().forEach(function(change){
+          if(change.type==='removed'){ delete merged[change.doc.id]; return; }
+          var data = Object.assign({id:change.doc.id}, change.doc.data());
+          merged[change.doc.id] = data;
+          if(change.type==='added' && seenInitial && data.urgency==='urgent' && data.fromUid!==currentUser.uid &&
+             (data.toUid===currentUser.uid || data.toUid==='all')){
+            triggerUrgentAlert(data);
+          }
+        });
+        seenInitial = true;
+        applyAll();
+      };
+    }
+    if(isAdmin()){
+      db.collection('messages').orderBy('createdAt','desc').limit(300).onSnapshot(makeHandler(), function(){});
+    } else {
+      db.collection('messages').where('toUid','==','all').onSnapshot(makeHandler(), function(){});
+      db.collection('messages').where('toUid','==',currentUser.uid).onSnapshot(makeHandler(), function(){});
+      db.collection('messages').where('fromUid','==',currentUser.uid).onSnapshot(makeHandler(), function(){});
+    }
+  }
+  function composeMessageFormHtml(){
+    var others = teamUsers.filter(function(u){ return currentUser && u.uid!==currentUser.uid && !u.disabled; });
+    var options = others.map(function(u){
+      var label = (u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'('+(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+')';
+      return '<option value="'+esc(u.uid)+'">'+esc(label)+'</option>';
+    }).join('');
+    return '<div class="modal-head"><h3>New message</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="compose-message">'+
+      '<div class="field-row"><label>To</label><select class="field" name="to">'+
+        (isAdmin() ? '<option value="all">Everyone</option>' : '')+
+        options+
+      '</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Urgency</label><select class="field" name="urgency">'+
+        '<option value="normal">Normal</option>'+
+        '<option value="important">Important</option>'+
+        '<option value="urgent">Urgent — pops up with a sound for the recipient</option>'+
+      '</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Message</label><textarea class="field" name="body" rows="4" maxlength="2000" required autofocus></textarea></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Send</button></div>'+
+    '</form>';
+  }
+  function messageRowHtml(m){
+    var unread = isMessageForMe(m) && (m.readBy||[]).indexOf(currentUser.uid)===-1;
+    var when = (m.createdAt && m.createdAt.toDate) ? fmtDate(m.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Sending…';
+    var toLabel = m.toUid==='all' ? 'Everyone' : (m.toLabel || 'a team member');
+    var attr = unread ? ' data-action="mark-message-read:'+m.id+'"' : '';
+    return '<div class="message-row'+(unread?' unread':'')+'"'+attr+'>'+
+      '<div style="flex:1">'+
+        '<div>'+(unread?'<strong>':'')+esc(m.fromLabel||'Unknown')+(unread?'</strong>':'')+' <span class="hint">→ '+esc(toLabel)+'</span></div>'+
+        '<div style="margin-top:2px">'+esc(m.body||'')+'</div>'+
+        '<div class="message-meta">'+when+(unread?' · tap to mark read':'')+'</div>'+
+      '</div>'+
+    '</div>';
+  }
+  function messagesPanel(){
+    if(!currentUser) return '<div class="empty">'+ICONS.empty+'<div>Sign in to use Messages.</div></div>';
+    var showAll = isAdmin() && messagesViewAll;
+    var list = showAll ? messages : messages.filter(function(m){ return isMessageForMe(m) || m.fromUid===currentUser.uid; });
+    var groups = [['urgent','Urgent'],['important','Important'],['normal','Normal']];
+    var sectionsHtml = groups.map(function(g){
+      var items = list.filter(function(m){ return (m.urgency||'normal')===g[0]; });
+      if(!items.length) return '';
+      return '<div class="card"><div class="card-title"><h3><span class="role-pill '+g[0]+'">'+g[1]+'</span></h3><span class="hint">'+items.length+'</span></div>'+
+        items.map(messageRowHtml).join('')+
+      '</div>';
+    }).join('');
+    return '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px">'+
+        '<button class="btn primary" data-action="open-compose-message">'+ICONS.plus+'New message</button>'+
+        (isAdmin() ? '<button class="btn" data-action="toggle-messages-view">'+(showAll?'Show my messages':'Show all team messages')+'</button>' : '')+
+      '</div>'+
+      (sectionsHtml || '<div class="empty">'+ICONS.empty+'<div>No messages yet.</div></div>');
   }
 
   /* ============================= FINANCE (administrator + financial staff, approval-gated) ============================= */
@@ -1361,11 +1550,9 @@
   function financeTopbarActions(){
     if(!canSeeFinance()) return '';
     var actions = currencySelectHTML();
-    if(isAdmin()){
-      actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
-      if(mpesaEnabled) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
-    }
-    actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'Propose transaction');
+    if(isAdmin()) actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
+    if(mpesaEnabled && (isAdmin() || isFinancialStaffUser())) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
+    actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'New transaction');
     return actions;
   }
   function financePanel(){
@@ -1384,7 +1571,7 @@
 
     var lockNote = isAdmin()
       ? '<div class="banner">You can add, edit, approve, and delete entries here.'+(mpesaEnabled?' Payments made straight to the farm\'s M-Pesa till are picked up automatically.':'')+'</div>'
-      : '<div class="banner">Entries you add here wait for the administrator\'s approval before they count toward the balance.</div>';
+      : '<div class="banner">Deposits you add count right away. Withdrawals wait for the administrator\'s approval before they affect the balance.</div>';
 
     var rows = txns.map(function(t){
       var status = t.status || 'approved';
@@ -1415,8 +1602,8 @@
     var f = financeState();
     var t = id ? f.transactions.find(function(x){return x.id===id;}) : null;
     var curAmount = t ? (t.amount * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
-    return '<div class="modal-head"><h3>'+(t?'Edit transaction':(isAdmin()?'Add transaction':'Propose transaction'))+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    (!t && !isAdmin() ? '<p class="hint">This will be sent to the administrator for approval before it affects the balance.</p>' : '')+
+    return '<div class="modal-head"><h3>'+(t?'Edit transaction':(isAdmin()?'Add transaction':'New transaction'))+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    (!t && !isAdmin() ? '<p class="hint">A deposit is added right away. A withdrawal is sent to the administrator for approval before it affects the balance.</p>' : '')+
     '<form data-form="finance">'+
       '<input type="hidden" name="id" value="'+(t?t.id:'')+'">'+
       '<div class="field-grid">'+
@@ -1431,7 +1618,7 @@
         '<div class="field-row"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(t?esc(t.note||''):'')+'" placeholder="e.g. Egg sales deposit, feed supplier payment"></div>'+
-      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(t?'Save changes':(isAdmin()?'Add transaction':'Send for approval'))+'</button></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(t?'Save changes':'Add transaction')+'</button></div>'+
     '</form>';
   }
   function openingBalanceFormHtml(){
@@ -1475,7 +1662,8 @@
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
     finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
-    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel }
+    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
+    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel }
   };
 
   /* ============================= MODAL / TOAST ============================= */
@@ -1716,7 +1904,7 @@
         openModal(openingBalanceFormHtml());
         break;
       case 'open-mpesa-deposit':
-        if(!isAdmin()){ toast('Only the administrator can start M-Pesa deposits.'); break; }
+        if(!isAdmin() && !isFinancialStaffUser()){ toast('Only the administrator or financial staff can start M-Pesa deposits.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
         openModal(mpesaDepositFormHtml());
         break;
@@ -1759,6 +1947,32 @@
         }).catch(function(err){ toast((err&&err.message)||'Could not review that entry.'); });
         break;
       }
+      case 'access-log-page':
+        if(a1==='prev') accessLogPage = Math.max(0, accessLogPage-1);
+        else accessLogPage = accessLogPage+1;
+        render();
+        break;
+      case 'open-compose-message':
+        if(!currentUser){ toast('Sign in first.'); break; }
+        openModal(composeMessageFormHtml());
+        break;
+      case 'toggle-messages-view':
+        if(!isAdmin()) break;
+        messagesViewAll = !messagesViewAll;
+        render();
+        break;
+      case 'mark-message-read':
+        firebase.functions().httpsCallable('markMessageRead')({id:a1}).catch(function(){});
+        break;
+      case 'urgent-alert-dismiss':
+        urgentAlertQueue.shift();
+        renderUrgentAlert();
+        break;
+      case 'urgent-alert-view':
+        urgentAlertQueue.shift();
+        renderUrgentAlert();
+        ui.section = 'messages'; saveUIPref(); render();
+        break;
       default: break;
     }
   }
@@ -1959,10 +2173,30 @@
     }
     if(name==='add-staff'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
-      var sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle');
-      firebase.functions().httpsCallable('createStaffAccount')({email:sEmail, password:sPassword, jobTitle:sJobTitle}).then(function(){
+      var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle');
+      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle}).then(function(){
         closeModal(); toast('Account created — share the email and password with them.');
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
+      return;
+    }
+    if(name==='update-own-name'){
+      if(!currentUser){ toast('Sign in first.'); return; }
+      var ownName = (val('name')||'').trim();
+      if(!ownName){ toast('Enter a name.'); return; }
+      firebase.functions().httpsCallable('updateOwnProfile')({name:ownName}).then(function(){
+        toast('Name saved.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not save your name.'); });
+      return;
+    }
+    if(name==='compose-message'){
+      if(!currentUser){ toast('Sign in first.'); return; }
+      var toVal = val('to'), msgUrgency = val('urgency')||'normal', msgBody = (val('body')||'').trim();
+      if(!msgBody){ toast('Write a message first.'); return; }
+      if(toVal==='all' && !isAdmin()){ toast('Only the administrator can message everyone.'); return; }
+      if(!toVal){ toast('Choose who to send this to.'); return; }
+      firebase.functions().httpsCallable('sendMessage')({to:toVal, body:msgBody, urgency:msgUrgency}).then(function(){
+        closeModal(); toast('Message sent.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not send that message.'); });
       return;
     }
     if(name==='change-password'){
@@ -1996,7 +2230,7 @@
       return;
     }
     if(name==='mpesa-deposit'){
-      if(!isAdmin()){ toast('Only the administrator can start M-Pesa deposits.'); return; }
+      if(!isAdmin() && !isFinancialStaffUser()){ toast('Only the administrator or financial staff can start M-Pesa deposits.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
       var mAmount = Number(val('amount')||0), mPhone = (val('phone')||'').trim();
       var submitBtn = document.getElementById('mpesa-deposit-submit');
@@ -2040,13 +2274,18 @@
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
-  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle }
+  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name }
   var guestMode = false;
   var mpesaEnabled = false;
   var financeSyncStarted = false;
-  var usersSyncStarted = false;
+  var directorySyncStarted = false;
+  var logsSyncStarted = false;
+  var messagesSyncStarted = false;
   var teamUsers = [];
   var accessLogs = [];
+  var accessLogPage = 0;
+  var messages = [];
+  var messagesViewAll = false;
   var idleTimer = null;
   var IDLE_LIMIT_MS = 5*60*1000;
   var artifactApi = null;

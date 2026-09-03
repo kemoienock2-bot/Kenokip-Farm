@@ -42,6 +42,9 @@ function isFinancialStaff(auth) {
 function canProposeFinance(auth) {
   return auth.token.role === 'administrator' || isFinancialStaff(auth);
 }
+function roleLabelFor(role, jobTitle) {
+  return role === 'administrator' ? 'Administrator' : (JOB_TITLE_LABELS[jobTitle] || jobTitle || 'Employee');
+}
 
 // Turns a browser's User-Agent header into something readable in the access
 // log, e.g. "iPhone · Safari" or "Windows · Chrome". Best-effort string
@@ -101,6 +104,7 @@ module.exports = function (admin, db) {
     await admin.auth().setCustomUserClaims(auth.uid, { role: 'administrator', jobTitle: null });
     await db.collection('users').doc(auth.uid).set({
       email: auth.token.email || null,
+      name: null,
       role: 'administrator',
       jobTitle: null,
       disabled: false,
@@ -119,6 +123,7 @@ module.exports = function (admin, db) {
     const email = String((request.data && request.data.email) || '').trim().toLowerCase();
     const password = String((request.data && request.data.password) || '');
     const jobTitle = String((request.data && request.data.jobTitle) || '');
+    const name = String((request.data && request.data.name) || '').trim().slice(0, 60) || null;
     if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
     if (password.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
     if (!JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
@@ -134,6 +139,7 @@ module.exports = function (admin, db) {
     await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'employee', jobTitle });
     await db.collection('users').doc(userRecord.uid).set({
       email,
+      name,
       role: 'employee',
       jobTitle,
       disabled: false,
@@ -141,6 +147,16 @@ module.exports = function (admin, db) {
       createdBy: auth.uid,
     });
     return { ok: true, uid: userRecord.uid };
+  });
+
+  // Any signed-in account (administrator or employee) sets their own
+  // display name — used to identify them in messages, e.g. "Supervisor(John)".
+  const updateOwnProfile = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const name = String((request.data && request.data.name) || '').trim().slice(0, 60);
+    if (!name) throw new HttpsError('invalid-argument', 'Enter a name.');
+    await db.collection('users').doc(auth.uid).set({ name }, { merge: true });
+    return { ok: true, name };
   });
 
   // Administrator changes an employee's job title, or enables/disables
@@ -221,9 +237,12 @@ module.exports = function (admin, db) {
   // Finance — the only writable path for money data
   // ---------------------------------------------------------------------
 
-  // Administrator: entry is final immediately.
-  // Financial Staff: entry is saved as "pending" and excluded from the
-  // balance until the administrator reviews it.
+  // Administrator: entry is final immediately, whichever direction it is.
+  // Financial Staff: receiving money (a deposit) is final immediately too —
+  // there's nothing to approve about money that's already in the account.
+  // Sending money out (a withdrawal) is saved as "pending" and excluded from
+  // the balance until the administrator reviews it, since that's the
+  // direction that actually needs sign-off.
   const proposeFinanceEntry = onCall({ region: 'us-central1' }, async (request) => {
     const auth = requireAuth(request);
     if (!canProposeFinance(auth)) throw new HttpsError('permission-denied', 'Only the administrator or financial staff can add Finance entries.');
@@ -236,14 +255,15 @@ module.exports = function (admin, db) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new HttpsError('invalid-argument', 'Enter a valid date.');
 
     const isAdmin = auth.token.role === 'administrator';
+    const autoApproved = isAdmin || type === 'deposit';
     const entry = {
       id: genId('fin'),
       date, type, amount, note,
-      status: isAdmin ? 'approved' : 'pending',
+      status: autoApproved ? 'approved' : 'pending',
       proposedBy: auth.uid,
       proposedByEmail: auth.token.email || null,
     };
-    if (isAdmin) { entry.reviewedBy = auth.uid; entry.reviewedAt = new Date().toISOString(); }
+    if (autoApproved) { entry.reviewedBy = auth.uid; entry.reviewedAt = new Date().toISOString(); }
     await mutateFinanceDoc((data) => { data.transactions.push(entry); });
     return { ok: true, id: entry.id, status: entry.status };
   });
@@ -309,10 +329,76 @@ module.exports = function (admin, db) {
     return { ok: true };
   });
 
+  // ---------------------------------------------------------------------
+  // Team messaging — broadcast (administrator only) or one-to-one (anyone
+  // signed in). Written only from here so the sender's name/role can't be
+  // spoofed — the app never lets the client claim to be someone else.
+  // ---------------------------------------------------------------------
+
+  const URGENCY_LEVELS = ['normal', 'important', 'urgent'];
+
+  const sendMessage = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const d = request.data || {};
+    const to = String(d.to || '');
+    const body = String(d.body || '').trim().slice(0, 2000);
+    const urgency = URGENCY_LEVELS.includes(d.urgency) ? d.urgency : 'normal';
+    if (!body) throw new HttpsError('invalid-argument', 'Write a message first.');
+    if (!to) throw new HttpsError('invalid-argument', 'Choose who to send this to.');
+    if (to === auth.uid) throw new HttpsError('invalid-argument', "You can't message yourself.");
+
+    const isAdmin = auth.token.role === 'administrator';
+    if (to === 'all' && !isAdmin) {
+      throw new HttpsError('permission-denied', 'Only the administrator can message the whole team.');
+    }
+
+    let toLabel = 'Everyone';
+    if (to !== 'all') {
+      const toSnap = await db.collection('users').doc(to).get();
+      if (!toSnap.exists) throw new HttpsError('not-found', "That team member's account no longer exists.");
+      const toData = toSnap.data();
+      toLabel = roleLabelFor(toData.role, toData.jobTitle) + '(' + (toData.name || (toData.email ? toData.email.split('@')[0] : 'Unnamed')) + ')';
+    }
+
+    const fromSnap = await db.collection('users').doc(auth.uid).get();
+    const fromData = fromSnap.exists ? fromSnap.data() : {};
+    const fromLabel = roleLabelFor(auth.token.role, auth.token.jobTitle) + '(' + (fromData.name || (auth.token.email ? auth.token.email.split('@')[0] : 'Unnamed')) + ')';
+
+    await db.collection('messages').add({
+      fromUid: auth.uid,
+      fromLabel,
+      toUid: to,
+      toLabel,
+      body,
+      urgency,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      readBy: [auth.uid],
+    });
+    return { ok: true };
+  });
+
+  // Marks one message as read by the caller — only the actual recipient (or
+  // a broadcast's recipients) can mark it, and the administrator, who can
+  // see everything.
+  const markMessageRead = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const id = String((request.data && request.data.id) || '');
+    if (!id) throw new HttpsError('invalid-argument', 'Missing message.');
+    const ref = db.collection('messages').doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'That message no longer exists.');
+    const msg = snap.data();
+    const allowed = auth.token.role === 'administrator' || msg.toUid === auth.uid || msg.toUid === 'all' || msg.fromUid === auth.uid;
+    if (!allowed) throw new HttpsError('permission-denied', "That message isn't addressed to you.");
+    await ref.set({ readBy: admin.firestore.FieldValue.arrayUnion(auth.uid) }, { merge: true });
+    return { ok: true };
+  });
+
   return {
-    bootstrapFirstAdmin, createStaffAccount, updateStaffAccount, deleteStaffAccount,
+    bootstrapFirstAdmin, createStaffAccount, updateStaffAccount, deleteStaffAccount, updateOwnProfile,
     logAccess,
     proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
+    sendMessage, markMessageRead,
   };
 };
 

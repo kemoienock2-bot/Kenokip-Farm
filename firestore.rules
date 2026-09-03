@@ -27,13 +27,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Team accounts. The administrator can see everyone; any signed-in
-    // person can see their own record (so the app can show their role).
-    // Only the createStaffAccount / updateStaffAccount / deleteStaffAccount
-    // Cloud Functions may write here.
+    // Team accounts. Any signed-in account (administrator or employee) can
+    // read the roster — this is what lets someone pick a team member to
+    // message. Guests (not signed in at all) still can't see it. Only the
+    // createStaffAccount / updateStaffAccount / deleteStaffAccount /
+    // updateOwnProfile Cloud Functions may write here.
     match /users/{uid} {
-      allow read: if request.auth != null &&
-        (request.auth.token.role == 'administrator' || request.auth.uid == uid);
+      allow read: if request.auth != null;
       allow write: if false;
     }
 
@@ -41,6 +41,20 @@ service cloud.firestore {
     // only the logAccess Cloud Function may write here.
     match /accessLogs/{id} {
       allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow write: if false;
+    }
+
+    // Team messaging. Administrator sees everything (oversight); anyone
+    // else sees a message only if they sent it, it's addressed to them, or
+    // it's a broadcast to everyone. Only the sendMessage / markMessageRead
+    // Cloud Functions may write here — this is what stops anyone from
+    // faking who a message is "from".
+    match /messages/{id} {
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' ||
+         resource.data.fromUid == request.auth.uid ||
+         resource.data.toUid == request.auth.uid ||
+         resource.data.toUid == 'all');
       allow write: if false;
     }
 

@@ -81,15 +81,20 @@ async function addTransactionIfNew(txn) {
   });
 }
 
-// Called from the app when the signed-in owner taps "Add via M-Pesa".
-// Sends the real Safaricom STK Push prompt to their own phone — the PIN is
-// entered there, on Safaricom's own screen, never in this app.
+// Called from the app when the administrator or Financial Staff taps "Add
+// via M-Pesa". Sends the real Safaricom STK Push prompt to their own phone —
+// the PIN is entered there, on Safaricom's own screen, never in this app.
+// This is a deposit (money coming in), so — same as any other deposit —
+// it doesn't need the administrator's approval even when Financial Staff
+// starts it.
 exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }, async (request) => {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Sign in as the administrator first.');
+    throw new HttpsError('unauthenticated', 'Sign in first.');
   }
-  if (request.auth.token.role !== 'administrator') {
-    throw new HttpsError('permission-denied', 'Only the administrator can start M-Pesa deposits.');
+  const role = request.auth.token.role;
+  const isFinancialStaff = role === 'employee' && request.auth.token.jobTitle === 'financial';
+  if (role !== 'administrator' && !isFinancialStaff) {
+    throw new HttpsError('permission-denied', 'Only the administrator or financial staff can start M-Pesa deposits.');
   }
   const amount = Number(request.data && request.data.amount);
   const phone = normalizePhone(request.data && request.data.phone);

@@ -1,6 +1,34 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update:** the access log (Team tab, administrator-only) now turns a
+> **Update (latest):** four changes —
+> 1. **Access log is now paginated**, 10 sign-ins per page with Prev/Next.
+> 2. **Financial Staff can now receive money without your approval** —
+>    deposits (money in, including "Add via M-Pesa", now available to them
+>    too) are added immediately. Only withdrawals (money out) still wait for
+>    you to approve. You (Administrator) are unaffected — everything you add
+>    is still immediate either way.
+> 3. **In-app messaging** — a new Messages tab (bell icon, with an unread
+>    badge) for the whole team. You can message everyone at once or one
+>    person; everyone else can message any individual team member (including
+>    you) but not the whole team. Messages are written with an urgency level
+>    (Normal / Important / Urgent) and grouped that way in the inbox. Every
+>    message shows who it's from as "Role(Name)" — e.g. "Supervisor(John)" —
+>    so team members now set their own display name once, from Settings →
+>    Your account (you can set yours there too, and it's also asked for when
+>    you add a new team member from now on).
+> 4. **Urgent messages pop up immediately** with a warning banner and a
+>    short alert sound, for whoever they're addressed to (or everyone, for a
+>    broadcast) — impossible to miss even if Messages isn't open.
+>
+> **This one needs both steps**: redeploy functions (`firebase deploy --only
+> functions`) *and* republish the Firestore rules in `firestore.rules` (two
+> rules changed: the team roster is now readable by any signed-in account,
+> not just you, since everyone needs it to pick who to message; and a new
+> `messages` collection was added, oversight-visible to you and otherwise
+> restricted to sender/recipient/broadcast). Then replace `index.html` and
+> `sw.js` as usual.
+
+> **Earlier update:** the access log (Team tab, administrator-only) now turns a
 > sign-in's coordinates into an actual place name — e.g. "Kondele, Kisumu,
 > Kenya" — using a free map lookup, and also shows which device/browser was
 > used. If it still shows "Location denied" for someone, that means their
