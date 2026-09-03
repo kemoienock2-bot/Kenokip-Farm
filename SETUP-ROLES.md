@@ -1,6 +1,34 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** four changes —
+> **Update (latest):** three changes —
+> 1. **Messages now have a Reply button.** Tapping it opens a new message
+>    already addressed back to whoever sent the original, with a quote of
+>    what they said shown above the reply so the thread stays clear (even
+>    though it's technically a new message each time, not a live chat
+>    thread).
+> 2. **Urgent messages can now pop up even when a team member isn't
+>    actively looking at the app** — as a real notification from the
+>    browser/phone itself, with sound, as long as the app or its browser
+>    tab is still running somewhere in the background (another tab,
+>    minimized, or a phone with the screen off but the app not fully
+>    closed). Each person turns this on once per device, from **Settings →
+>    Your account → "Enable background urgent alerts"** (their browser will
+>    ask them to allow it). **Important limit:** this can't reach someone
+>    whose browser or app has been fully closed/force-quit — nothing is
+>    running to receive it in that case. Making it work even then needs a
+>    much bigger "push notification" system (a server permanently reaching
+>    out to Apple/Google's own notification services) — tell me if you
+>    want that built next; it's a separate, larger job.
+> 3. **You can now name team members who were added before names existed**
+>    — go to **Team**, and there's an "Edit name" button next to each of
+>    their rows.
+>
+> **This one needs both steps**: redeploy functions (`firebase deploy --only
+> functions`) — the reply feature and the name-editing both live there —
+> *and* replace `index.html` and `sw.js` as usual. No Firestore rules change
+> this time.
+
+> **Earlier update:** four changes —
 > 1. **Access log is now paginated**, 10 sign-ins per page with Prev/Next.
 > 2. **Financial Staff can now receive money without your approval** —
 >    deposits (money in, including "Add via M-Pesa", now available to them

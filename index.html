@@ -1102,6 +1102,18 @@
   }
   function accountCardHTML(){
     if(!currentUser) return '';
+    var notifSupported = (typeof Notification !== 'undefined');
+    var notifPerm = notifSupported ? Notification.permission : 'unsupported';
+    var notifRowHtml;
+    if(!notifSupported){
+      notifRowHtml = '<span class="hint">Background alerts aren\'t supported in this browser.</span>';
+    } else if(notifPerm==='granted'){
+      notifRowHtml = '<span class="hint">✓ Urgent messages can pop up on this device even when you\'re not looking at the app.</span>';
+    } else if(notifPerm==='denied'){
+      notifRowHtml = '<span class="hint">Background alerts are blocked for this site — turn on notifications for it in your browser\'s site settings to enable this.</span>';
+    } else {
+      notifRowHtml = '<button class="btn" data-action="enable-notifications">Enable background urgent alerts</button>';
+    }
     return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
       (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 5 minutes of inactivity.' : '')+
@@ -1110,6 +1122,9 @@
         '<div class="field-row" style="max-width:220px"><label>Your name (shown in messages)</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentUser.name||'')+'"></div>'+
         '<button class="btn" type="submit">Save name</button>'+
       '</form>'+
+      '<div style="margin-bottom:14px">'+notifRowHtml+
+        '<p class="hint" style="margin-top:6px">This lets an <strong>Urgent</strong> message pop up as a notification on this device while the app or browser is running in the background (another tab, minimized, or your phone locked with it still open) — not while it\'s fully closed. Needs to be turned on once per device.</p>'+
+      '</div>'+
       '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
         '<button class="btn" data-action="open-change-password">Change password</button>'+
         '<button class="btn ghost" data-action="signout">Sign out</button>'+
@@ -1320,6 +1335,15 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
+  function editStaffNameFormHtml(uid, currentName){
+    return '<div class="modal-head"><h3>Edit name</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">For team members added before names existed, or if theirs still needs fixing.</p>'+
+    '<form data-form="edit-staff-name">'+
+      '<input type="hidden" name="uid" value="'+esc(uid)+'">'+
+      '<div class="field-row"><label>Name</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentName||'')+'" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
   function resetStaffPasswordFormHtml(uid, email){
     return '<div class="modal-head"><h3>Reset password</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">There\'s no way to see '+esc(email||'this account')+'\'s existing password — Firebase never stores it in a readable form, not even for the administrator. This sets a new one instead, which you then share with them the same way as before.</p>'+
@@ -1338,6 +1362,7 @@
         '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
         '<td><div class="row-actions">'+
           (u.role==='administrator' || isSelf ? '<span class="hint">—</span>' :
+            '<button class="btn sm" data-action="open-edit-name:'+u.uid+'">Edit name</button>'+
             '<button class="btn sm" data-action="open-reset-password:'+u.uid+'">Reset password</button>'+
             '<button class="btn sm" data-action="toggle-staff:'+u.uid+'">'+(u.disabled?'Enable':'Disable')+'</button>'+
             '<button class="icon-btn" data-action="delete-staff:'+u.uid+'">'+ICONS.trash+'</button>')+
@@ -1425,6 +1450,32 @@
     urgentAlertQueue.push(msg);
     renderUrgentAlert();
     playAlertSound();
+    showBackgroundAlert(msg);
+  }
+  // A real system notification for Urgent messages, so they're impossible
+  // to miss even when this tab isn't the one on screen — another tab is
+  // focused, the window is minimized, or (on a phone) the screen is off
+  // with the app still running underneath. This can NOT wake the app back
+  // up if it's been fully closed/killed — that would need a much bigger
+  // "push notification" system (a server that can reach the device even
+  // with no tab open at all), which isn't built here.
+  function showBackgroundAlert(msg){
+    if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+    if(!document.hidden) return; // in-page banner + sound already cover the foreground case
+    var title = 'Urgent — '+(msg.fromLabel||'a team member');
+    var opts = {
+      body: (msg.body||'').slice(0,180),
+      icon: './icons/icon-192.png',
+      tag: 'kenokip-urgent-'+(msg.id||Date.now()),
+      requireInteraction: true
+    };
+    if(navigator.serviceWorker && navigator.serviceWorker.ready){
+      navigator.serviceWorker.ready.then(function(reg){ reg.showNotification(title, opts); }).catch(function(){
+        try{ new Notification(title, opts); }catch(e){}
+      });
+    } else {
+      try{ new Notification(title, opts); }catch(e){}
+    }
   }
   function isMessageForMe(m){
     if(!currentUser || m.fromUid===currentUser.uid) return false;
@@ -1479,16 +1530,20 @@
       db.collection('messages').where('fromUid','==',currentUser.uid).onSnapshot(makeHandler(), function(){});
     }
   }
-  function composeMessageFormHtml(){
+  function composeMessageFormHtml(prefill){
+    prefill = prefill || {};
     var others = teamUsers.filter(function(u){ return currentUser && u.uid!==currentUser.uid && !u.disabled; });
     var options = others.map(function(u){
       var label = (u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'('+(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+')';
-      return '<option value="'+esc(u.uid)+'">'+esc(label)+'</option>';
+      return '<option value="'+esc(u.uid)+'"'+(prefill.to===u.uid?' selected':'')+'>'+esc(label)+'</option>';
     }).join('');
-    return '<div class="modal-head"><h3>New message</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    var quoteHtml = prefill.quoteBody ? '<div class="hint" style="margin-bottom:12px; padding:8px 10px; border-left:3px solid var(--accent, #4a7); border-radius:6px; background:rgba(127,127,127,.12)">Replying to '+esc(prefill.quoteFrom||'a message')+': "'+esc(prefill.quoteBody)+'"</div>' : '';
+    return '<div class="modal-head"><h3>'+(prefill.replyTo?'Reply':'New message')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<form data-form="compose-message">'+
+      quoteHtml+
+      '<input type="hidden" name="replyTo" value="'+esc(prefill.replyTo||'')+'">'+
       '<div class="field-row"><label>To</label><select class="field" name="to">'+
-        (isAdmin() ? '<option value="all">Everyone</option>' : '')+
+        (isAdmin() ? '<option value="all"'+(prefill.to==='all'?' selected':'')+'>Everyone</option>' : '')+
         options+
       '</select></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Urgency</label><select class="field" name="urgency">'+
@@ -1505,11 +1560,15 @@
     var when = (m.createdAt && m.createdAt.toDate) ? fmtDate(m.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Sending…';
     var toLabel = m.toUid==='all' ? 'Everyone' : (m.toLabel || 'a team member');
     var attr = unread ? ' data-action="mark-message-read:'+m.id+'"' : '';
+    var quoteBlock = m.replyToSnippet ? '<div class="hint" style="margin:6px 0; padding:6px 8px; border-left:3px solid var(--border, #ccc)">↩ '+esc(m.replyToFromLabel||'a message')+': "'+esc(m.replyToSnippet)+'"</div>' : '';
+    var canReply = currentUser && m.fromUid && m.fromUid!==currentUser.uid;
     return '<div class="message-row'+(unread?' unread':'')+'"'+attr+'>'+
       '<div style="flex:1">'+
         '<div>'+(unread?'<strong>':'')+esc(m.fromLabel||'Unknown')+(unread?'</strong>':'')+' <span class="hint">→ '+esc(toLabel)+'</span></div>'+
+        quoteBlock+
         '<div style="margin-top:2px">'+esc(m.body||'')+'</div>'+
         '<div class="message-meta">'+when+(unread?' · tap to mark read':'')+'</div>'+
+        (canReply ? '<div style="margin-top:6px"><button class="btn sm" data-action="reply-message:'+esc(m.id)+'">Reply</button></div>' : '')+
       '</div>'+
     '</div>';
   }
@@ -1923,6 +1982,20 @@
         openModal(resetStaffPasswordFormHtml(a1, resetUser.email));
         break;
       }
+      case 'open-edit-name': {
+        if(!isAdmin()) break;
+        var editNameUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!editNameUser) break;
+        openModal(editStaffNameFormHtml(a1, editNameUser.name));
+        break;
+      }
+      case 'enable-notifications':
+        if(typeof Notification==='undefined'){ toast('Background alerts aren\'t supported in this browser.'); break; }
+        Notification.requestPermission().then(function(perm){
+          toast(perm==='granted' ? 'Background urgent alerts enabled on this device.' : 'Blocked — enable notifications for this site in your browser settings to turn this on.');
+          render();
+        });
+        break;
       case 'toggle-staff': {
         if(!isAdmin()) break;
         var staffUser = teamUsers.find(function(x){ return x.uid===a1; });
@@ -1964,6 +2037,18 @@
       case 'mark-message-read':
         firebase.functions().httpsCallable('markMessageRead')({id:a1}).catch(function(){});
         break;
+      case 'reply-message': {
+        if(!currentUser){ toast('Sign in first.'); break; }
+        var replyMsg = messages.find(function(m){ return m.id===a1; });
+        if(!replyMsg){ toast('That message is no longer available.'); break; }
+        openModal(composeMessageFormHtml({
+          to: replyMsg.fromUid,
+          quoteFrom: replyMsg.fromLabel,
+          quoteBody: (replyMsg.body||'').slice(0,160),
+          replyTo: replyMsg.id
+        }));
+        break;
+      }
       case 'urgent-alert-dismiss':
         urgentAlertQueue.shift();
         renderUrgentAlert();
@@ -2191,12 +2276,24 @@
     if(name==='compose-message'){
       if(!currentUser){ toast('Sign in first.'); return; }
       var toVal = val('to'), msgUrgency = val('urgency')||'normal', msgBody = (val('body')||'').trim();
+      var msgReplyTo = (val('replyTo')||'').trim();
       if(!msgBody){ toast('Write a message first.'); return; }
       if(toVal==='all' && !isAdmin()){ toast('Only the administrator can message everyone.'); return; }
       if(!toVal){ toast('Choose who to send this to.'); return; }
-      firebase.functions().httpsCallable('sendMessage')({to:toVal, body:msgBody, urgency:msgUrgency}).then(function(){
-        closeModal(); toast('Message sent.');
+      var msgPayload = {to:toVal, body:msgBody, urgency:msgUrgency};
+      if(msgReplyTo) msgPayload.replyTo = msgReplyTo;
+      firebase.functions().httpsCallable('sendMessage')(msgPayload).then(function(){
+        closeModal(); toast(msgReplyTo ? 'Reply sent.' : 'Message sent.');
       }).catch(function(err){ toast((err&&err.message)||'Could not send that message.'); });
+      return;
+    }
+    if(name==='edit-staff-name'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var enUid = val('uid'), enName = (val('name')||'').trim();
+      if(!enName){ toast('Enter a name.'); return; }
+      firebase.functions().httpsCallable('updateStaffAccount')({uid:enUid, name:enName}).then(function(){
+        closeModal(); toast('Name saved.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that name.'); });
       return;
     }
     if(name==='change-password'){

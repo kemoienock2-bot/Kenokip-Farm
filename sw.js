@@ -2,7 +2,7 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v10';
+var CACHE_NAME = 'kenokip-farm-v11';
 var APP_SHELL = [
   './',
   './index.html',
@@ -39,6 +39,22 @@ self.addEventListener('activate', function(event){
              .map(function(name){ return caches.delete(name); })
       );
     }).then(function(){ return self.clients.claim(); })
+  );
+});
+
+// Clicking an urgent-alert notification (shown even while this tab wasn't
+// focused) brings an already-open tab to the front, or opens a new one if
+// none is open — it can't do anything if the app has been fully closed,
+// since nothing is running to catch the click in that case.
+self.addEventListener('notificationclick', function(event){
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list){
+      for(var i=0; i<list.length; i++){
+        if('focus' in list[i]) return list[i].focus();
+      }
+      if(clients.openWindow) return clients.openWindow('./');
+    })
   );
 });
 

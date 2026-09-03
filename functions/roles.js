@@ -177,6 +177,12 @@ module.exports = function (admin, db) {
       patch.disabled = request.data.disabled;
       await admin.auth().updateUser(uid, { disabled: request.data.disabled });
     }
+    // Lets the administrator set (or fix) a team member's display name —
+    // mainly for accounts created before names existed, or if someone never
+    // got around to setting their own from Settings.
+    if (request.data && typeof request.data.name === 'string') {
+      patch.name = request.data.name.trim().slice(0, 60) || null;
+    }
     // Resets the account's password outright (there is no way to look up
     // the existing one — Firebase never stores or exposes plaintext
     // passwords, only a one-way hash, not even to the administrator). This
@@ -343,6 +349,7 @@ module.exports = function (admin, db) {
     const to = String(d.to || '');
     const body = String(d.body || '').trim().slice(0, 2000);
     const urgency = URGENCY_LEVELS.includes(d.urgency) ? d.urgency : 'normal';
+    const replyToId = d.replyTo ? String(d.replyTo).slice(0, 200) : null;
     if (!body) throw new HttpsError('invalid-argument', 'Write a message first.');
     if (!to) throw new HttpsError('invalid-argument', 'Choose who to send this to.');
     if (to === auth.uid) throw new HttpsError('invalid-argument', "You can't message yourself.");
@@ -364,7 +371,27 @@ module.exports = function (admin, db) {
     const fromData = fromSnap.exists ? fromSnap.data() : {};
     const fromLabel = roleLabelFor(auth.token.role, auth.token.jobTitle) + '(' + (fromData.name || (auth.token.email ? auth.token.email.split('@')[0] : 'Unnamed')) + ')';
 
-    await db.collection('messages').add({
+    // A reply carries a quoted snippet of the original message, resolved
+    // here (not trusted from the client) so it can't be faked. Silently
+    // dropped (not an error) if the original is gone or the caller couldn't
+    // see it — the reply itself still sends fine either way.
+    let replyMeta = null;
+    if (replyToId) {
+      const origSnap = await db.collection('messages').doc(replyToId).get();
+      if (origSnap.exists) {
+        const orig = origSnap.data();
+        const canSeeOrig = isAdmin || orig.fromUid === auth.uid || orig.toUid === auth.uid || orig.toUid === 'all';
+        if (canSeeOrig) {
+          replyMeta = {
+            replyTo: replyToId,
+            replyToFromLabel: orig.fromLabel || null,
+            replyToSnippet: String(orig.body || '').slice(0, 160),
+          };
+        }
+      }
+    }
+
+    await db.collection('messages').add(Object.assign({
       fromUid: auth.uid,
       fromLabel,
       toUid: to,
@@ -373,7 +400,7 @@ module.exports = function (admin, db) {
       urgency,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       readBy: [auth.uid],
-    });
+    }, replyMeta || {}));
     return { ok: true };
   });
 
