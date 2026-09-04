@@ -1809,18 +1809,40 @@
         setSyncStatus('err');
       });
       if(firebase.auth){
-        firebase.auth().onAuthStateChanged(function(user){
-          stopIdleTimer();
-          if(!user){
-            currentUser = null;
-            readOnly = guestMode;
-            render();
-            return;
+        // By default Firebase keeps someone signed in indefinitely on a
+        // device (across closing the browser, reopening the app, etc.) —
+        // that's the "remembered session" you asked to turn off. Switching
+        // to NONE persistence means nothing about a sign-in is ever written
+        // to this device at all, so every fresh page load starts signed
+        // out and always requires the sign-in form + button, on every
+        // account, every time. The one-time forced sign-out below just
+        // clears out any session that was already remembered on this
+        // device from before this change shipped.
+        var AUTH_MIGRATION_KEY = 'kenokip-auth-no-remember-v1';
+        var clearLegacySession = Promise.resolve();
+        try{
+          if(!localStorage.getItem(AUTH_MIGRATION_KEY)){
+            clearLegacySession = firebase.auth().signOut().catch(function(){}).then(function(){
+              try{ localStorage.setItem(AUTH_MIGRATION_KEY, '1'); }catch(e){}
+            });
           }
-          user.getIdTokenResult(false).then(function(res){
-            handleSignedInUser(user, res.claims || {});
-          }).catch(function(){
-            firebase.auth().signOut();
+        }catch(e){}
+        clearLegacySession.then(function(){
+          return firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){});
+        }).then(function(){
+          firebase.auth().onAuthStateChanged(function(user){
+            stopIdleTimer();
+            if(!user){
+              currentUser = null;
+              readOnly = guestMode;
+              render();
+              return;
+            }
+            user.getIdTokenResult(false).then(function(res){
+              handleSignedInUser(user, res.claims || {});
+            }).catch(function(){
+              firebase.auth().signOut();
+            });
           });
         });
       } else {

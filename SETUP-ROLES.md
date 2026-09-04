@@ -1,6 +1,19 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** the Overview page's **all-time deficit/profit** card
+> **Update (latest):** sign-ins are no longer remembered on a device.
+> Before, once someone signed in successfully, Firebase kept them signed in
+> indefinitely on that browser/device — closing the app and reopening it
+> later would skip straight past the sign-in form. Every sign-in (yours
+> included) now requires filling in the form and pressing **Sign in** every
+> single time the app is opened or reloaded, with no exceptions. The first
+> time each device loads this update, it also automatically signs out
+> whichever account was remembered there from before — so don't be
+> surprised if the very next time you or your team opens the app, it shows
+> the welcome screen instead of going straight in like it used to; that's
+> expected, one-time cleanup. Front-end only — just replace `index.html`
+> and `sw.js`, no functions redeploy or rules change needed.
+
+> **Earlier update:** the Overview page's **all-time deficit/profit** card
 > and the **Profit** stat tile are now visible only to you (Administrator)
 > and Financial Staff — the same tier as the Finance tab itself. Supervisors,
 > Vets, and Farmhands still see everything else on Overview (eggs, flock,
