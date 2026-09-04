@@ -1,6 +1,51 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** two small fixes to the Finance/authenticator update —
+> **Update (latest):** reworked sign-in timeouts, plus a brand-new Finance
+> portal lock. Here's exactly what changed and the assumptions I made where
+> your instructions left room for interpretation — flag anything you'd
+> rather have differently:
+>
+> 1. **Reloading the page no longer signs anyone out.** The "sign in every
+>    single time" behavior from a couple of updates ago is gone. Everyone
+>    now stays signed in on their device the normal way (closing the app and
+>    reopening it later goes straight back in), **except** you and Financial
+>    Staff.
+> 2. **You and Financial Staff are automatically signed out 10 minutes after
+>    signing in.** This is a flat 10-minute clock from the moment of
+>    sign-in — it does **not** reset while you're actively using the app,
+>    and it keeps counting even if the app is in the background or the page
+>    gets reloaded partway through, so it can't be dodged either way. I read
+>    "timeout after 10 minutes" as a fixed session length rather than the
+>    old activity-based 5-minute idle timer — tell me if you'd actually
+>    prefer it to reset every time you're active instead (i.e. only sign
+>    out after 10 minutes of doing nothing).
+> 3. **Supervisors, Vets, and Farmhands have no timeout at all** — they stay
+>    signed in for as long as they're online, foreground or background,
+>    exactly as you asked.
+> 4. **New: the Finance portal itself is now locked behind its own gate**,
+>    separate from just being able to see the Finance tab. Opening Finance
+>    now asks for two things: a **Finance portal password** (set by you
+>    only — new "Finance portal password" box on the Team page — and shared
+>    only with whoever you want to have Finance access) and a **Finance
+>    portal authenticator code** — a second, completely separate
+>    authenticator-app entry from the one used to reveal amounts / send
+>    M-Pesa (set up from Settings → Your account, it shows up as its own
+>    "Kenokip Farm Finance Portal" entry in Google Authenticator/Authy so
+>    the two codes can't be mixed up).
+> 5. **Inside the Finance portal, 2 minutes of inactivity locks it again**
+>    (back to asking for the password + code) — this one *is* a normal
+>    activity-based idle timer, separate from the 10-minute clock in #2. I
+>    made this re-lock just the Finance portal, not sign out of the whole
+>    app — say the word if you actually want the whole account signed out
+>    instead.
+>
+> **Needs both steps**: redeploy functions (`firebase deploy --only
+> functions`) — all of the Finance portal password/code logic lives there —
+> and replace `index.html` and `sw.js` as usual. No Firestore rules change
+> this time (the new Finance portal password piggybacks on the same locked
+> `security` collection already in the rules).
+
+> **Earlier update:** two small fixes to the Finance/authenticator update —
 > 1. **Fixed the eye icon rendering huge, covering the whole screen.** It
 >    had no size limit in one spot where it was dropped inline into a
 >    sentence of text (every other icon in the app is inside a button,

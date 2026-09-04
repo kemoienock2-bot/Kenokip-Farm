@@ -1155,7 +1155,7 @@
     }
     return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
-      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 5 minutes of inactivity.' : '')+
+      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically 10 minutes after signing in — including while the app is in the background — though reloading the page on its own won\'t sign you out early.' : '')+
       '</p>'+
       '<form data-form="update-own-name" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">'+
         '<div class="field-row" style="max-width:220px"><label>Your name (shown in messages)</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentUser.name||'')+'"></div>'+
@@ -1173,6 +1173,7 @@
   }
   function authAppSectionHTML(){
     var enrolled = !!(currentUser && currentUser.totpEnrolled);
+    var portalEnrolled = !!(currentUser && currentUser.portalTotpEnrolled);
     return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
       '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.shield+'</span><strong>Authenticator app</strong></div>'+
       (enrolled
@@ -1180,6 +1181,14 @@
           '<button class="btn sm" data-action="open-authapp-setup">Set up on a new device</button>'
         : '<p class="hint">Not set up yet. Once it is, revealing Finance amounts and sending money via M-Pesa will require a code from an app like Google Authenticator or Authy.</p>'+
           '<button class="btn sm primary" data-action="open-authapp-setup">Set up authenticator app</button>')+
+    '</div>'+
+    '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.shield+'</span><strong>Finance portal authenticator</strong></div>'+
+      (portalEnrolled
+        ? '<p class="hint">✓ Set up — this is a separate code (its own entry in your authenticator app) needed, along with the Finance portal password, to open Finance at all.</p>'+
+          '<button class="btn sm" data-action="open-portal-authapp-setup">Set up on a new device</button>'
+        : '<p class="hint">Not set up yet. This is a second, separate code from the one above — set it up here, then ask the administrator for the Finance portal password, to be able to open Finance.</p>'+
+          '<button class="btn sm primary" data-action="open-portal-authapp-setup">Set up Finance portal authenticator</button>')+
     '</div>';
   }
 
@@ -1228,29 +1237,79 @@
     '</div>';
   }
 
-  /* ---- idle auto sign-out (accounts that can touch Finance only) ---- */
+  /* ---- 10-minute session expiry (administrator + Financial Staff only) ----
+     Unlike a plain "idle" timer, this counts real elapsed time since
+     sign-in, not activity — it does not reset while you're using the app,
+     and it keeps counting even while the tab/app is in the background (a
+     background setTimeout can get throttled or paused by the browser, so
+     this checks against a stored timestamp with Date.now() instead of
+     relying on one long-running timer). The start time lives in
+     localStorage (keyed by uid) precisely so it survives a page reload —
+     reloading does NOT give you a fresh 10 minutes. Every other role
+     (Supervisor, Vet, Farmhand) has no timeout at all and stays signed in
+     indefinitely, foreground or background. */
   function idleTimeoutApplies(){ return isAdmin() || isFinancialStaffUser(); }
-  function resetIdleTimer(){
-    if(!idleTimeoutApplies()) return;
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(function(){
-      toast('Signed out after 5 minutes of inactivity — for the safety of financial data.');
+  function sessionStartKey(uid){ return 'kenokip-session-start-'+uid; }
+  function sessionExpiryCheck(){
+    if(!currentUser || !idleTimeoutApplies()) return;
+    var key = sessionStartKey(currentUser.uid);
+    var start = Number(localStorage.getItem(key) || 0);
+    if(!start){
+      start = Date.now();
+      try{ localStorage.setItem(key, String(start)); }catch(e){}
+    }
+    if(Date.now() - start >= SESSION_LIMIT_MS){
+      stopIdleTimer();
+      try{ localStorage.removeItem(key); }catch(e){}
+      toast('Signed out after 10 minutes — for the safety of financial data.');
       firebase.auth().signOut();
-    }, IDLE_LIMIT_MS);
+    }
   }
   function startIdleTimer(){
     stopIdleTimer();
     if(!idleTimeoutApplies()) return;
-    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
-      document.addEventListener(evt, resetIdleTimer, {passive:true});
-    });
-    resetIdleTimer();
+    sessionExpiryCheck();
+    idleTimer = setInterval(sessionExpiryCheck, 15000);
+    document.addEventListener('visibilitychange', sessionExpiryCheck);
   }
   function stopIdleTimer(){
-    clearTimeout(idleTimer);
+    clearInterval(idleTimer);
+    idleTimer = null;
+    document.removeEventListener('visibilitychange', sessionExpiryCheck);
+  }
+
+  /* ---- Finance portal: a separate 2-minute *activity-based* idle lock,
+     independent of the 10-minute session-expiry clock above. This one
+     behaves like the old idle timer used to (resets on mouse/keyboard/touch
+     activity) — it locks the Finance portal (back to asking for the portal
+     password + its own code) rather than signing the whole app out. ---- */
+  var FINANCE_PORTAL_IDLE_MS = 2*60*1000;
+  function resetFinancePortalIdleTimer(){
+    if(!financePortalUnlocked) return;
+    clearTimeout(financePortalIdleTimer);
+    financePortalIdleTimer = setTimeout(function(){
+      lockFinancePortal('Finance portal locked after 2 minutes of inactivity.');
+    }, FINANCE_PORTAL_IDLE_MS);
+  }
+  function startFinancePortalTimer(){
+    stopFinancePortalTimer();
     ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
-      document.removeEventListener(evt, resetIdleTimer);
+      document.addEventListener(evt, resetFinancePortalIdleTimer, {passive:true});
     });
+    resetFinancePortalIdleTimer();
+  }
+  function stopFinancePortalTimer(){
+    clearTimeout(financePortalIdleTimer);
+    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
+      document.removeEventListener(evt, resetFinancePortalIdleTimer);
+    });
+  }
+  function lockFinancePortal(msg){
+    if(!financePortalUnlocked) return;
+    financePortalUnlocked = false;
+    stopFinancePortalTimer();
+    if(msg) toast(msg);
+    render();
   }
 
   /* ---- access logging (who signed in, from where) ---- */
@@ -1305,8 +1364,10 @@
 
   /* ---- sign-in flow (bootstrap-first-admin, then normal role resolution) ---- */
   function finishSignIn(user, claims){
-    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null, totpEnrolled:false };
+    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null, totpEnrolled:false, portalTotpEnrolled:false };
     financeRevealed = false;
+    financePortalUnlocked = false;
+    stopFinancePortalTimer();
     guestMode = false;
     readOnly = false;
     if(ui.section==='finance' && !canSeeFinance()) ui.section = 'overview';
@@ -1461,6 +1522,13 @@
         '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div style="margin-top:14px"><button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button></div>'+
       '</div>'+
+      '<div class="card"><div class="card-title"><h3>Finance portal password</h3></div>'+
+        '<p class="hint">A separate password — not anyone\'s sign-in password — that only you set. Share it only with whoever should be able to open the Finance portal; they\'ll also need their own Finance portal authenticator code (Settings → Your account) to get in.</p>'+
+        '<form data-form="set-finance-portal-password" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap">'+
+          '<div class="field-row" style="max-width:220px"><label>New Finance portal password</label><input class="field" type="password" name="password" minlength="6" placeholder="At least 6 characters" required></div>'+
+          '<button class="btn primary" type="submit">Save</button>'+
+        '</form>'+
+      '</div>'+
       '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, 10 per page — visible only to you</span></div>'+
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
         '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
@@ -1544,6 +1612,7 @@
         var d = snap.data();
         currentUser.name = d.name || null;
         currentUser.totpEnrolled = !!d.totpEnrolled;
+        currentUser.portalTotpEnrolled = !!d.portalTotpEnrolled;
         render();
       }
     }, function(){});
@@ -1662,6 +1731,7 @@
   }
   function financeTopbarActions(){
     if(!canSeeFinance()) return '';
+    if(!financePortalUnlocked) return '';
     var actions = currencySelectHTML();
     if(isAdmin()) actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
     if(mpesaEnabled && (isAdmin() || isFinancialStaffUser())) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
@@ -1671,6 +1741,7 @@
   }
   function financePanel(){
     if(!canSeeFinance()) return '<div class="empty">'+ICONS.empty+'<div>Finance isn\'t available for your account.</div></div>';
+    if(!financePortalUnlocked) return financePortalGateHTML();
     var f = financeState();
     var r = getRange('month');
     var visible = f.transactions.filter(function(t){
@@ -1717,6 +1788,18 @@
       (txns.length ? '<table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No transactions recorded yet.</div></div>')+
       '</div></div>';
+  }
+  function financePortalGateHTML(){
+    return '<div class="card" style="max-width:420px; margin:0 auto">'+
+      '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px">'+ICONS.shield+'</span>Finance portal locked</h3></div>'+
+      '<p class="hint">Enter the Finance portal password and a current Finance portal authenticator code to continue. Both are separate from your regular sign-in password and from the authenticator code used to reveal amounts or send M-Pesa payouts.</p>'+
+      '<form data-form="unlock-finance-portal">'+
+        '<div class="field-row"><label>Finance portal password</label><input class="field" type="password" name="password" autocomplete="off" required autofocus></div>'+
+        '<div class="field-row" style="margin-top:12px"><label>Finance portal authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required></div>'+
+        '<button class="btn primary" type="submit" style="width:100%; margin-top:16px" id="unlock-finance-portal-submit">Unlock Finance</button>'+
+      '</form>'+
+      (!(currentUser && currentUser.portalTotpEnrolled) ? '<p class="hint" style="margin-top:14px">Haven\'t set up the Finance portal authenticator yet? Do that first from Settings → Your account.</p>' : '')+
+    '</div>';
   }
   function financeFormHtml(id){
     var f = financeState();
@@ -1842,6 +1925,20 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Confirm</button></div>'+
     '</form>';
   }
+  function portalAuthAppSetupFormHtml(data){
+    return '<div class="modal-head"><h3>Set up Finance portal authenticator</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">This is a separate code from your regular authenticator entry — it\'ll show up as its own entry ("Kenokip Farm Finance Portal") in your app. Scan this, or enter the key manually:</p>'+
+    '<div id="authapp-qr" style="display:flex; justify-content:center; align-items:center; min-height:60px; margin-bottom:14px"><span class="hint">Loading code…</span></div>'+
+    '<div class="card" style="margin-bottom:14px"><div style="display:grid; gap:6px; font-size:13px">'+
+      '<div><strong>Account:</strong> Kenokip Farm Finance Portal ('+esc(currentUser.email||'')+')</div>'+
+      '<div><strong>Key:</strong> <span class="num" style="letter-spacing:1px; word-break:break-all">'+esc(data.secret)+'</span></div>'+
+      '<div><strong>Type:</strong> Time based</div>'+
+    '</div></div>'+
+    '<form data-form="confirm-portal-authapp">'+
+      '<div class="field-row"><label>Then enter the current 6-digit code it shows</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Confirm</button></div>'+
+    '</form>';
+  }
   function initFinanceSync(){
     if(financeSyncStarted || !db) return;
     financeSyncStarted = true;
@@ -1943,31 +2040,26 @@
         setSyncStatus('err');
       });
       if(firebase.auth){
-        // By default Firebase keeps someone signed in indefinitely on a
-        // device (across closing the browser, reopening the app, etc.) —
-        // that's the "remembered session" you asked to turn off. Switching
-        // to NONE persistence means nothing about a sign-in is ever written
-        // to this device at all, so every fresh page load starts signed
-        // out and always requires the sign-in form + button, on every
-        // account, every time. The one-time forced sign-out below just
-        // clears out any session that was already remembered on this
-        // device from before this change shipped.
-        var AUTH_MIGRATION_KEY = 'kenokip-auth-no-remember-v1';
-        var clearLegacySession = Promise.resolve();
-        try{
-          if(!localStorage.getItem(AUTH_MIGRATION_KEY)){
-            clearLegacySession = firebase.auth().signOut().catch(function(){}).then(function(){
-              try{ localStorage.setItem(AUTH_MIGRATION_KEY, '1'); }catch(e){}
-            });
-          }
-        }catch(e){}
-        clearLegacySession.then(function(){
-          return firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){});
-        }).then(function(){
+        // Sign-ins are remembered on this device (Firebase's normal
+        // default), so reloading the page — or closing the app and
+        // reopening it later — doesn't force the sign-in form again.
+        // Administrator and Financial Staff accounts are the exception:
+        // see sessionExpiryCheck()/startIdleTimer() below, which signs
+        // those two roles out automatically once 10 real minutes have
+        // passed since they signed in — that clock keeps ticking even
+        // while the app sits in the background (or the page gets
+        // reloaded), it just doesn't force a fresh sign-in on every single
+        // reload the way the old "never remember" setting did. Every other
+        // role has no such timeout at all and stays signed in indefinitely,
+        // foreground or background.
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){}).then(function(){
           firebase.auth().onAuthStateChanged(function(user){
             stopIdleTimer();
             if(!user){
+              if(currentUser){ try{ localStorage.removeItem(sessionStartKey(currentUser.uid)); }catch(e){} }
               currentUser = null;
+              financePortalUnlocked = false;
+              stopFinancePortalTimer();
               readOnly = guestMode;
               render();
               return;
@@ -2138,6 +2230,13 @@
         if(!canSeeFinance()){ toast('Not available for your account.'); break; }
         firebase.functions().httpsCallable('startTotpEnrollment')().then(function(res){
           openModal(authAppSetupFormHtml(res.data));
+          renderAuthAppQR(res.data.otpauthUri);
+        }).catch(function(err){ toast((err&&err.message)||'Could not start setup.'); });
+        break;
+      case 'open-portal-authapp-setup':
+        if(!canSeeFinance()){ toast('Not available for your account.'); break; }
+        firebase.functions().httpsCallable('startPortalTotpEnrollment')().then(function(res){
+          openModal(portalAuthAppSetupFormHtml(res.data));
           renderAuthAppQR(res.data.otpauthUri);
         }).catch(function(err){ toast((err&&err.message)||'Could not start setup.'); });
         break;
@@ -2557,6 +2656,40 @@
       }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
       return;
     }
+    if(name==='confirm-portal-authapp'){
+      if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      var portalSetupCode = (val('code')||'').trim();
+      firebase.functions().httpsCallable('confirmPortalTotpEnrollment')({ code: portalSetupCode }).then(function(){
+        closeModal(); toast('Finance portal authenticator set up.');
+      }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
+      return;
+    }
+    if(name==='unlock-finance-portal'){
+      if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      var fpPassword = val('password')||'', fpCode = (val('code')||'').trim();
+      var fpBtn = document.getElementById('unlock-finance-portal-submit');
+      if(fpBtn){ fpBtn.disabled = true; fpBtn.textContent = 'Checking…'; }
+      firebase.functions().httpsCallable('unlockFinancePortal')({ password: fpPassword, code: fpCode }).then(function(){
+        financePortalUnlocked = true;
+        startFinancePortalTimer();
+        toast('Finance portal unlocked.');
+        render();
+      }).catch(function(err){
+        if(fpBtn){ fpBtn.disabled = false; fpBtn.textContent = 'Unlock Finance'; }
+        toast((err&&err.message)||'Could not unlock the Finance portal.');
+      });
+      return;
+    }
+    if(name==='set-finance-portal-password'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var newPortalPw = val('password')||'';
+      if(newPortalPw.length<6){ toast('Use at least 6 characters.'); return; }
+      firebase.functions().httpsCallable('setFinancePortalPassword')({ password: newPortalPw }).then(function(){
+        toast('Finance portal password saved — share it only with whoever should have Finance access.');
+        try{ form.reset(); }catch(e){}
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that password.'); });
+      return;
+    }
   }
 
   /* ============================= BOOTSTRAP ============================= */
@@ -2586,7 +2719,7 @@
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
-  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name, totpEnrolled }
+  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name, totpEnrolled, portalTotpEnrolled }
   var guestMode = false;
   var financeRevealed = false; // masked by default — cleared back to false on every fresh page load
   var mpesaEnabled = false;
@@ -2600,7 +2733,9 @@
   var messages = [];
   var messagesViewAll = false;
   var idleTimer = null;
-  var IDLE_LIMIT_MS = 5*60*1000;
+  var SESSION_LIMIT_MS = 10*60*1000;
+  var financePortalUnlocked = false; // in-memory only — re-locks on reload, and re-asks after 2 minutes idle
+  var financePortalIdleTimer = null;
   var artifactApi = null;
   var saveTimer = null;
 
