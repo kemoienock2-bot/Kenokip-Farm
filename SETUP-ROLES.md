@@ -1,6 +1,16 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** three changes —
+> **Update (latest):** the Overview page's **all-time deficit/profit** card
+> and the **Profit** stat tile are now visible only to you (Administrator)
+> and Financial Staff — the same tier as the Finance tab itself. Supervisors,
+> Vets, and Farmhands still see everything else on Overview (eggs, flock,
+> spending by category, recent activity), and can still add and view
+> individual Expenses and Income entries exactly as before — they just no
+> longer see the combined profit/deficit bottom line. This is entirely a
+> front-end change — just replace `index.html` and `sw.js`, no functions
+> redeploy or rules change needed.
+
+> **Earlier update:** three changes —
 > 1. **Messages now have a Reply button.** Tapping it opens a new message
 >    already addressed back to whoever sent the original, with a quote of
 >    what they said shown above the reply so the thread stays clear (even

@@ -718,6 +718,11 @@
     var allTimeColor = allTimeProfit<0 ? 'var(--bad)' : (allTimeProfit>0 ? 'var(--good)' : 'var(--ink)');
     var allTimeLabel = allTimeProfit<0 ? 'All-time deficit' : (allTimeProfit>0 ? 'All-time profit' : 'All-time — breaking even');
     var since = earliestRecordISO();
+    // Profit/deficit is a finance-sensitive figure — only the administrator
+    // and Financial Staff see it here, same tier as the Finance tab itself.
+    // Everyone else can still add and view individual expenses/income (that
+    // hasn't changed), just not this combined bottom-line number.
+    var showProfit = canSeeFinance();
 
     var last14 = [];
     for(var i=13;i>=0;i--){ var iso = toISO(addDays(new Date(),-i)); last14.push(sumEggs(iso,iso)); }
@@ -725,13 +730,13 @@
     var activity = buildActivity().slice(0,7);
 
     return (isEmpty ? '<div class="banner">Welcome to your ledger — start in <strong>&nbsp;Flock&nbsp;</strong> to add your birds, then log eggs and expenses as you go.</div>' : '') +
-    '<div class="card">'+
+    (showProfit ? '<div class="card">'+
       '<div class="card-title"><h3>'+allTimeLabel+'</h3><span class="hint">'+(since?'Since '+fmtDate(parseISO(since)):'This never changes with the period filter below')+'</span></div>'+
       '<div class="stat-value num" style="font-size:32px; color:'+allTimeColor+'">'+fmtMoney(Math.abs(allTimeProfit))+'</div>'+
       '<div class="hint" style="margin-top:6px">Total income '+fmtMoney(allTimeIncome)+' · Total expenses '+fmtMoney(allTimeExpense)+'</div>'+
-    '</div>'+
+    '</div>' : '')+
     '<div class="grid stats">'+
-      statTile('Profit · '+r.label, fmtMoney(profitCur), deltaBadge(profitCur,profitPrev))+
+      (showProfit ? statTile('Profit · '+r.label, fmtMoney(profitCur), deltaBadge(profitCur,profitPrev)) : '')+
       statTile('Expenses · '+r.label, fmtMoney(expenseCur), deltaBadge(expenseCur,expensePrev,true))+
       statTile('Eggs produced', eggsCur.toLocaleString()+' eggs', deltaBadge(eggsCur,eggsPrev))+
       statTile('Flock change', (nc.net>=0?'+':'')+nc.net+' birds', '<span class="hint">+'+nc.added+' added · −'+nc.removed+' lost/sold</span>')+
