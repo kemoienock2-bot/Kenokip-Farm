@@ -393,6 +393,7 @@
   function endOfYear(d){ return new Date(d.getFullYear(), 11, 31); }
   function weeksBetween(a,b){ return Math.floor((b-a)/(7*24*3600*1000)); }
   function daysBetween(a,b){ return Math.round((b-a)/(24*3600*1000)); }
+  function addDaysISO(iso, days){ var d = parseISO(iso); d.setDate(d.getDate()+days); return toISO(d); }
   function fmtDate(d,opts){ return d.toLocaleDateString('en-GB', opts||{day:'numeric',month:'short',year:'numeric'}); }
 
   function getRange(period, ref){
@@ -435,7 +436,7 @@
         expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Equipment & Housing','Utilities','Transport','Other'],
         incomeCategories:['Egg Sales','Bird Sales','Manure','Other']
       },
-      flock:[], eggs:[], eggLosses:[], expenses:[], incomes:[]
+      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[]
     };
   }
   function migrateState(data){
@@ -448,6 +449,7 @@
     merged.flock = Array.isArray(data&&data.flock) ? data.flock : [];
     merged.eggs = Array.isArray(data&&data.eggs) ? data.eggs : [];
     merged.eggLosses = Array.isArray(data&&data.eggLosses) ? data.eggLosses : [];
+    merged.broodings = Array.isArray(data&&data.broodings) ? data.broodings : [];
     merged.expenses = Array.isArray(data&&data.expenses) ? data.expenses : [];
     merged.incomes = Array.isArray(data&&data.incomes) ? data.incomes : [];
     return merged;
@@ -518,6 +520,12 @@
     return Object.entries(map).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return [eggLossReasonLabel(e[0]), e[1]]; });
   }
   function totalEggsLost(){ return (state.eggLosses||[]).reduce(function(a,x){return a+x.count;},0); }
+  // A broody hen setting on eggs — 21 days is the standard incubation
+  // period for chicken eggs (the same figure any keeper would use), so the
+  // hatch date is calculated automatically from the date brooding starts.
+  var EGG_INCUBATION_DAYS = 21;
+  function broodingHatchDateISO(b){ return addDaysISO(b.dateStarted, EGG_INCUBATION_DAYS); }
+  function broodingDaysToHatch(b){ return daysBetween(new Date(), parseISO(broodingHatchDateISO(b))); }
   function totalEggsLaid(){ return state.eggs.reduce(function(a,x){return a+x.total;},0); }
   function countBars(entries){
     if(!entries.length) return '<div class="empty">Nothing recorded yet.</div>';
@@ -609,6 +617,10 @@
     var items=[];
     state.eggs.forEach(function(e){ items.push({date:e.date,type:'egg',text:'Logged '+e.total+' eggs'}); });
     (state.eggLosses||[]).forEach(function(x){ items.push({date:x.date,type:'egg',text:'Lost '+x.count+' egg'+(x.count>1?'s':'')+' — '+eggLossReasonLabel(x.reason)}); });
+    (state.broodings||[]).forEach(function(b){
+      items.push({date:b.dateStarted,type:'egg',text:'Started brooding '+b.eggsGiven+' egg'+(b.eggsGiven>1?'s':'')});
+      if(b.status==='hatched') items.push({date:b.resolvedDate||b.dateStarted,type:'flock',text:'Brooding hatched — '+b.chicksAdded+' chick'+(b.chicksAdded===1?'':'s')+' added'});
+    });
     state.expenses.forEach(function(e){ items.push({date:e.date,type:'expense',text:'Spent '+fmtMoney(e.amount)+' on '+e.category}); });
     state.incomes.forEach(function(e){ items.push({date:e.date,type:'income',text:'Earned '+fmtMoney(e.amount)+' from '+e.category}); });
     state.flock.forEach(function(b){
@@ -835,9 +847,42 @@
           '<table><thead><tr><th>Added</th><th>Gender</th><th>Age</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
           : '<div class="empty">'+ICONS.empty+'<div>No birds recorded yet. Use the '+'+ '+'button above — or on any Chicks / Growers / Layers card — to add your first batch.</div></div>')+
         '</div></div>'+
+      broodingPanelHTML()+
       '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
         countBars(lossEntries)+
       '</div>';
+  }
+  function broodingPanelHTML(){
+    var list = (state.broodings||[]).slice().sort(function(a,b){ return a.dateStarted<b.dateStarted?1:-1; });
+    var rows = list.map(function(b){
+      var hatchDate = broodingHatchDateISO(b);
+      var statusHtml;
+      if(b.status==='hatched'){
+        statusHtml = '<span class="pill" style="background:var(--good-tint); color:var(--good)">Hatched</span> '+
+          b.chicksAdded+' chick'+(b.chicksAdded===1?'':'s')+' added'+(b.eggsNotHatched?' · '+b.eggsNotHatched+' didn\'t hatch':'');
+      } else {
+        var daysTo = broodingDaysToHatch(b);
+        statusHtml = daysTo>0
+          ? '<span class="pill pending">Brooding</span> hatches in '+daysTo+' day'+(daysTo===1?'':'s')
+          : '<span class="pill pending">Ready to check</span> expected '+fmtDate(parseISO(hatchDate));
+      }
+      return '<tr><td>'+fmtDate(parseISO(b.dateStarted))+'</td>'+
+        '<td class="num">'+b.eggsGiven+'</td>'+
+        '<td>'+fmtDate(parseISO(hatchDate))+'</td>'+
+        '<td>'+statusHtml+'</td>'+
+        '<td>'+esc(b.note||'—')+'</td>'+
+        '<td><div class="row-actions">'+
+          (b.status!=='hatched' ? '<button class="btn sm primary" data-action="open-resolve-brooding:'+b.id+'" '+(readOnly?'disabled':'')+'>Record hatch</button>' : '')+
+          '<button class="icon-btn" data-action="delete-brooding:'+b.id+'" title="Delete" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+        '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Brooding</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+list.length+' recorded</span>'+
+        '<button class="icon-btn" data-action="open-add-brooding" title="Start brooding" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
+      '<p class="hint" style="margin-top:-6px">When a hen starts sitting on eggs, log how many she\'s given here — the app works out the expected hatch date on its own (21 days). Once it\'s time, come back and record how many didn\'t hatch; the rest are added to the flock as new chicks automatically.</p>'+
+      '<div class="table-wrap">'+
+      (rows ? '<table><thead><tr><th>Started</th><th class="num">Eggs given</th><th>Expected hatch</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No brooding hens recorded yet.</div></div>')+
+      '</div></div>';
   }
 
   function historyModalHtml(batchId){
@@ -914,6 +959,34 @@
       '<div class="field-grid">'+
         '<div class="field-row"><label>Now identified as</label><select class="field" name="targetGender"><option value="female">Female (hens)</option><option value="male">Male (roosters)</option></select></div>'+
         '<div class="field-row"><label>Number of birds</label><input class="field" type="number" min="1" max="'+max+'" name="count" value="'+max+'" required></div>'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
+      '</div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
+  function broodingFormHtml(){
+    var ti = todayISO();
+    return '<div class="modal-head"><h3>Start brooding</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">These eggs come off your egg count right away (recorded as "Given for brooding"), the same as before — the app just now tracks them through to hatching.</p>'+
+    '<form data-form="brooding">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Eggs given to the hen</label><input class="field" type="number" min="1" name="eggsGiven" required autofocus></div>'+
+        '<div class="field-row"><label>Date started</label><input class="field" type="date" name="dateStarted" value="'+ti+'" max="'+ti+'" required data-change="brooding-date"></div>'+
+      '</div>'+
+      '<p class="hint" style="margin-top:8px">Expected to hatch around <strong id="brooding-hatch-preview">'+fmtDate(parseISO(addDaysISO(ti, EGG_INCUBATION_DAYS)))+'</strong> (21 days).</p>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note (optional)</label><input class="field" type="text" name="note" maxlength="80" placeholder="e.g. Brown hen in coop A"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Start brooding</button></div>'+
+    '</form>';
+  }
+  function resolveBroodingFormHtml(id){
+    var b = (state.broodings||[]).find(function(x){return x.id===id;});
+    if(!b) return '<div class="modal-head"><h3>Record hatch</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div><p class="hint">That brooding record is no longer available.</p>';
+    return '<div class="modal-head"><h3>Record hatch</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">'+b.eggsGiven+' egg'+(b.eggsGiven===1?'':'s')+' given on '+fmtDate(parseISO(b.dateStarted))+'. Enter how many did <strong>not</strong> hatch — the rest are added to the flock automatically as new unsexed chicks.</p>'+
+    '<form data-form="resolve-brooding">'+
+      '<input type="hidden" name="id" value="'+b.id+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Eggs that did not hatch</label><input class="field" type="number" min="0" max="'+b.eggsGiven+'" name="eggsNotHatched" value="0" required autofocus></div>'+
         '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
       '</div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
@@ -2165,6 +2238,23 @@
         });
         break;
       }
+      case 'open-add-brooding': openModal(broodingFormHtml()); break;
+      case 'open-resolve-brooding': openModal(resolveBroodingFormHtml(a1)); break;
+      case 'delete-brooding': {
+        var delBrood = (state.broodings||[]).find(function(x){return x.id===a1;});
+        var delMsg = (delBrood && delBrood.chickBatchId) ? 'Delete this brooding record? This will also remove the chicks batch it added to the flock.' : 'Delete this brooding record?';
+        confirmModal(delMsg, function(){
+          mutate(function(s){
+            var brood = (s.broodings||[]).find(function(x){return x.id===a1;});
+            if(brood){
+              if(brood.eggLossId) s.eggLosses = (s.eggLosses||[]).filter(function(x){return x.id!==brood.eggLossId;});
+              if(brood.chickBatchId) s.flock = s.flock.filter(function(x){return x.id!==brood.chickBatchId;});
+            }
+            s.broodings = (s.broodings||[]).filter(function(x){return x.id!==a1;});
+          });
+        }, {confirmLabel:'Delete'});
+        break;
+      }
       case 'open-add-expense': openModal(moneyFormHtml('expense')); break;
       case 'edit-expense': openModal(moneyFormHtml('expense',a1)); break;
       case 'delete-expense': confirmModal('Delete this expense? This can\'t be undone.', function(){ mutate(function(s){ s.expenses = s.expenses.filter(function(x){return x.id!==a1;}); }); }); break;
@@ -2351,6 +2441,11 @@
     }
     if(name==='display-currency'){ mutate(function(s){ s.settings.displayCurrency = el.value; }); return; }
     if(name==='import-file'){ importBackupFile(el.files[0]); el.value=''; return; }
+    if(name==='brooding-date'){
+      var preview = document.getElementById('brooding-hatch-preview');
+      if(preview && el.value) preview.textContent = fmtDate(parseISO(addDaysISO(el.value, EGG_INCUBATION_DAYS)));
+      return;
+    }
   }
   function handleForm(name, form){
     var fd = new FormData(form);
@@ -2433,6 +2528,42 @@
       });
       if(serror){ toast(serror); return; }
       closeModal(); toast('Batch updated.');
+      return;
+    }
+    if(name==='brooding'){
+      var bgEggs = Math.max(1, Number(val('eggsGiven')||0));
+      var bgDate = val('dateStarted'), bgNote = val('note') || '';
+      mutate(function(s){
+        if(!Array.isArray(s.broodings)) s.broodings = [];
+        var lossRec = {id:uid('eggloss'), date:bgDate, reason:'brooding', count:bgEggs, note:bgNote};
+        s.eggLosses = s.eggLosses || [];
+        s.eggLosses.push(lossRec);
+        s.broodings.push({id:uid('brood'), dateStarted:bgDate, eggsGiven:bgEggs, note:bgNote, status:'pending', eggLossId:lossRec.id});
+      });
+      closeModal(); toast('Brooding started — expected to hatch in '+EGG_INCUBATION_DAYS+' days.');
+      return;
+    }
+    if(name==='resolve-brooding'){
+      var rbId2 = val('id'), rbDate = val('date');
+      var rbError = null, rbChicks = 0;
+      mutate(function(s){
+        var brood = (s.broodings||[]).find(function(x){return x.id===rbId2}); if(!brood){ rbError='That brooding record is no longer available.'; return; }
+        if(brood.status==='hatched'){ rbError = 'This one has already been recorded.'; return; }
+        var notHatched = Math.max(0, Math.min(brood.eggsGiven, Number(val('eggsNotHatched')||0)));
+        var chicks = brood.eggsGiven - notHatched;
+        rbChicks = chicks;
+        brood.status = 'hatched';
+        brood.eggsNotHatched = notHatched;
+        brood.chicksAdded = chicks;
+        brood.resolvedDate = rbDate;
+        if(chicks>0){
+          var chickBatchId = uid('batch');
+          s.flock.push({id:chickBatchId, gender:'unsexed', count:chicks, dateAdded:rbDate, birthDate:rbDate, source:'Hatched from brooding', removals:[]});
+          brood.chickBatchId = chickBatchId;
+        }
+      });
+      if(rbError){ toast(rbError); return; }
+      closeModal(); toast(rbChicks>0 ? rbChicks+' chick'+(rbChicks===1?'':'s')+' added to the flock.' : 'Recorded — none of the eggs hatched.');
       return;
     }
     if(name==='expense' || name==='income'){

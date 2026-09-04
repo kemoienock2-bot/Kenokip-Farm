@@ -1,6 +1,18 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** reworked sign-in timeouts, plus a brand-new Finance
+> **Update (latest):** a new **Brooding** section on the Flock page. When a
+> hen starts sitting on eggs, log how many she's given from there — those
+> eggs come off your egg count right away (same as the "Given for brooding"
+> option that already existed), and the app works out the expected hatch
+> date on its own, using the standard 21-day incubation period for chicken
+> eggs. Once it's due, come back to that same entry and tap **Record hatch**
+> — enter how many eggs *didn't* hatch, and the rest are added to the flock
+> automatically as a new batch of unsexed chicks (no need to add them by
+> hand). Deleting a brooding record also removes the chicks batch it added,
+> if any, so nothing is left dangling. Front-end only — just replace
+> `index.html` and `sw.js`, no functions redeploy or rules change needed.
+
+> **Earlier update:** reworked sign-in timeouts, plus a brand-new Finance
 > portal lock. Here's exactly what changed and the assumptions I made where
 > your instructions left room for interpretation — flag anything you'd
 > rather have differently:
