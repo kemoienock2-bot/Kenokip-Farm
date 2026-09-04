@@ -1,6 +1,26 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** a new **Brooding** section on the Flock page. When a
+> **Update (latest):** two changes —
+> 1. **A "Record loss" button on the Flock page** (top right, next to "Add
+>    birds") — this was already possible per-batch (the small icon on each
+>    row in the Batches table), but there was no obvious way in without
+>    already knowing which batch to click into first. This new button opens
+>    the same form with a "Which batch" dropdown added, so you can start
+>    from "I lost some birds" rather than having to find the batch first.
+> 2. **Overview now opens with a greeting** that reads the time on your own
+>    device — "Good morning" / afternoon / evening / (late) night — by name
+>    if you've set one, plus today's date and a short line that changes with
+>    the time of day. I took "be creative" as license to give it a bit of
+>    personality (references to checking the flock, collecting eggs, that
+>    kind of thing) rather than a plain clock — happy to tone it down or
+>    change the wording if it's not to your taste. It updates on its own
+>    once a minute, so it won't say "morning" anymore if the app is just
+>    left open into the afternoon.
+>
+> Front-end only — just replace `index.html` and `sw.js`, no functions
+> redeploy or rules change needed.
+
+> **Earlier update:** a new **Brooding** section on the Flock page. When a
 > hen starts sitting on eggs, log how many she's given from there — those
 > eggs come off your egg count right away (same as the "Given for brooding"
 > option that already existed), and the app works out the expected hatch

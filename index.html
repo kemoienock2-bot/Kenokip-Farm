@@ -746,6 +746,26 @@
     if(!dates.length) return null;
     return dates.reduce(function(a,b){ return a<b?a:b; });
   }
+  // Time-of-day greeting for the Overview page — reads the viewer's own
+  // device clock (not the server's), so it's always "morning" for whoever's
+  // actually looking at it, wherever they are.
+  function greetingTimeInfo(d){
+    d = d || new Date();
+    var h = d.getHours();
+    if(h>=5 && h<12) return {greeting:'Good morning', note:'Time to check on the flock and collect the morning eggs.'};
+    if(h>=12 && h<17) return {greeting:'Good afternoon', note:'Hope the day is going well out on the farm.'};
+    if(h>=17 && h<21) return {greeting:'Good evening', note:'Wrapping up for the day — how did the flock do?'};
+    return {greeting:'Good night', note:'Burning the midnight oil? The chickens turned in hours ago.'};
+  }
+  function overviewGreetingHTML(){
+    var info = greetingTimeInfo();
+    var who = currentUser ? (currentUser.name || roleLabel(currentUser)) : (guestMode ? 'Guest' : '');
+    var todayLong = fmtDate(new Date(), {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    return '<div class="card" id="overview-greeting" style="background:linear-gradient(135deg, var(--accent-tint), transparent)">'+
+      '<div class="card-title"><h3>'+info.greeting+(who?', '+esc(who):'')+'</h3><span class="hint">'+todayLong+'</span></div>'+
+      '<p class="hint" style="margin:0">'+info.note+'</p>'+
+    '</div>';
+  }
   function overviewPanel(){
     var isEmpty = state.flock.length===0 && state.eggs.length===0 && state.expenses.length===0 && state.incomes.length===0;
     var period = ui.periods.overview;
@@ -775,7 +795,8 @@
     var expBreak = breakdownByCategory(state.expenses, r.startISO, r.endISO).slice(0,5);
     var activity = buildActivity().slice(0,7);
 
-    return (isEmpty ? '<div class="banner">Welcome to your ledger — start in <strong>&nbsp;Flock&nbsp;</strong> to add your birds, then log eggs and expenses as you go.</div>' : '') +
+    return overviewGreetingHTML() +
+    (isEmpty ? '<div class="banner">Welcome to your ledger — start in <strong>&nbsp;Flock&nbsp;</strong> to add your birds, then log eggs and expenses as you go.</div>' : '') +
     (showProfit ? '<div class="card">'+
       '<div class="card-title"><h3>'+allTimeLabel+'</h3><span class="hint">'+(since?'Since '+fmtDate(parseISO(since)):'This never changes with the period filter below')+'</span></div>'+
       '<div class="stat-value num" style="font-size:32px; color:'+allTimeColor+'">'+fmtMoney(Math.abs(allTimeProfit))+'</div>'+
@@ -923,12 +944,28 @@
     '</form>';
   }
   function removalFormHtml(batchId){
-    var b = state.flock.find(function(x){return x.id===batchId;});
-    var max = currentCount(b);
+    var b = batchId ? state.flock.find(function(x){return x.id===batchId;}) : null;
+    var eligible = state.flock.filter(function(x){ return currentCount(x)>0; });
+    var max = b ? currentCount(b) : (eligible[0] ? currentCount(eligible[0]) : 0);
+    if(!b && !eligible.length){
+      return '<div class="modal-head"><h3>Record loss or sale</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+        '<p class="hint">No birds recorded yet — add a batch first, from the Flock page.</p>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Close</button></div>';
+    }
+    var batchFieldHtml = b
+      ? '<input type="hidden" name="batchId" value="'+batchId+'">'
+      : '<div class="field-row"><label>Which batch</label><select class="field" name="batchId" data-change="removal-batch">'+
+          eligible.map(function(x){
+            return '<option value="'+x.id+'">'+genderLabel(x.gender)+(x.gender!=='unsexed'?'s':'')+' · '+ageGroupLabel(ageGroupForWeeks(ageWeeks(x)))+' · added '+fmtDate(parseISO(x.dateAdded))+' · '+currentCount(x)+' available</option>';
+          }).join('')+
+        '</select></div>';
+    var introHtml = b
+      ? '<p class="hint">From this batch: '+max+' bird'+(max===1?'':'s')+' currently ('+genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+').</p>'
+      : '<p class="hint" id="removal-batch-hint">'+max+' bird'+(max===1?'':'s')+' available in this batch.</p>';
     return '<div class="modal-head"><h3>Record loss or sale</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<form data-form="removal">'+
-      '<input type="hidden" name="batchId" value="'+batchId+'">'+
-      '<p class="hint">From this batch: '+max+' bird'+(max===1?'':'s')+' currently ('+genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+').</p>'+
+      batchFieldHtml+
+      introHtml+
       '<div class="field-grid">'+
         '<div class="field-row"><label>Reason</label><select class="field" name="reason" data-change="removal-reason">'+
           '<option value="sold">Sold</option>'+
@@ -938,7 +975,7 @@
           '<option value="culled">Culled</option>'+
           '<option value="other">Other</option>'+
         '</select></div>'+
-        '<div class="field-row"><label>Number of birds</label><input class="field" type="number" min="1" max="'+max+'" name="count" value="1" required></div>'+
+        '<div class="field-row"><label>Number of birds</label><input class="field" type="number" min="1" max="'+max+'" name="count" value="1" id="removal-count-input" required></div>'+
         '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
       '</div>'+
       '<div id="sale-fields" class="field-grid" style="margin-top:12px">'+
@@ -2024,7 +2061,7 @@
 
   var SECTIONS = {
     overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML()); }, panel:overviewPanel },
-    flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', addBtn('open-add-flock','Add birds')); }, panel:flockPanel },
+    flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs')); }, panel:eggsPanel },
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
@@ -2222,6 +2259,7 @@
         });
         break;
       case 'open-remove-flock': openModal(removalFormHtml(a1)); break;
+      case 'open-record-loss': openModal(removalFormHtml()); break;
       case 'open-resex': openModal(resexFormHtml(a1)); break;
       case 'open-history': openModal(historyModalHtml(a1)); break;
       case 'delete-removal': {
@@ -2437,6 +2475,15 @@
     if(name==='removal-reason'){
       var sf = document.getElementById('sale-fields');
       if(sf) sf.style.display = el.value==='sold' ? 'grid' : 'none';
+      return;
+    }
+    if(name==='removal-batch'){
+      var chosen = state.flock.find(function(x){return x.id===el.value;});
+      var cMax = chosen ? currentCount(chosen) : 0;
+      var countInput = document.getElementById('removal-count-input');
+      if(countInput){ countInput.max = cMax; if(Number(countInput.value||0)>cMax) countInput.value = cMax || 1; }
+      var hint = document.getElementById('removal-batch-hint');
+      if(hint) hint.textContent = cMax+' bird'+(cMax===1?'':'s')+' available in this batch.';
       return;
     }
     if(name==='display-currency'){ mutate(function(s){ s.settings.displayCurrency = el.value; }); return; }
@@ -2889,6 +2936,16 @@
     handleChange(el.dataset.change, el);
   });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+  // Keeps the Overview greeting's "morning"/"afternoon"/etc. correct if the
+  // app is just left open across that boundary, without needing a full
+  // reload or touching the rest of the page.
+  setInterval(function(){
+    if(ui.section==='overview'){
+      var el = document.getElementById('overview-greeting');
+      if(el) el.outerHTML = overviewGreetingHTML();
+    }
+  }, 60000);
 
   render();
   initArtifact();
