@@ -1300,7 +1300,7 @@
     }
     return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
-      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically 10 minutes after signing in — including while the app is in the background — though reloading the page on its own won\'t sign you out early.' : '')+
+      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 10 minutes of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.' : '')+
       '</p>'+
       '<form data-form="update-own-name" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">'+
         '<div class="field-row" style="max-width:220px"><label>Your name (shown in messages)</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentUser.name||'')+'"></div>'+
@@ -1382,31 +1382,39 @@
     '</div>';
   }
 
-  /* ---- 10-minute session expiry (administrator + Financial Staff only) ----
-     Unlike a plain "idle" timer, this counts real elapsed time since
-     sign-in, not activity — it does not reset while you're using the app,
-     and it keeps counting even while the tab/app is in the background (a
-     background setTimeout can get throttled or paused by the browser, so
-     this checks against a stored timestamp with Date.now() instead of
-     relying on one long-running timer). The start time lives in
-     localStorage (keyed by uid) precisely so it survives a page reload —
-     reloading does NOT give you a fresh 10 minutes. Every other role
-     (Supervisor, Vet, Farmhand) has no timeout at all and stays signed in
-     indefinitely, foreground or background. */
+  /* ---- 10-minute inactivity sign-out (administrator + Financial Staff
+     only) ---- Resets on real activity (mouse/keyboard/touch/scroll), same
+     idea as a normal idle timer, just checked against a stored timestamp
+     with Date.now() rather than one long-running setTimeout — a background
+     tab can get its timers throttled or paused by the browser, so this
+     re-checks on a short interval and whenever the tab regains visibility,
+     which catches time that passed while it was in the background too. The
+     last-activity time lives in localStorage (keyed by uid) so it survives
+     a page reload — reloading with nothing else happening does NOT reset
+     the clock. Every other role (Supervisor, Vet, Farmhand) has no timeout
+     at all and stays signed in indefinitely, foreground or background. */
   function idleTimeoutApplies(){ return isAdmin() || isFinancialStaffUser(); }
-  function sessionStartKey(uid){ return 'kenokip-session-start-'+uid; }
+  function lastActivityKey(uid){ return 'kenokip-last-activity-'+uid; }
+  var lastActivityWriteAt = 0;
+  function markSessionActivity(){
+    if(!currentUser || !idleTimeoutApplies()) return;
+    var now = Date.now();
+    if(now - lastActivityWriteAt < 5000) return; // throttle localStorage writes
+    lastActivityWriteAt = now;
+    try{ localStorage.setItem(lastActivityKey(currentUser.uid), String(now)); }catch(e){}
+  }
   function sessionExpiryCheck(){
     if(!currentUser || !idleTimeoutApplies()) return;
-    var key = sessionStartKey(currentUser.uid);
-    var start = Number(localStorage.getItem(key) || 0);
-    if(!start){
-      start = Date.now();
-      try{ localStorage.setItem(key, String(start)); }catch(e){}
+    var key = lastActivityKey(currentUser.uid);
+    var last = Number(localStorage.getItem(key) || 0);
+    if(!last){
+      last = Date.now();
+      try{ localStorage.setItem(key, String(last)); }catch(e){}
     }
-    if(Date.now() - start >= SESSION_LIMIT_MS){
+    if(Date.now() - last >= SESSION_LIMIT_MS){
       stopIdleTimer();
       try{ localStorage.removeItem(key); }catch(e){}
-      toast('Signed out after 10 minutes — for the safety of financial data.');
+      toast('Signed out after 10 minutes of inactivity — for the safety of financial data.');
       firebase.auth().signOut();
     }
   }
@@ -1416,11 +1424,17 @@
     sessionExpiryCheck();
     idleTimer = setInterval(sessionExpiryCheck, 15000);
     document.addEventListener('visibilitychange', sessionExpiryCheck);
+    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
+      document.addEventListener(evt, markSessionActivity, {passive:true});
+    });
   }
   function stopIdleTimer(){
     clearInterval(idleTimer);
     idleTimer = null;
     document.removeEventListener('visibilitychange', sessionExpiryCheck);
+    ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
+      document.removeEventListener(evt, markSessionActivity);
+    });
   }
 
   /* ---- Finance portal: a separate 2-minute *activity-based* idle lock,
@@ -2191,10 +2205,10 @@
         // reopening it later — doesn't force the sign-in form again.
         // Administrator and Financial Staff accounts are the exception:
         // see sessionExpiryCheck()/startIdleTimer() below, which signs
-        // those two roles out automatically once 10 real minutes have
-        // passed since they signed in — that clock keeps ticking even
-        // while the app sits in the background (or the page gets
-        // reloaded), it just doesn't force a fresh sign-in on every single
+        // those two roles out automatically after 10 minutes with no real
+        // activity (mouse/keyboard/touch/scroll) — using the app resets the
+        // clock, and it keeps counting correctly even while the app sits in
+        // the background. It doesn't force a fresh sign-in on every single
         // reload the way the old "never remember" setting did. Every other
         // role has no such timeout at all and stays signed in indefinitely,
         // foreground or background.
@@ -2202,7 +2216,7 @@
           firebase.auth().onAuthStateChanged(function(user){
             stopIdleTimer();
             if(!user){
-              if(currentUser){ try{ localStorage.removeItem(sessionStartKey(currentUser.uid)); }catch(e){} }
+              if(currentUser){ try{ localStorage.removeItem(lastActivityKey(currentUser.uid)); }catch(e){} }
               currentUser = null;
               financePortalUnlocked = false;
               stopFinancePortalTimer();

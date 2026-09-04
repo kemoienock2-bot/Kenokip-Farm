@@ -1,6 +1,17 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** a new **About** section (nav bar, visible to
+> **Update (latest):** fixed the 10-minute sign-out for you and Financial
+> Staff — it was a flat 10-minute clock from sign-in regardless of whether
+> you were actively using the app, which is why you were getting signed out
+> mid-use. It's now a proper **10 minutes of inactivity** timer instead:
+> using the app (typing, clicking, scrolling, tapping) keeps resetting the
+> clock, and it only signs you out once there's genuinely been no activity
+> for 10 minutes — including while the app sits in the background. The
+> separate **Finance portal** 2-minute inactivity lock is unchanged. Front-end
+> only — just replace `index.html` and `sw.js`, no functions redeploy or
+> rules change needed.
+
+> **Earlier update:** a new **About** section (nav bar, visible to
 > everyone including guests) with three parts — a bio/story, a mission
 > statement, and a vision statement. I wrote a first draft using only what
 > I've actually picked up from our conversations so far (that you're Enock
