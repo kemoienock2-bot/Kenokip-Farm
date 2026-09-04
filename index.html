@@ -346,7 +346,8 @@
     warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>',
     eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
     eyeOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.2 0 10 7 10 7a15.5 15.5 0 0 1-3.6 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></svg>',
-    shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>'
+    shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+    info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -434,7 +435,16 @@
           EUR:{symbol:'€',rate:0.0071,decimals:2}
         },
         expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Equipment & Housing','Utilities','Transport','Other'],
-        incomeCategories:['Egg Sales','Bird Sales','Manure','Other']
+        incomeCategories:['Egg Sales','Bird Sales','Manure','Other'],
+        // A first draft, written from what's known so far — meant to be
+        // edited (Settings → About, administrator only) rather than treated
+        // as final. Bracketed bits are placeholders for details only the
+        // administrator can fill in.
+        about:{
+          bio:"Enock Kemoi — known as Kenokip — runs Kenokip Farm, a poultry-keeping operation that has grown from a personal record-keeping effort into a real team operation with its own Supervisor, Vet, Financial Staff, and Farmhand roles. What began as tracking birds, eggs, and money by hand is now run through this purpose-built ledger, with real M-Pesa integration and proper financial controls behind it. [Add: where the farm is based, how and when it got started, and anything else you'd like people to know.]",
+          mission:"To run a transparent, well-organized poultry operation — where every bird, egg, shilling, and team member is accounted for — using modern tools to replace guesswork and paper records with real data anyone on the team can trust.",
+          vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
+        }
       },
       flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[]
     };
@@ -446,6 +456,7 @@
     merged.settings.currencies = Object.assign({}, base.settings.currencies, (data&&data.settings&&data.settings.currencies)||{});
     merged.settings.expenseCategories = (data&&data.settings&&data.settings.expenseCategories) || base.settings.expenseCategories;
     merged.settings.incomeCategories = (data&&data.settings&&data.settings.incomeCategories) || base.settings.incomeCategories;
+    merged.settings.about = Object.assign({}, base.settings.about, (data&&data.settings&&data.settings.about)||{});
     merged.flock = Array.isArray(data&&data.flock) ? data.flock : [];
     merged.eggs = Array.isArray(data&&data.eggs) ? data.eggs : [];
     merged.eggLosses = Array.isArray(data&&data.eggLosses) ? data.eggLosses : [];
@@ -672,6 +683,7 @@
     ];
     if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
     if(currentUser) items.push(['messages','Messages',ICONS.bell]);
+    items.push(['about','About',ICONS.info]);
     items.push(['settings','Settings',ICONS.settings]);
     if(isAdmin()) items.push(['team','Team',ICONS.team]);
     var unread = unreadMessageCount();
@@ -816,6 +828,29 @@
     '<div class="card"><div class="card-title"><h3>Recent activity</h3></div>'+
       (activity.length ? activity.map(activityRowHTML).join('') : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
     '</div>';
+  }
+
+  /* ============================= ABOUT ============================= */
+  function aboutPanel(){
+    var a = state.settings.about || {};
+    return '<div class="card">'+
+        '<div class="card-title"><h3>About Enock (Kenokip)</h3></div>'+
+        '<p style="white-space:pre-wrap; margin:0">'+esc(a.bio||'')+'</p>'+
+      '</div>'+
+      '<div class="grid two">'+
+        '<div class="card"><div class="card-title"><h3>Mission</h3></div><p style="white-space:pre-wrap; margin:0">'+esc(a.mission||'')+'</p></div>'+
+        '<div class="card"><div class="card-title"><h3>Vision</h3></div><p style="white-space:pre-wrap; margin:0">'+esc(a.vision||'')+'</p></div>'+
+      '</div>';
+  }
+  function aboutFormHtml(){
+    var a = state.settings.about || {};
+    return '<div class="modal-head"><h3>Edit About</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="about">'+
+      '<div class="field-row"><label>Bio / story</label><textarea class="field" name="bio" rows="6">'+esc(a.bio||'')+'</textarea></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Mission</label><textarea class="field" name="mission" rows="3">'+esc(a.mission||'')+'</textarea></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Vision</label><textarea class="field" name="vision" rows="3">'+esc(a.vision||'')+'</textarea></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
   }
 
   /* ============================= FLOCK ============================= */
@@ -2066,6 +2101,7 @@
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
     finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
+    about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : ''); }, panel:aboutPanel },
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
     team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
     messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel }
@@ -2299,6 +2335,10 @@
       case 'open-add-income': openModal(moneyFormHtml('income')); break;
       case 'edit-income': openModal(moneyFormHtml('income',a1)); break;
       case 'delete-income': confirmModal('Delete this income record? This can\'t be undone.', function(){ mutate(function(s){ s.incomes = s.incomes.filter(function(x){return x.id!==a1;}); }); }); break;
+      case 'open-edit-about':
+        if(!isAdmin()){ toast('Only the administrator can edit this.'); break; }
+        openModal(aboutFormHtml());
+        break;
       case 'open-add-currency': openModal(currencyFormHtml()); break;
       case 'open-edit-currency': openModal(currencyFormHtml(a1)); break;
       case 'delete-currency':
@@ -2611,6 +2651,15 @@
       });
       if(rbError){ toast(rbError); return; }
       closeModal(); toast(rbChicks>0 ? rbChicks+' chick'+(rbChicks===1?'':'s')+' added to the flock.' : 'Recorded — none of the eggs hatched.');
+      return;
+    }
+    if(name==='about'){
+      if(!isAdmin()){ toast('Only the administrator can edit this.'); return; }
+      var aboutBio = (val('bio')||'').trim(), aboutMission = (val('mission')||'').trim(), aboutVision = (val('vision')||'').trim();
+      mutate(function(s){
+        s.settings.about = { bio: aboutBio, mission: aboutMission, vision: aboutVision };
+      });
+      closeModal(); toast('About saved.');
       return;
     }
     if(name==='expense' || name==='income'){

@@ -1,6 +1,21 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** two changes —
+> **Update (latest):** a new **About** section (nav bar, visible to
+> everyone including guests) with three parts — a bio/story, a mission
+> statement, and a vision statement. I wrote a first draft using only what
+> I've actually picked up from our conversations so far (that you're Enock
+> Kemoi, known as Kenokip; that the farm grew from a personal
+> record-keeping effort into a real team operation; the mission/vision are
+> my best read on what this project is clearly aiming at). I did **not**
+> invent personal details I don't actually know — where the farm is, how
+> and when you started, anything about your background — those are left as
+> a bracketed placeholder in the bio for you to fill in. Only you
+> (Administrator) see an **Edit** button, top right of that page, to rewrite
+> any of the three whenever you like — nobody else can edit it, though
+> everyone including guests can read it. Front-end only — just replace
+> `index.html` and `sw.js`, no functions redeploy or rules change needed.
+
+> **Earlier update:** two changes —
 > 1. **A "Record loss" button on the Flock page** (top right, next to "Add
 >    birds") — this was already possible per-batch (the small icon on each
 >    row in the Batches table), but there was no obvious way in without
