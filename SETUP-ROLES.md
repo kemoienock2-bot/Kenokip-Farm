@@ -1,6 +1,22 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** three changes, all in Finance —
+> **Update (latest):** two small fixes to the Finance/authenticator update —
+> 1. **Fixed the eye icon rendering huge, covering the whole screen.** It
+>    had no size limit in one spot where it was dropped inline into a
+>    sentence of text (every other icon in the app is inside a button,
+>    which already sized it correctly). It's a small icon now, as it should
+>    have been.
+> 2. **Setting up the authenticator app now shows a scannable QR code**, not
+>    just the manual entry key — scan it with Google Authenticator, Authy,
+>    etc. and it's set up in one step. It loads from a small library
+>    fetched only at that moment (never during normal app use), and if that
+>    fails for any reason (no signal, etc.) the manual key entry underneath
+>    still works exactly as before — nothing about setup breaks either way.
+>
+> Front-end only — just replace `index.html` and `sw.js`, no functions
+> redeploy or rules change needed this time.
+
+> **Earlier update:** three changes, all in Finance —
 > 1. **Balances and transaction notes are now masked by default** for
 >    everyone who can see Finance (you and Financial Staff) — e.g. an
 >    amount shows as `KSh 1xx,xx0` instead of the real figure. Tapping the

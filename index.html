@@ -200,6 +200,11 @@
   .icon-btn{ border:none; background:none; color:var(--ink-3); padding:4px; border-radius:6px; display:inline-flex; }
   .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
   .icon-btn svg{ width:15px; height:15px; }
+  /* A small icon dropped inline inside a sentence of text (not a button) —
+     without this, a bare <svg> defaults to a huge intrinsic size in most
+     browsers, which is what made the eye icon fill the whole screen. */
+  .inline-ico{ display:inline-flex; width:14px; height:14px; vertical-align:-2px; }
+  .inline-ico svg{ width:100%; height:100%; display:block; }
 
   .pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; background:var(--surface-2); color:var(--ink-2); }
   .pill.female{ background:var(--accent-tint); color:var(--accent-ink); }
@@ -1169,7 +1174,7 @@
   function authAppSectionHTML(){
     var enrolled = !!(currentUser && currentUser.totpEnrolled);
     return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
-      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">'+ICONS.shield+'<strong>Authenticator app</strong></div>'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.shield+'</span><strong>Authenticator app</strong></div>'+
       (enrolled
         ? '<p class="hint">✓ Set up on this account — codes from it are needed to reveal Finance amounts and to send money via M-Pesa.</p>'+
           '<button class="btn sm" data-action="open-authapp-setup">Set up on a new device</button>'
@@ -1684,7 +1689,7 @@
       : '<div class="banner">Deposits you add count right away. Withdrawals wait for the administrator\'s approval before they affect the balance.</div>';
 
     var eyeBtn = '<button class="icon-btn" style="margin-left:6px" data-action="'+(revealed?'finance-reveal-hide':'finance-reveal-prompt')+'" title="'+(revealed?'Hide amounts':'Show amounts')+'">'+(revealed?ICONS.eyeOff:ICONS.eye)+'</button>';
-    var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap '+ICONS.eye+' to reveal them (needs a code from your authenticator app).</div>';
+    var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap <span class="inline-ico">'+ICONS.eye+'</span> to reveal them (needs a code from your authenticator app).</div>';
 
     var rows = txns.map(function(t){
       var status = t.status || 'approved';
@@ -1778,9 +1783,55 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Show</button></div>'+
     '</form>';
   }
+  // Loads a script from the network at most once (reused if already
+  // present/loading), resolving when it's ready and rejecting on failure —
+  // used below to fetch a small QR-code-drawing library on demand, only
+  // when someone actually opens authenticator setup, never as part of the
+  // app's normal load. If it fails (offline, blocked), setup still works
+  // fine via the manual key entry shown either way.
+  function loadScriptOnce(src){
+    return new Promise(function(resolve, reject){
+      var existing = document.querySelector('script[data-src="'+src+'"]');
+      if(existing){
+        if(window.QRCode) { resolve(); return; }
+        existing.addEventListener('load', function(){ resolve(); });
+        existing.addEventListener('error', function(){ reject(new Error('load failed')); });
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = src; s.async = true; s.setAttribute('data-src', src);
+      s.onload = function(){ resolve(); };
+      s.onerror = function(){ reject(new Error('load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+  function ensureQRCodeLib(){
+    if(window.QRCode) return Promise.resolve();
+    var urls = [
+      'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+      'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js'
+    ];
+    return urls.reduce(function(chain, url){
+      return chain.catch(function(){ return loadScriptOnce(url); });
+    }, Promise.reject());
+  }
+  function renderAuthAppQR(otpauthUri){
+    var el = document.getElementById('authapp-qr');
+    if(!el) return;
+    ensureQRCodeLib().then(function(){
+      if(!window.QRCode || !document.getElementById('authapp-qr')) return;
+      el.innerHTML = '';
+      new QRCode(el, { text: otpauthUri, width:176, height:176, correctLevel: QRCode.CorrectLevel.M });
+    }).catch(function(){
+      // No network / blocked — leave the placeholder empty, the manual key
+      // below still works fine on its own.
+      if(el) el.style.display = 'none';
+    });
+  }
   function authAppSetupFormHtml(data){
     return '<div class="modal-head"><h3>Set up authenticator app</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    '<p class="hint">In Google Authenticator, Authy, or similar, add an account and choose to enter the key manually (no camera/QR code needed):</p>'+
+    '<p class="hint">Scan this with Google Authenticator, Authy, or similar — or, if it doesn\'t load, enter the key below manually instead:</p>'+
+    '<div id="authapp-qr" style="display:flex; justify-content:center; align-items:center; min-height:60px; margin-bottom:14px"><span class="hint">Loading code…</span></div>'+
     '<div class="card" style="margin-bottom:14px"><div style="display:grid; gap:6px; font-size:13px">'+
       '<div><strong>Account:</strong> Kenokip Farm ('+esc(currentUser.email||'')+')</div>'+
       '<div><strong>Key:</strong> <span class="num" style="letter-spacing:1px; word-break:break-all">'+esc(data.secret)+'</span></div>'+
@@ -2087,6 +2138,7 @@
         if(!canSeeFinance()){ toast('Not available for your account.'); break; }
         firebase.functions().httpsCallable('startTotpEnrollment')().then(function(res){
           openModal(authAppSetupFormHtml(res.data));
+          renderAuthAppQR(res.data.otpauthUri);
         }).catch(function(err){ toast((err&&err.message)||'Could not start setup.'); });
         break;
       case 'finance-reveal-prompt':
