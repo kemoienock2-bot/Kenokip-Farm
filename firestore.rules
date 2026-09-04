@@ -66,6 +66,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Authenticator-app (2FA) secrets. Nobody — not even the account owner
+    // — reads or writes this directly from the client; only security.js's
+    // Cloud Functions touch it via the Admin SDK. This is deliberately a
+    // separate collection from `users/{uid}` (which any signed-in account
+    // can read) so a TOTP secret can never leak out through that broader
+    // rule — the only thing `users/{uid}` ever gets is a plain
+    // `totpEnrolled` true/false flag, which reveals nothing useful.
+    match /security/{uid} {
+      allow read, write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

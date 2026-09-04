@@ -1,6 +1,29 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** sign-ins are no longer remembered on a device.
+> **Update (latest):** three changes, all in Finance —
+> 1. **Balances and transaction notes are now masked by default** for
+>    everyone who can see Finance (you and Financial Staff) — e.g. an
+>    amount shows as `KSh 1xx,xx0` instead of the real figure. Tapping the
+>    eye icon next to the balance reveals everything, but only after
+>    entering a current code from an authenticator app (Google
+>    Authenticator, Authy, etc.).
+> 2. **A new "Send via M-Pesa" button** (administrator only) actually pushes
+>    real money out to someone's phone via Safaricom's B2C API — always
+>    gated by the same authenticator code. **This needs Safaricom to have
+>    approved B2C for your shortcode first**, plus new credentials — see the
+>    new **SETUP-B2C.md** for the full walkthrough; until that's done, the
+>    button gives a clear error rather than silently failing.
+> 3. Everyone who can see Finance sets up their authenticator app once,
+>    from **Settings → Your account**.
+>
+> Needs a full functions redeploy (`firebase deploy --only functions`) and
+> republishing `firestore.rules` (a new `security` collection was added,
+> fully locked down — see the rules file's comments). No new npm packages
+> to install — the authenticator-code checking is built entirely from
+> Node's built-in tools, deliberately, to avoid yet another thing that can
+> fail to install on a flaky connection.
+
+> **Earlier update:** sign-ins are no longer remembered on a device.
 > Before, once someone signed in successfully, Firebase kept them signed in
 > indefinitely on that browser/device — closing the app and reopening it
 > later would skip straight past the sign-in form. Every sign-in (yours

@@ -20,13 +20,19 @@ const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
-const { stkPush } = require('./daraja');
+const { stkPush, buildSecurityCredential, b2cSend } = require('./daraja');
 
 admin.initializeApp();
 const db = admin.firestore();
 
 // Accounts, roles, Finance approvals, and access logging — see roles.js.
 Object.assign(exports, require('./roles')(admin, db));
+
+// Authenticator-app (2FA) enrollment + verification — see security.js.
+// verifyTotpForUid is used directly below, inside initiateWithdrawal, not
+// just as the callable verifyTotpCode export.
+const security = require('./security')(admin, db);
+Object.assign(exports, security.triggers);
 
 const MPESA_CONSUMER_KEY = defineSecret('MPESA_CONSUMER_KEY');
 const MPESA_CONSUMER_SECRET = defineSecret('MPESA_CONSUMER_SECRET');
@@ -36,7 +42,15 @@ const MPESA_ENV = defineSecret('MPESA_ENV'); // "sandbox" or "production"
 const MPESA_CALLBACK_BASE_URL = defineSecret('MPESA_CALLBACK_BASE_URL'); // e.g. https://us-central1-kenokip-farm.cloudfunctions.net
 const MPESA_ACCOUNT_TYPE = defineSecret('MPESA_ACCOUNT_TYPE'); // "till" (Buy Goods) or "paybill"
 
+// B2C ("send money out") credentials — separate from the collections
+// secrets above, and only usable once Safaricom has approved B2C for your
+// shortcode specifically. See SETUP-B2C.md before setting these.
+const MPESA_INITIATOR_NAME = defineSecret('MPESA_INITIATOR_NAME');
+const MPESA_INITIATOR_PASSWORD = defineSecret('MPESA_INITIATOR_PASSWORD');
+const MPESA_B2C_CERT = defineSecret('MPESA_B2C_CERT'); // the Safaricom public certificate for your environment, as PEM text
+
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE];
+const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT]);
 
 // Secrets set via `echo value| firebase functions:secrets:set NAME --data-file -`
 // (a common workaround on Windows when the interactive prompt won't accept a
@@ -155,6 +169,108 @@ exports.mpesaStkCallback = onRequest({ secrets: [] }, async (req, res) => {
   }
   // Always 200 — Safaricom retries on anything else, which would just
   // duplicate-process a transaction we already handled or skipped.
+  res.status(200).send('ok');
+});
+
+// Administrator taps "Send via M-Pesa" — pushes real money OUT to a
+// recipient's phone via Safaricom's B2C API. Two things stand between a
+// tap and real money moving: (1) role check, right below — the
+// administrator only, since sending is the one action in this app that's
+// both real and irreversible; and (2) a valid, unused code from their
+// authenticator app, checked via verifyTotpForUid before anything is sent
+// to Safaricom at all. Nothing is written to the Finance ledger from this
+// function directly — that only happens from mpesaB2CResult below, once
+// Safaricom actually confirms the payout went through (exactly the same
+// pattern as mpesaStkCallback for deposits).
+exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in first.');
+  }
+  if (request.auth.token.role !== 'administrator') {
+    throw new HttpsError('permission-denied', 'Only the administrator can send money out.');
+  }
+  const amount = Number(request.data && request.data.amount);
+  const phone = normalizePhone(request.data && request.data.phone);
+  const note = String((request.data && request.data.note) || '').slice(0, 100);
+  const code = String((request.data && request.data.code) || '');
+  if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
+  if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
+
+  // Throws (failed-precondition / invalid-argument) on a missing, wrong, or
+  // already-used code — nothing below this line runs unless it passes.
+  await security.verifyTotpForUid(request.auth.uid, code);
+
+  const certPem = sval(MPESA_B2C_CERT);
+  const initiatorName = sval(MPESA_INITIATOR_NAME);
+  const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
+  if (!certPem || !initiatorName || !initiatorPassword) {
+    throw new HttpsError('failed-precondition', "B2C isn't set up on this deployment yet — see SETUP-B2C.md.");
+  }
+  const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
+  try {
+    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const result = await b2cSend({
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      shortcode: sval(MPESA_SHORTCODE),
+      initiatorName,
+      securityCredential,
+      phone,
+      amount,
+      remarks: note || 'Kenokip Farm payout',
+      resultUrl: `${callbackBase}/mpesaB2CResult`,
+      timeoutUrl: `${callbackBase}/mpesaB2CTimeout`,
+      commandId: 'BusinessPayment',
+    });
+    return {
+      ok: true,
+      message: 'Payout sent to Safaricom — it will show up here once confirmed.',
+      conversationId: result.ConversationID,
+    };
+  } catch (err) {
+    logger.error('B2C send failed', err);
+    throw new HttpsError('internal', 'Could not send the payout. Check your B2C setup (SETUP-B2C.md) and try again.');
+  }
+});
+
+// Safaricom calls this once a B2C payout finishes processing, successfully
+// or not. Only a genuinely successful result (ResultCode 0) gets logged as
+// an approved withdrawal — same principle as deposits: nothing is counted
+// until Safaricom itself confirms it.
+exports.mpesaB2CResult = onRequest({ secrets: [] }, async (req, res) => {
+  try {
+    const result = req.body && req.body.Result;
+    if (result && result.ResultCode === 0) {
+      const items = (result.ResultParameters && result.ResultParameters.ResultParameter) || [];
+      const get = (name) => { const it = items.find((i) => i.Key === name); return it ? it.Value : undefined; };
+      const amount = Number(get('TransactionAmount') || 0);
+      const receipt = get('TransactionReceipt');
+      const recipientName = get('ReceiverPartyPublicName');
+      await addTransactionIfNew({
+        id: 'mpesab2c_' + (receipt || result.ConversationID || Date.now()),
+        date: new Date().toISOString().slice(0, 10),
+        type: 'withdrawal',
+        amount,
+        note: 'Sent via kenokipfarm (M-Pesa' + (receipt ? ' ' + receipt : '') + (recipientName ? ', to ' + recipientName : '') + ')',
+        source: 'mpesa-b2c',
+        status: 'approved',
+        reviewedBy: 'mpesa-b2c',
+        reviewedAt: new Date().toISOString(),
+      });
+    } else {
+      logger.info('B2C payout not completed: ' + (result && result.ResultDesc));
+    }
+  } catch (err) {
+    logger.error('mpesaB2CResult error', err);
+  }
+  res.status(200).send('ok');
+});
+
+// Safaricom calls this instead of mpesaB2CResult if the request timed out
+// before it could even be processed — nothing to log, just acknowledge it.
+exports.mpesaB2CTimeout = onRequest({ secrets: [] }, async (req, res) => {
+  logger.info('B2C payout timed out', req.body);
   res.status(200).send('ok');
 });
 

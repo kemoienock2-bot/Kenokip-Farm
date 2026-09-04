@@ -338,13 +338,42 @@
     team:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="8" r="2.4"/><path d="M15.5 14.2c2.6.4 4.5 2.6 4.5 5.3"/></svg>',
     pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>',
     bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>',
-    warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>'
+    warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg>',
+    eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.2 0 10 7 10 7a15.5 15.5 0 0 1-3.6 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></svg>',
+    shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
   function uid(p){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function clamp(n,lo,hi){ return Math.max(lo,Math.min(hi,n)); }
+
+  /* ---- privacy masking (Finance, until unlocked with an authenticator code) ----
+     Not everything is blanked out — just enough of each number/word that a
+     glance over someone's shoulder can't read the real figures, the same
+     idea as a masked card number like "4512 xxxx xxxx 9081". */
+  function maskString(str){
+    str = String(str==null ? '' : str);
+    var n = str.length;
+    if(n <= 2) return str.replace(/\S/g, 'x');
+    var keepStart = n <= 6 ? 1 : (n <= 12 ? 2 : Math.min(5, Math.ceil(n*0.3)));
+    var keepEnd = n <= 6 ? 1 : (n <= 12 ? 1 : Math.min(3, Math.ceil(n*0.15)));
+    if(keepStart + keepEnd >= n){ keepStart = Math.max(1, n-1); keepEnd = 0; }
+    var mid = str.slice(keepStart, n-keepEnd).replace(/\S/g, 'x');
+    return str.slice(0,keepStart) + mid + (keepEnd ? str.slice(n-keepEnd) : '');
+  }
+  function maskMoneyDisplay(amount){
+    var full = fmtMoney(amount);
+    var digits = full.replace(/[^0-9]/g,'');
+    if(digits.length <= 4) return full.replace(/[0-9]/g,'x');
+    var keep = Math.max(1, Math.floor(digits.length*0.2));
+    var seen = 0;
+    return full.replace(/[0-9]/g, function(ch){
+      seen++;
+      return (seen<=keep || seen>digits.length-keep) ? ch : 'x';
+    });
+  }
 
   /* ============================= DATES ============================= */
   function pad2(n){ return String(n).padStart(2,'0'); }
@@ -1130,10 +1159,22 @@
       '<div style="margin-bottom:14px">'+notifRowHtml+
         '<p class="hint" style="margin-top:6px">This lets an <strong>Urgent</strong> message pop up as a notification on this device while the app or browser is running in the background (another tab, minimized, or your phone locked with it still open) — not while it\'s fully closed. Needs to be turned on once per device.</p>'+
       '</div>'+
+      (canSeeFinance() ? authAppSectionHTML() : '')+
       '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
         '<button class="btn" data-action="open-change-password">Change password</button>'+
         '<button class="btn ghost" data-action="signout">Sign out</button>'+
       '</div>'+
+    '</div>';
+  }
+  function authAppSectionHTML(){
+    var enrolled = !!(currentUser && currentUser.totpEnrolled);
+    return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">'+ICONS.shield+'<strong>Authenticator app</strong></div>'+
+      (enrolled
+        ? '<p class="hint">✓ Set up on this account — codes from it are needed to reveal Finance amounts and to send money via M-Pesa.</p>'+
+          '<button class="btn sm" data-action="open-authapp-setup">Set up on a new device</button>'
+        : '<p class="hint">Not set up yet. Once it is, revealing Finance amounts and sending money via M-Pesa will require a code from an app like Google Authenticator or Authy.</p>'+
+          '<button class="btn sm primary" data-action="open-authapp-setup">Set up authenticator app</button>')+
     '</div>';
   }
 
@@ -1259,7 +1300,8 @@
 
   /* ---- sign-in flow (bootstrap-first-admin, then normal role resolution) ---- */
   function finishSignIn(user, claims){
-    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null };
+    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null, totpEnrolled:false };
+    financeRevealed = false;
     guestMode = false;
     readOnly = false;
     if(ui.section==='finance' && !canSeeFinance()) ui.section = 'overview';
@@ -1494,7 +1536,9 @@
     if(!db || !currentUser) return;
     db.collection('users').doc(currentUser.uid).onSnapshot(function(snap){
       if(snap.exists && currentUser){
-        currentUser.name = snap.data().name || null;
+        var d = snap.data();
+        currentUser.name = d.name || null;
+        currentUser.totpEnrolled = !!d.totpEnrolled;
         render();
       }
     }, function(){});
@@ -1616,6 +1660,7 @@
     var actions = currencySelectHTML();
     if(isAdmin()) actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
     if(mpesaEnabled && (isAdmin() || isFinancialStaffUser())) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
+    if(mpesaEnabled && isAdmin()) actions += '<button class="btn" data-action="open-mpesa-withdraw">Send via M-Pesa</button>';
     actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'New transaction');
     return actions;
   }
@@ -1632,29 +1677,35 @@
     var inThisMonth = approved.filter(function(t){ return t.type==='deposit' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
     var outThisMonth = approved.filter(function(t){ return t.type==='withdrawal' && inRange(t.date,r.startISO,r.endISO); }).reduce(function(a,t){return a+t.amount;},0);
     var balance = financeBalance();
+    var revealed = financeRevealed;
 
     var lockNote = isAdmin()
       ? '<div class="banner">You can add, edit, approve, and delete entries here.'+(mpesaEnabled?' Payments made straight to the farm\'s M-Pesa till are picked up automatically.':'')+'</div>'
       : '<div class="banner">Deposits you add count right away. Withdrawals wait for the administrator\'s approval before they affect the balance.</div>';
 
+    var eyeBtn = '<button class="icon-btn" style="margin-left:6px" data-action="'+(revealed?'finance-reveal-hide':'finance-reveal-prompt')+'" title="'+(revealed?'Hide amounts':'Show amounts')+'">'+(revealed?ICONS.eyeOff:ICONS.eye)+'</button>';
+    var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap '+ICONS.eye+' to reveal them (needs a code from your authenticator app).</div>';
+
     var rows = txns.map(function(t){
       var status = t.status || 'approved';
       var good = t.type==='deposit';
       var statusPill = status==='pending' ? ' <span class="role-pill pending">Pending</span>' : (status==='rejected' ? ' <span class="role-pill rejected">Rejected</span>' : '');
+      var amountText = revealed ? fmtMoney(t.amount) : maskMoneyDisplay(t.amount);
+      var noteText = t.note ? (revealed ? esc(t.note) : esc(maskString(t.note))) : '—';
       return '<tr><td>'+fmtDate(parseISO(t.date))+'</td>'+
         '<td><span class="pill" style="background:'+(good?'var(--good-tint)':'var(--bad-tint)')+';color:'+(good?'var(--good)':'var(--bad)')+'">'+(good?'Deposit':'Withdrawal')+'</span>'+statusPill+'</td>'+
-        '<td class="num">'+fmtMoney(t.amount)+'</td>'+
-        '<td>'+esc(t.note||'—')+'</td>'+
+        '<td class="num">'+amountText+'</td>'+
+        '<td>'+noteText+'</td>'+
         '<td><div class="row-actions">'+
           (isAdmin() ? '<button class="icon-btn" data-action="edit-finance:'+t.id+'">'+ICONS.edit+'</button><button class="icon-btn" data-action="delete-finance:'+t.id+'">'+ICONS.trash+'</button>' : '')+
         '</div></td></tr>';
     }).join('');
 
-    return lockNote+
+    return lockNote+privacyNote+
     '<div class="grid stats">'+
-      statTile('Bank balance', fmtMoney(balance), '<span class="hint">Poultry-only account</span>')+
-      statTile('In this month', fmtMoney(inThisMonth), '')+
-      statTile('Out this month', fmtMoney(outThisMonth), '')+
+      statTile('Bank balance', (revealed?fmtMoney(balance):maskMoneyDisplay(balance)), '<span class="hint">Poultry-only account</span>'+eyeBtn)+
+      statTile('In this month', (revealed?fmtMoney(inThisMonth):maskMoneyDisplay(inThisMonth)), '')+
+      statTile('Out this month', (revealed?fmtMoney(outThisMonth):maskMoneyDisplay(outThisMonth)), '')+
     '</div>'+
     '<div class="card"><div class="card-title"><h3>Transactions</h3><span class="hint">'+txns.length+' recorded'+(f.openingDate?' · opening balance set '+fmtDate(parseISO(f.openingDate)):'')+'</span></div>'+
       '<div class="table-wrap">'+
@@ -1706,6 +1757,38 @@
       '<div class="field-row"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required autofocus></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Phone number</label><input class="field" type="tel" name="phone" placeholder="0712345678" value="'+esc(state.settings.ownerPhone||'')+'" required></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-deposit-submit">Send M-Pesa prompt</button></div>'+
+    '</form>';
+  }
+  function mpesaWithdrawFormHtml(){
+    return '<div class="modal-head"><h3>Send via M-Pesa</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Sends real money out of the farm\'s M-Pesa account to the number below — this can\'t be undone once Safaricom processes it. Needs a current code from your authenticator app.</p>'+
+    '<form data-form="mpesa-withdraw">'+
+      '<div class="field-row"><label>Recipient phone</label><input class="field" type="tel" name="phone" placeholder="0712345678" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note (optional)</label><input class="field" type="text" name="note" maxlength="100" placeholder="What this payout is for"></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn danger" type="submit" id="mpesa-withdraw-submit">Send</button></div>'+
+    '</form>';
+  }
+  function financeRevealFormHtml(){
+    return '<div class="modal-head"><h3>Show amounts</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Enter the current code from your authenticator app.</p>'+
+    '<form data-form="finance-reveal-code">'+
+      '<div class="field-row"><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Show</button></div>'+
+    '</form>';
+  }
+  function authAppSetupFormHtml(data){
+    return '<div class="modal-head"><h3>Set up authenticator app</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">In Google Authenticator, Authy, or similar, add an account and choose to enter the key manually (no camera/QR code needed):</p>'+
+    '<div class="card" style="margin-bottom:14px"><div style="display:grid; gap:6px; font-size:13px">'+
+      '<div><strong>Account:</strong> Kenokip Farm ('+esc(currentUser.email||'')+')</div>'+
+      '<div><strong>Key:</strong> <span class="num" style="letter-spacing:1px; word-break:break-all">'+esc(data.secret)+'</span></div>'+
+      '<div><strong>Type:</strong> Time based</div>'+
+    '</div></div>'+
+    '<form data-form="confirm-authapp">'+
+      '<div class="field-row"><label>Then enter the current 6-digit code it shows</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Confirm</button></div>'+
     '</form>';
   }
   function initFinanceSync(){
@@ -1993,6 +2076,27 @@
         if(!isAdmin() && !isFinancialStaffUser()){ toast('Only the administrator or financial staff can start M-Pesa deposits.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
         openModal(mpesaDepositFormHtml());
+        break;
+      case 'open-mpesa-withdraw':
+        if(!isAdmin()){ toast('Only the administrator can send money out.'); break; }
+        if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
+        openModal(mpesaWithdrawFormHtml());
+        break;
+      case 'open-authapp-setup':
+        if(!canSeeFinance()){ toast('Not available for your account.'); break; }
+        firebase.functions().httpsCallable('startTotpEnrollment')().then(function(res){
+          openModal(authAppSetupFormHtml(res.data));
+        }).catch(function(err){ toast((err&&err.message)||'Could not start setup.'); });
+        break;
+      case 'finance-reveal-prompt':
+        if(!canSeeFinance()) break;
+        if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
+        openModal(financeRevealFormHtml());
+        break;
+      case 'finance-reveal-hide':
+        financeRevealed = false;
+        render();
         break;
       case 'open-add-staff':
         if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
@@ -2369,6 +2473,38 @@
       });
       return;
     }
+    if(name==='mpesa-withdraw'){
+      if(!isAdmin()){ toast('Only the administrator can send money out.'); return; }
+      if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
+      var wAmount = Number(val('amount')||0), wPhone = (val('phone')||'').trim(), wNote = (val('note')||'').trim(), wCode = (val('code')||'').trim();
+      var wBtn = document.getElementById('mpesa-withdraw-submit');
+      if(wBtn){ wBtn.disabled = true; wBtn.textContent = 'Sending…'; }
+      firebase.functions().httpsCallable('initiateWithdrawal')({ amount: wAmount, phone: wPhone, note: wNote, code: wCode }).then(function(res){
+        closeModal();
+        toast((res.data && res.data.message) || 'Payout sent — it will show up here once Safaricom confirms it.');
+      }).catch(function(err){
+        if(wBtn){ wBtn.disabled = false; wBtn.textContent = 'Send'; }
+        toast((err && err.message) || 'Could not send that payout.');
+      });
+      return;
+    }
+    if(name==='confirm-authapp'){
+      if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      var setupCode = (val('code')||'').trim();
+      firebase.functions().httpsCallable('confirmTotpEnrollment')({ code: setupCode }).then(function(){
+        closeModal(); toast('Authenticator app set up.');
+      }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
+      return;
+    }
+    if(name==='finance-reveal-code'){
+      if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      var revealCode = (val('code')||'').trim();
+      firebase.functions().httpsCallable('verifyTotpCode')({ code: revealCode }).then(function(){
+        financeRevealed = true;
+        closeModal(); render();
+      }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
+      return;
+    }
   }
 
   /* ============================= BOOTSTRAP ============================= */
@@ -2398,8 +2534,9 @@
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
-  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name }
+  var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name, totpEnrolled }
   var guestMode = false;
+  var financeRevealed = false; // masked by default — cleared back to false on every fresh page load
   var mpesaEnabled = false;
   var financeSyncStarted = false;
   var directorySyncStarted = false;
