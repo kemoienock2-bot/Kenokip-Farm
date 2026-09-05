@@ -63,6 +63,7 @@ function sval(secretRef, fallback) {
 }
 
 const FINANCE_REF = () => db.collection('finance').doc('kenokip');
+const FARM_REF = () => db.collection('farms').doc('kenokip');
 
 function normalizePhone(raw) {
   if (!raw) return null;
@@ -84,13 +85,34 @@ function isoDateFromMpesaTimestamp(v) {
 // Adds a transaction to the shared Finance doc, skipping it if a
 // transaction with the same id was already recorded (Safaricom retries
 // webhooks, so this keeps a retried callback from double-counting).
+//
+// A deposit (real money actually received — via STK push or straight to
+// the Till) is mirrored into the farm's Income list in the same
+// transaction, under a fixed id ("inc_fin_<txnId>"), so a till payment
+// shows up as Income automatically — same rule as a manually-entered
+// Finance deposit (see proposeFinanceEntry in roles.js). Withdrawals/B2C
+// payouts are never mirrored — only the income direction was asked for.
 async function addTransactionIfNew(txn) {
   const ref = FINANCE_REF();
+  const farmRef = FARM_REF();
   await db.runTransaction(async (t) => {
     const snap = await t.get(ref);
     const data = snap.exists ? snap.data() : { openingBalance: 0, openingDate: new Date().toISOString().slice(0, 10), transactions: [] };
     const existing = Array.isArray(data.transactions) ? data.transactions : [];
     if (existing.some((x) => x.id === txn.id)) return;
+
+    const farmSnap = txn.type === 'deposit' ? await t.get(farmRef) : null;
+
+    if (farmSnap && farmSnap.exists) {
+      const farmData = farmSnap.data();
+      const incomes = Array.isArray(farmData.incomes) ? farmData.incomes.slice() : [];
+      const incomeId = 'inc_fin_' + txn.id;
+      if (!incomes.some((x) => x.id === incomeId)) {
+        incomes.push({ id: incomeId, date: txn.date, category: 'M-Pesa / Bank', amount: txn.amount, note: txn.note || 'Received into Finance', linkedFinanceId: txn.id });
+        t.set(farmRef, Object.assign({}, farmData, { incomes }), { merge: true });
+      }
+    }
+
     t.set(ref, Object.assign({}, data, { transactions: existing.concat([txn]) }), { merge: true });
   });
 }

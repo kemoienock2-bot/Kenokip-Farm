@@ -1,6 +1,49 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** the farm-management basics, tightened up — plus real
+> **Update (latest):** downloadable receipts, and Finance/Income now stay in
+> sync automatically. Three things in this one:
+> 1. **Receipts** — a printable receipt (with your logo, a receipt number,
+>    signature lines, and a stamp box) for anything the farm is paid for:
+>    a Finance deposit, a flock sale, or an egg sale. Recording a "Sold"
+>    entry in Flock or Eggs now opens the receipt right away so you can
+>    print it or save it as a PDF (your browser's own Print dialog — no new
+>    app needed); every past sale keeps its receipt too — reopen it anytime
+>    from the small receipt icon on that row (Flock → a batch's History; the
+>    Eggs page's sales/losses table; Finance's transaction list, once
+>    amounts are revealed). A Finance receipt is signed **Administrator +
+>    Financial Staff**; a Flock or Egg sale receipt is signed
+>    **Administrator** plus whoever actually recorded the sale, by their
+>    role — so it only shows two different names when two different people
+>    were actually involved. **Eggs can now be marked "Sold"** the same way
+>    birds already could — with who bought them and for how much — which
+>    is what a receipt needs to exist for an egg sale at all.
+>    Logo note: I built the receipt logo from the "Kenokip Tech" artwork you
+>    shared — cropped to just the mark itself (dropped the "Tech" wordmark
+>    and tagline, since this is the farm, not the robotics venture) with a
+>    softened edge so it sits cleanly on a printed page. The original image
+>    is also saved as `icons/kenokip-emblem.png` if you want it elsewhere.
+>    Tell me if you'd rather it look different — a farm-specific mark, a
+>    different crop, colors — and I'll redo it.
+> 2. **A sale — Flock or Eggs — records itself as Income automatically.**
+>    This already happened for Flock; it's now true for Eggs too, the
+>    moment you mark a sale, no separate step in the Income tab.
+> 3. **Finance and Income now stay in sync on their own.** Whenever the
+>    farm's Finance account actually receives money — money you record by
+>    hand as a deposit, an "Add via M-Pesa" you complete, or (once your
+>    Till is live) someone paying it directly — that amount is now mirrored
+>    into Income automatically, under "M-Pesa / Bank", so the two never
+>    drift apart and nothing needs entering twice. Editing or deleting that
+>    Finance entry keeps the mirrored Income entry in step or removes it —
+>    you'll never see a stale one left behind. This only runs in one
+>    direction, on purpose: sending money out (a withdrawal) is not mirrored
+>    into Expenses — only the "money received" side was asked for.
+>
+> Needs both a front-end update (`index.html`, `sw.js`) and a functions
+> redeploy this time (`firebase deploy --only functions`), since the
+> Finance→Income sync lives partly in `functions/roles.js` and
+> `functions/index.js`. No new Firestore rules needed.
+
+> **Earlier update:** the farm-management basics, tightened up — plus real
 > push notifications. Four things in this one:
 > 1. **Feed** (new nav item) — log what you buy/use (type, kg, optional
 >    cost, note). Today/week/month/year cards show kg used and **feed per

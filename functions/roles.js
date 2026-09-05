@@ -75,14 +75,49 @@ function describeDevice(ua) {
 
 module.exports = function (admin, db) {
   const FINANCE_REF = db.collection('finance').doc('kenokip');
+  const FARM_REF = db.collection('farms').doc('kenokip');
   const META_REF = db.collection('meta').doc('roles');
 
-  async function mutateFinanceDoc(mutator) {
+  // Finance and Income are meant to stay in step: money the farm actually
+  // receives (a Finance deposit) is mirrored into the farm's Income list
+  // automatically, under a fixed id ("inc_fin_<financeEntryId>") so it can
+  // always be found again to update or remove later — no double-entry, and
+  // editing or deleting the Finance side keeps the Income side honest too.
+  // Withdrawals are deliberately NOT mirrored to Expenses — only asked for
+  // the income direction.
+  //
+  // `mirrorFn`, when given, runs AFTER `mutator` (so it sees the already-
+  // mutated Finance data) and returns either null (no income change this
+  // call) or { incomeId, incomeEntry } — incomeEntry present upserts that
+  // income record, incomeEntry null removes it. Both Finance and Income
+  // documents are read before either is written, so this is one atomic
+  // Firestore transaction — they can never drift apart mid-write.
+  async function mutateFinanceDoc(mutator, mirrorFn) {
     await db.runTransaction(async (t) => {
       const snap = await t.get(FINANCE_REF);
       const data = snap.exists ? snap.data() : { openingBalance: 0, openingDate: new Date().toISOString().slice(0, 10), transactions: [] };
       if (!Array.isArray(data.transactions)) data.transactions = [];
+
+      const farmSnap = mirrorFn ? await t.get(FARM_REF) : null;
+
       mutator(data);
+
+      if (mirrorFn && farmSnap && farmSnap.exists) {
+        const mirror = mirrorFn(data);
+        if (mirror) {
+          const farmData = farmSnap.data();
+          const incomes = Array.isArray(farmData.incomes) ? farmData.incomes.slice() : [];
+          const idx = incomes.findIndex((x) => x.id === mirror.incomeId);
+          if (mirror.incomeEntry) {
+            const nextEntry = Object.assign({}, mirror.incomeEntry, { id: mirror.incomeId });
+            if (idx >= 0) incomes[idx] = nextEntry; else incomes.push(nextEntry);
+          } else if (idx >= 0) {
+            incomes.splice(idx, 1);
+          }
+          t.set(FARM_REF, Object.assign({}, farmData, { incomes }), { merge: true });
+        }
+      }
+
       t.set(FINANCE_REF, data, { merge: true });
     });
   }
@@ -270,7 +305,13 @@ module.exports = function (admin, db) {
       proposedByEmail: auth.token.email || null,
     };
     if (autoApproved) { entry.reviewedBy = auth.uid; entry.reviewedAt = new Date().toISOString(); }
-    await mutateFinanceDoc((data) => { data.transactions.push(entry); });
+    await mutateFinanceDoc(
+      (data) => { data.transactions.push(entry); },
+      type === 'deposit' ? () => ({
+        incomeId: 'inc_fin_' + entry.id,
+        incomeEntry: { date, category: 'M-Pesa / Bank', amount, note: note || 'Received into Finance', linkedFinanceId: entry.id },
+      }) : null
+    );
     return { ok: true, id: entry.id, status: entry.status };
   });
 
@@ -309,6 +350,13 @@ module.exports = function (admin, db) {
       if (typeof d.amount === 'number' && d.amount > 0) entry.amount = d.amount;
       if (typeof d.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) entry.date = d.date;
       if (typeof d.note === 'string') entry.note = d.note.slice(0, 300);
+    }, (data) => {
+      // Re-mirror (or un-mirror) after the edit above, whatever changed —
+      // amount, date, note, or type flipping away from/into "deposit".
+      const entry = data.transactions.find((x) => x.id === id);
+      const incomeId = 'inc_fin_' + id;
+      if (!entry || entry.type !== 'deposit') return { incomeId, incomeEntry: null };
+      return { incomeId, incomeEntry: { date: entry.date, category: 'M-Pesa / Bank', amount: entry.amount, note: entry.note || 'Received into Finance', linkedFinanceId: id } };
     });
     if (!found) throw new HttpsError('not-found', 'That entry no longer exists.');
     return { ok: true };
@@ -319,7 +367,10 @@ module.exports = function (admin, db) {
     requireAdmin(request);
     const id = String((request.data && request.data.id) || '');
     if (!id) throw new HttpsError('invalid-argument', 'Missing entry.');
-    await mutateFinanceDoc((data) => { data.transactions = data.transactions.filter((x) => x.id !== id); });
+    await mutateFinanceDoc(
+      (data) => { data.transactions = data.transactions.filter((x) => x.id !== id); },
+      () => ({ incomeId: 'inc_fin_' + id, incomeEntry: null })
+    );
     return { ok: true };
   });
 
