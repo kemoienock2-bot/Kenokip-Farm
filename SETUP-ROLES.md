@@ -1,6 +1,41 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** fixed the 10-minute sign-out for you and Financial
+> **Update (latest):** the farm-management basics, tightened up — plus real
+> push notifications. Four things in this one:
+> 1. **Feed** (new nav item) — log what you buy/use (type, kg, optional
+>    cost, note). Today/week/month/year cards show kg used and **feed per
+>    egg** in grams, so you can actually see if feed use per egg is
+>    creeping up. If you enter a cost, it's added to Expenses automatically
+>    under "Feed" — editing or deleting the feed entry keeps that Expense in
+>    sync, so nothing needs entering twice or can go out of step.
+> 2. **Health** (new nav item) — log vaccinations, treatments, checkups,
+>    and illnesses, each against the whole flock or one batch, with an
+>    optional "next due" date. An **Upcoming & due** card at the top flags
+>    anything overdue or due within a week, and the Overview page now shows
+>    a red banner if anything's overdue, so it's impossible to miss.
+> 3. **Reports** (new nav item, Administrator/Financial Staff only) — pick
+>    a period (day/week/month/year) and get one summary card: income,
+>    expenses, profit or deficit, eggs produced, feed used + cost + per-egg,
+>    flock change, total birds, and overdue health reminders. **Print /
+>    Save as PDF** uses your browser's own print dialog (no new library
+>    needed) to print just that summary, cleanly, without the rest of the
+>    app around it. **Download CSV** exports every income/expense
+>    transaction in the selected period as a spreadsheet file.
+> 4. **Real push notifications** — Urgent messages can now reach your phone
+>    even with the app **fully closed**, not just backgrounded like before.
+>    This needs one manual step only you can do (getting a free key from
+>    your own Firebase console) — see the new `SETUP-PUSH.md` for exactly
+>    how. Until that key is in place, everything above works as normal and
+>    urgent alerts still work exactly as they did while a tab is open
+>    somewhere; the fully-closed-app case just waits for that one step.
+>
+> Needs both a front-end update (`index.html`, `sw.js`) and a functions
+> redeploy this time (`firebase deploy --only functions`), since the push
+> notification backend lives in `functions/roles.js`. No new Firestore rules
+> needed — Feed and Health logs live in the same `farms/kenokip` document
+> Flock and Eggs already use.
+
+> **Earlier update:** fixed the 10-minute sign-out for you and Financial
 > Staff — it was a flat 10-minute clock from sign-in regardless of whether
 > you were actively using the app, which is why you were getting signed out
 > mid-use. It's now a proper **10 minutes of inactivity** timer instead:

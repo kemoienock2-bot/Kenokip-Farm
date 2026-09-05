@@ -295,6 +295,16 @@
     .rail-foot{ display:none; }
     .topbar, .panel{ padding-left:18px; padding-right:18px; }
   }
+
+  /* Printing a Report: hide everything else on the page and show only the
+     report card, full-width — turns the browser's own "Print / Save as PDF"
+     into a clean one-page summary with no extra library needed. */
+  @media print{
+    body *{ visibility:hidden; }
+    #report-print-area, #report-print-area *{ visibility:visible; }
+    #report-print-area{ position:absolute; left:0; top:0; width:100%; padding:0; }
+    .rail, .topbar, #toast-root, #modal-root, #global-banner{ display:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -319,6 +329,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
 
 <script id="app-script">
 (function(){
@@ -347,7 +358,10 @@
     eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
     eyeOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.2 0 10 7 10 7a15.5 15.5 0 0 1-3.6 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></svg>',
     shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
-    info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"/></svg>'
+    info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"/></svg>',
+    health:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C.8 8.2 2.4 4.5 6 4.5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.6 0 5.2 3.7 3.5 7.5-2.5 4.5-9.5 9-9.5 9z"/><path d="M6.5 12h2.3l1.2-2.4L11.5 14l1.4-2h4.3"/></svg>',
+    feed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l1.5 6c.6 4-1.5 8-3.5 9.5a4 4 0 0 1-4 .8"/><path d="M6 3 4.5 9c-.6 4 1.5 8 3.5 9.5.8.6 1.8.9 2.8.9"/><path d="M9 9h6"/><path d="M8 13.5h3M13 13.5h3"/></svg>',
+    reports:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13l2 2 4-5"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -446,7 +460,7 @@
           vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
         }
       },
-      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[]
+      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[]
     };
   }
   function migrateState(data){
@@ -463,6 +477,8 @@
     merged.broodings = Array.isArray(data&&data.broodings) ? data.broodings : [];
     merged.expenses = Array.isArray(data&&data.expenses) ? data.expenses : [];
     merged.incomes = Array.isArray(data&&data.incomes) ? data.incomes : [];
+    merged.healthRecords = Array.isArray(data&&data.healthRecords) ? data.healthRecords : [];
+    merged.feedLogs = Array.isArray(data&&data.feedLogs) ? data.feedLogs : [];
     return merged;
   }
   function loadState(){
@@ -634,6 +650,8 @@
     });
     state.expenses.forEach(function(e){ items.push({date:e.date,type:'expense',text:'Spent '+fmtMoney(e.amount)+' on '+e.category}); });
     state.incomes.forEach(function(e){ items.push({date:e.date,type:'income',text:'Earned '+fmtMoney(e.amount)+' from '+e.category}); });
+    (state.feedLogs||[]).forEach(function(f){ items.push({date:f.date,type:'expense',text:'Fed '+(f.quantityKg||0).toFixed(1)+' kg of '+f.feedType}); });
+    (state.healthRecords||[]).forEach(function(h){ items.push({date:h.date,type:'flock',text:healthTypeLabel(h.type)+' — '+h.title}); });
     state.flock.forEach(function(b){
       if(!b.resex) items.push({date:b.dateAdded,type:'flock',text:'Added '+b.count+' '+genderLabel(b.gender)+(b.count>1?'s':'')});
       (b.removals||[]).forEach(function(r){
@@ -678,10 +696,13 @@
       ['overview','Overview',ICONS.overview],
       ['flock','Flock',ICONS.flock],
       ['eggs','Eggs',ICONS.eggs],
+      ['feed','Feed',ICONS.feed],
+      ['health','Health',ICONS.health],
       ['expenses','Expenses',ICONS.expenses],
       ['income','Income',ICONS.income]
     ];
     if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
+    if(canSeeFinance()) items.push(['reports','Reports',ICONS.reports]);
     if(currentUser) items.push(['messages','Messages',ICONS.bell]);
     items.push(['about','About',ICONS.info]);
     items.push(['settings','Settings',ICONS.settings]);
@@ -807,8 +828,11 @@
     var expBreak = breakdownByCategory(state.expenses, r.startISO, r.endISO).slice(0,5);
     var activity = buildActivity().slice(0,7);
 
+    var overdueHealth = overdueHealthCount();
+
     return overviewGreetingHTML() +
     (isEmpty ? '<div class="banner">Welcome to your ledger — start in <strong>&nbsp;Flock&nbsp;</strong> to add your birds, then log eggs and expenses as you go.</div>' : '') +
+    (overdueHealth>0 ? '<div class="banner bad" style="cursor:pointer" data-action="nav:health">'+overdueHealth+' health reminder'+(overdueHealth===1?'':'s')+' overdue — tap to view in Health.</div>' : '') +
     (showProfit ? '<div class="card">'+
       '<div class="card-title"><h3>'+allTimeLabel+'</h3><span class="hint">'+(since?'Since '+fmtDate(parseISO(since)):'This never changes with the period filter below')+'</span></div>'+
       '<div class="stat-value num" style="font-size:32px; color:'+allTimeColor+'">'+fmtMoney(Math.abs(allTimeProfit))+'</div>'+
@@ -1155,6 +1179,209 @@
     '</form>';
   }
 
+  /* ============================= FEED ============================= */
+  var FEED_TYPES = ['Chick mash','Grower mash','Layer mash','Kienyeji / free-range mix','Supplements','Other'];
+  function totalFeedKg(s,e){ return (state.feedLogs||[]).filter(function(x){return inRange(x.date,s,e);}).reduce(function(a,x){return a+(x.quantityKg||0);},0); }
+  function totalFeedCost(s,e){ return (state.feedLogs||[]).filter(function(x){return inRange(x.date,s,e);}).reduce(function(a,x){return a+(x.cost||0);},0); }
+  function feedPerEgg(s,e){
+    var kg = totalFeedKg(s,e), eggsCount = sumEggs(s,e);
+    return eggsCount>0 ? (kg/eggsCount) : null;
+  }
+  function feedPanel(){
+    var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
+    var cards = periodsDef.map(function(pd){
+      var r = getRange(pd[0]);
+      var kg = totalFeedKg(r.startISO, r.endISO);
+      var cost = totalFeedCost(r.startISO, r.endISO);
+      var fpe = feedPerEgg(r.startISO, r.endISO);
+      return '<div class="card"><div class="card-title"><h3>'+pd[1]+'</h3><span class="hint num">'+fmtMoney(cost)+'</span></div>'+
+        '<div class="stat-value num" style="font-size:22px">'+kg.toFixed(1)+' kg</div>'+
+        '<div class="hint" style="margin-top:6px">'+(fpe!=null ? (fpe*1000).toFixed(0)+' g feed per egg' : 'No eggs logged this period')+'</div>'+
+      '</div>';
+    }).join('');
+
+    var entries = (state.feedLogs||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var rows = entries.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td>'+esc(x.feedType)+'</td><td class="num">'+(x.quantityKg||0).toFixed(1)+' kg</td><td class="num">'+fmtMoney(x.cost||0)+'</td><td>'+esc(x.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-feed:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-feed:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+
+    return '<div class="grid four">'+cards+'</div>'+
+    '<div class="card"><div class="card-title"><h3>Feed log</h3><span class="hint">'+entries.length+' records</span></div>'+
+      '<div class="table-wrap">'+
+      (entries.length ? '<table><thead><tr><th>Date</th><th>Feed type</th><th class="num">Quantity</th><th class="num">Cost</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No feed logged yet — track what you buy and use to see feed-per-egg, and spot waste early.</div></div>')+
+      '</div></div>';
+  }
+  function feedFormHtml(id){
+    var x = id ? (state.feedLogs||[]).find(function(i){return i.id===id;}) : null;
+    var curCost = x && x.cost ? (x.cost * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
+    return '<div class="modal-head"><h3>'+(x?'Edit feed entry':'Log feed')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    (!x ? '<p class="hint">If you enter a cost, it\'s added to Expenses automatically under "Feed" — no need to log it twice.</p>' : '')+
+    '<form data-form="feed">'+
+      '<input type="hidden" name="id" value="'+(x?x.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Feed type</label><select class="field" name="feedType">'+FEED_TYPES.map(function(t){ return '<option '+(x&&x.feedType===t?'selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select></div>'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+      '</div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Quantity (kg)</label><input class="field" type="number" min="0" step="0.1" name="quantityKg" value="'+(x?x.quantityKg:'')+'" required autofocus></div>'+
+        '<div class="field-row"><label>Cost (optional)</label><input class="field" type="number" min="0" step="0.01" name="cost" value="'+curCost+'" placeholder="0"></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Log feed')+'</button></div>'+
+    '</form>';
+  }
+
+  /* ============================= HEALTH ============================= */
+  var HEALTH_TYPE_LABELS = {vaccination:'Vaccination', treatment:'Treatment / medication', checkup:'Checkup', illness:'Illness / diagnosis', other:'Other'};
+  function healthTypeLabel(t){ return HEALTH_TYPE_LABELS[t] || 'Other'; }
+  function healthBatchLabel(batchId){
+    if(!batchId) return 'Whole flock';
+    var b = state.flock.find(function(x){return x.id===batchId;});
+    return b ? (genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+' · added '+fmtDate(parseISO(b.dateAdded))) : 'Batch no longer listed';
+  }
+  function upcomingHealthReminders(){
+    var today = todayISO();
+    return (state.healthRecords||[]).filter(function(x){ return !!x.nextDueDate; })
+      .slice().sort(function(a,b){ return a.nextDueDate<b.nextDueDate?-1:1; })
+      .map(function(x){
+        return Object.assign({}, x, {
+          overdue: x.nextDueDate < today,
+          dueSoon: x.nextDueDate >= today && daysBetween(new Date(), parseISO(x.nextDueDate)) <= 7
+        });
+      });
+  }
+  function overdueHealthCount(){ return upcomingHealthReminders().filter(function(r){ return r.overdue; }).length; }
+  function healthPanel(){
+    var reminders = upcomingHealthReminders();
+    var remindersHtml = reminders.length ? reminders.map(function(r){
+      var pillStyle = r.overdue ? 'style="background:var(--bad-tint); color:var(--bad)"' : (r.dueSoon ? 'style="background:var(--accent-tint); color:var(--accent-strong)"' : '');
+      var pillText = r.overdue ? 'Overdue' : (r.dueSoon ? 'Due soon' : 'Upcoming');
+      return '<div class="kv-row"><div><div>'+esc(r.title)+' — '+healthTypeLabel(r.type)+' <span class="pill" '+pillStyle+'>'+pillText+'</span></div>'+
+        '<div class="hint">'+esc(healthBatchLabel(r.batchId))+' · due '+fmtDate(parseISO(r.nextDueDate))+'</div></div>'+
+        '<button class="icon-btn" data-action="edit-health:'+r.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button></div>';
+    }).join('') : '<div class="empty">'+ICONS.empty+'<div>Nothing due — set a "next due" date on a record to see reminders here.</div></div>';
+
+    var entries = (state.healthRecords||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var rows = entries.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+healthTypeLabel(x.type)+'</span></td><td>'+esc(x.title)+'</td><td>'+esc(healthBatchLabel(x.batchId))+'</td>'+
+      '<td>'+(x.nextDueDate ? fmtDate(parseISO(x.nextDueDate)) : '—')+'</td><td>'+esc(x.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-health:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-health:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+
+    return '<div class="card"><div class="card-title"><h3>Upcoming &amp; due</h3></div>'+remindersHtml+'</div>'+
+    '<div class="card"><div class="card-title"><h3>Health log</h3><span class="hint">'+entries.length+' records</span></div>'+
+      '<div class="table-wrap">'+
+      (entries.length ? '<table><thead><tr><th>Date</th><th>Type</th><th>What</th><th>Batch</th><th>Next due</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No health records yet.</div></div>')+
+      '</div></div>';
+  }
+  function healthFormHtml(id){
+    var x = id ? (state.healthRecords||[]).find(function(i){return i.id===id;}) : null;
+    var typeOptions = ['vaccination','treatment','checkup','illness','other'];
+    return '<div class="modal-head"><h3>'+(x?'Edit health record':'Add health record')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="health">'+
+      '<input type="hidden" name="id" value="'+(x?x.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Type</label><select class="field" name="type">'+
+          typeOptions.map(function(t){ return '<option value="'+t+'" '+((x?x.type===t:t==='vaccination')?'selected':'')+'>'+healthTypeLabel(t)+'</option>'; }).join('')+
+        '</select></div>'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>What (e.g. Newcastle Disease vaccine)</label><input class="field" type="text" name="title" maxlength="100" value="'+(x?esc(x.title||''):'')+'" required autofocus></div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Which batch</label><select class="field" name="batchId"><option value="">Whole flock</option>'+
+          state.flock.map(function(b){ return '<option value="'+b.id+'" '+(x&&x.batchId===b.id?'selected':'')+'>'+genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+' · added '+fmtDate(parseISO(b.dateAdded))+'</option>'; }).join('')+
+        '</select></div>'+
+        '<div class="field-row"><label>Next due (optional)</label><input class="field" type="date" name="nextDueDate" value="'+(x&&x.nextDueDate?x.nextDueDate:'')+'"></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add record')+'</button></div>'+
+    '</form>';
+  }
+
+  /* ============================= REPORTS ============================= */
+  function csvCell(v){
+    v = v==null ? '' : String(v);
+    return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+  }
+  function toCSV(rows){ return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\r\n'); }
+  function downloadCSVFile(filename, rows){
+    try{
+      var blob = new Blob([toCSV(rows)], {type:'text/csv;charset=utf-8;'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      toast('CSV downloaded.');
+    }catch(e){ toast('Could not build the CSV file.'); }
+  }
+  function exportReportCSV(r){
+    var rows = [['Date','Kind','Category','Amount (KES)','Note']];
+    state.incomes.filter(function(x){return inRange(x.date,r.startISO,r.endISO);}).forEach(function(x){
+      rows.push([x.date,'Income',x.category,x.amount.toFixed(2),x.note||'']);
+    });
+    state.expenses.filter(function(x){return inRange(x.date,r.startISO,r.endISO);}).forEach(function(x){
+      rows.push([x.date,'Expense',x.category,x.amount.toFixed(2),x.note||'']);
+    });
+    rows.sort(function(a,b){ if(a===rows[0]) return -1; if(b===rows[0]) return 1; return a[0]<b[0]?-1:1; });
+    downloadCSVFile('kenokip-farm-report-'+r.startISO+'-to-'+r.endISO+'.csv', rows);
+  }
+  function reportsPanel(){
+    var period = ui.periods.reports;
+    var r = getRange(period);
+    var income = sumMoney(state.incomes, r.startISO, r.endISO);
+    var expense = sumMoney(state.expenses, r.startISO, r.endISO);
+    var profit = income - expense;
+    var profitColor = profit<0 ? 'var(--bad)' : (profit>0 ? 'var(--good)' : 'var(--ink)');
+    var eggsCount = sumEggs(r.startISO, r.endISO);
+    var feedKg = totalFeedKg(r.startISO, r.endISO);
+    var feedCost = totalFeedCost(r.startISO, r.endISO);
+    var fpe = feedPerEgg(r.startISO, r.endISO);
+    var nc = netChange(r.startISO, r.endISO);
+    var totalNow = birdsAsOf(todayISO());
+    var overdueHealth = overdueHealthCount();
+    var expBreak = breakdownByCategory(state.expenses, r.startISO, r.endISO);
+
+    return '<div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">'+
+        periodSegment('reports')+
+        '<div style="display:flex; gap:8px">'+
+          '<button class="btn" data-action="export-report-csv">Download CSV</button>'+
+          '<button class="btn primary" data-action="print-report">Print / Save as PDF</button>'+
+        '</div>'+
+      '</div>'+
+      '<div id="report-print-area">'+
+        '<div class="card"><div class="card-title"><h3>Kenokip Farm — report</h3><span class="hint">'+r.label+'</span></div>'+
+          '<p class="hint" style="margin:0">Generated '+fmtDate(new Date(),{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</p>'+
+        '</div>'+
+        '<div class="grid stats">'+
+          statTile('Income · '+r.label, fmtMoney(income), '')+
+          statTile('Expenses · '+r.label, fmtMoney(expense), '')+
+          statTile(profit<0?'Deficit':'Profit', fmtMoney(Math.abs(profit)), '')+
+          statTile('Eggs produced', eggsCount.toLocaleString()+' eggs', '')+
+        '</div>'+
+        '<div class="grid stats">'+
+          statTile('Feed used', feedKg.toFixed(1)+' kg', '<span class="hint">'+fmtMoney(feedCost)+'</span>')+
+          statTile('Feed per egg', fpe!=null ? (fpe*1000).toFixed(0)+' g' : '—', '')+
+          statTile('Flock change', (nc.net>=0?'+':'')+nc.net+' birds', '<span class="hint">+'+nc.added+' added · −'+nc.removed+' lost/sold</span>')+
+          statTile('Total birds now', totalNow.toLocaleString(), overdueHealth>0 ? '<span class="hint" style="color:var(--bad)">'+overdueHealth+' health reminder'+(overdueHealth===1?'':'s')+' overdue</span>' : '<span class="hint">No overdue reminders</span>')+
+        '</div>'+
+        '<div class="card"><div class="card-title"><h3>Spending by category · '+r.label+'</h3><span class="hint num">'+fmtMoney(expense)+'</span></div>'+
+          (expBreak.length ? categoryBars(expBreak) : '<div class="empty">'+ICONS.empty+'<div>No expenses in this period.</div></div>')+
+        '</div>'+
+      '</div>';
+  }
+
   /* ============================= EXPENSES / INCOME ============================= */
   function moneyBreakdownPanel(list, categories, kind){
     var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
@@ -1280,6 +1507,7 @@
   function canProposeFinance(){ return canSeeFinance(); }
   function sectionAllowed(key){
     if(key==='finance') return canSeeFinance();
+    if(key==='reports') return canSeeFinance();
     if(key==='team') return isAdmin();
     if(key==='messages') return !!currentUser;
     return true;
@@ -1539,6 +1767,7 @@
     if(isAdmin()) initAdminLogsSync();
     captureAccessLog();
     startIdleTimer();
+    if(typeof Notification!=='undefined' && Notification.permission==='granted') registerForPush();
     render();
   }
   function handleSignedInUser(user, claims){
@@ -1734,10 +1963,9 @@
   // A real system notification for Urgent messages, so they're impossible
   // to miss even when this tab isn't the one on screen — another tab is
   // focused, the window is minimized, or (on a phone) the screen is off
-  // with the app still running underneath. This can NOT wake the app back
-  // up if it's been fully closed/killed — that would need a much bigger
-  // "push notification" system (a server that can reach the device even
-  // with no tab open at all), which isn't built here.
+  // with the app still running underneath. Below this is the separate,
+  // fully-closed-app case (registerForPush / sw.js's onBackgroundMessage) —
+  // this function only covers "tab open somewhere, just not focused".
   function showBackgroundAlert(msg){
     if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
     if(!document.hidden) return; // in-page banner + sound already cover the foreground case
@@ -1755,6 +1983,25 @@
     } else {
       try{ new Notification(title, opts); }catch(e){}
     }
+  }
+  // Registers this device for real push notifications (Firebase Cloud
+  // Messaging) — these reach the phone even with the app fully closed,
+  // unlike showBackgroundAlert() above which needs a tab still open
+  // somewhere. Requires a VAPID key from the Firebase console (see
+  // SETUP-PUSH.md) — until that's filled in, this quietly does nothing, so
+  // the button above still works for the tab-open case either way.
+  function registerForPush(){
+    if(!currentUser) return;
+    if(!VAPID_KEY || VAPID_KEY.indexOf('PASTE_')===0) return;
+    if(!(window.firebase && firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported())) return;
+    if(!navigator.serviceWorker){ return; }
+    navigator.serviceWorker.ready.then(function(reg){
+      var messaging = firebase.messaging();
+      return messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    }).then(function(token){
+      if(!token) return;
+      return firebase.functions().httpsCallable('registerPushToken')({ token: token });
+    }).catch(function(){ /* best-effort — the in-tab alert path still works */ });
   }
   function isMessageForMe(m){
     if(!currentUser || m.fromUid===currentUser.uid) return false;
@@ -2112,6 +2359,9 @@
     overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML()); }, panel:overviewPanel },
     flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs')); }, panel:eggsPanel },
+    feed:{ topbar:function(){ return topbarHTML('Feed','Consumption, cost, and feed-per-egg', addBtn('open-add-feed','Log feed')); }, panel:feedPanel },
+    health:{ topbar:function(){ return topbarHTML('Health','Vaccinations, treatments &amp; reminders', addBtn('open-add-health','Add record')); }, panel:healthPanel },
+    reports:{ topbar:function(){ return topbarHTML('Reports','Print or export a period summary', ''); }, panel:reportsPanel },
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
     finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
@@ -2343,6 +2593,22 @@
         }, {confirmLabel:'Delete'});
         break;
       }
+      case 'open-add-feed': openModal(feedFormHtml()); break;
+      case 'edit-feed': openModal(feedFormHtml(a1)); break;
+      case 'delete-feed':
+        confirmModal('Delete this feed entry? This can\'t be undone.', function(){
+          mutate(function(s){
+            var fx = (s.feedLogs||[]).find(function(x){return x.id===a1;});
+            if(fx && fx.linkedExpenseId) s.expenses = s.expenses.filter(function(x){return x.id!==fx.linkedExpenseId;});
+            s.feedLogs = (s.feedLogs||[]).filter(function(x){return x.id!==a1;});
+          });
+        });
+        break;
+      case 'open-add-health': openModal(healthFormHtml()); break;
+      case 'edit-health': openModal(healthFormHtml(a1)); break;
+      case 'delete-health':
+        confirmModal('Delete this health record? This can\'t be undone.', function(){ mutate(function(s){ s.healthRecords = (s.healthRecords||[]).filter(function(x){return x.id!==a1;}); }); });
+        break;
       case 'open-add-expense': openModal(moneyFormHtml('expense')); break;
       case 'edit-expense': openModal(moneyFormHtml('expense',a1)); break;
       case 'delete-expense': confirmModal('Delete this expense? This can\'t be undone.', function(){ mutate(function(s){ s.expenses = s.expenses.filter(function(x){return x.id!==a1;}); }); }); break;
@@ -2373,6 +2639,8 @@
         break;
       }
       case 'export-backup': doExportBackup(); break;
+      case 'export-report-csv': exportReportCSV(getRange(ui.periods.reports)); break;
+      case 'print-report': window.print(); break;
       case 'signout': firebase.auth().signOut(); toast('Signed out.'); break;
       case 'guest-signin': guestMode = false; readOnly = false; authGateMode = 'welcome'; authGateError=''; render(); break;
       case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
@@ -2458,6 +2726,7 @@
         Notification.requestPermission().then(function(perm){
           toast(perm==='granted' ? 'Background urgent alerts enabled on this device.' : 'Blocked — enable notifications for this site in your browser settings to turn this on.');
           render();
+          if(perm==='granted') registerForPush();
         });
         break;
       case 'toggle-staff': {
@@ -2674,6 +2943,59 @@
         s.settings.about = { bio: aboutBio, mission: aboutMission, vision: aboutVision };
       });
       closeModal(); toast('About saved.');
+      return;
+    }
+    if(name==='feed'){
+      var fid = val('id') || null, fdate = val('date'), feedType = val('feedType') || 'Other';
+      var qtyKg = Math.max(0, Number(val('quantityKg')||0));
+      var fcurrency = val('currency');
+      var fcostRaw = Number(val('cost')||0);
+      var fnote = val('note') || '';
+      mutate(function(s){
+        var fcost = fcostRaw>0 ? fromCurrency(fcostRaw, fcurrency) : 0;
+        s.feedLogs = s.feedLogs || [];
+        s.expenses = s.expenses || [];
+        var entry;
+        if(fid){ entry = s.feedLogs.find(function(x){return x.id===fid;}); }
+        if(!entry){
+          entry = {id:uid('feed'), feedType:feedType, date:fdate, quantityKg:qtyKg, cost:fcost, note:fnote};
+          s.feedLogs.push(entry);
+        } else {
+          entry.feedType = feedType; entry.date = fdate; entry.quantityKg = qtyKg; entry.cost = fcost; entry.note = fnote;
+        }
+        // Keep a linked Expense entry (category "Feed") in sync with the cost
+        // on this feed log, so it's never entered twice — editing or zeroing
+        // the cost here updates/removes the Expense automatically.
+        if(fcost>0){
+          var linkedExp = entry.linkedExpenseId ? s.expenses.find(function(x){return x.id===entry.linkedExpenseId;}) : null;
+          if(linkedExp){ linkedExp.date=fdate; linkedExp.amount=fcost; linkedExp.note='Feed: '+feedType+(fnote?' — '+fnote:''); }
+          else {
+            var newExp = {id:uid('exp'), date:fdate, category:'Feed', amount:fcost, note:'Feed: '+feedType+(fnote?' — '+fnote:'')};
+            s.expenses.push(newExp);
+            entry.linkedExpenseId = newExp.id;
+          }
+        } else if(entry.linkedExpenseId){
+          s.expenses = s.expenses.filter(function(x){return x.id!==entry.linkedExpenseId;});
+          entry.linkedExpenseId = null;
+        }
+      });
+      closeModal(); toast(fid ? 'Feed entry updated.' : 'Feed logged.');
+      return;
+    }
+    if(name==='health'){
+      var hid = val('id') || null, hdate = val('date'), htype = val('type') || 'other';
+      var htitle = (val('title')||'').trim(), hbatchId = val('batchId') || null, hnextDue = val('nextDueDate') || null, hnote = val('note') || '';
+      if(!htitle){ toast('Enter what this record is for.'); return; }
+      mutate(function(s){
+        s.healthRecords = s.healthRecords || [];
+        if(hid){
+          var hx = s.healthRecords.find(function(x){return x.id===hid;});
+          if(hx){ hx.date=hdate; hx.type=htype; hx.title=htitle; hx.batchId=hbatchId||null; hx.nextDueDate=hnextDue||null; hx.note=hnote; }
+        } else {
+          s.healthRecords.push({id:uid('health'), date:hdate, type:htype, title:htitle, batchId:hbatchId||null, nextDueDate:hnextDue||null, note:hnote});
+        }
+      });
+      closeModal(); toast(hid ? 'Health record updated.' : 'Health record added.');
       return;
     }
     if(name==='expense' || name==='income'){
@@ -2946,6 +3268,15 @@
     messagingSenderId: "386891888391",
     appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
   };
+  // Web Push certificate key from Firebase Console → Project Settings →
+  // Cloud Messaging → Web Push certificates. Needed so the browser can ask
+  // Google to deliver a push to this exact site — replace the placeholder
+  // below with the real key (starts with a long random string) once you've
+  // generated it there; see SETUP-PUSH.md. Until it's a real key, "Enable
+  // background alerts" still turns on the notification permission and the
+  // existing while-the-tab-is-open alerts, it just can't register for the
+  // fully-closed-app kind yet.
+  var VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
   var FARM_COLLECTION = 'farms';
   var FARM_DOC = 'kenokip';
   var FINANCE_COLLECTION = 'finance';
@@ -2953,7 +3284,7 @@
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
-  var ui = { section: getSavedSection(), periods:{overview:'week'} };
+  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'} };
   var syncStatus = 'idle';
   var readOnly = false;
   var localMode = false;

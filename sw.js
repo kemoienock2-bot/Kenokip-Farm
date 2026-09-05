@@ -2,7 +2,7 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v20';
+var CACHE_NAME = 'kenokip-farm-v21';
 var APP_SHELL = [
   './',
   './index.html',
@@ -21,6 +21,39 @@ var APP_SHELL = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js'
 ];
+
+// Real push notifications (Firebase Cloud Messaging) — this is what lets a
+// notification arrive even when the app is fully closed, not just
+// backgrounded. The service worker has no access to the page's JS, so the
+// (non-secret) Firebase config is repeated here. If these two scripts fail
+// to load (offline on first install, or an old cached service worker), the
+// try/catch below just skips FCM setup — cache-first offline support above
+// still works either way, and it retries again the next time the SW updates.
+try{
+  importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
+  firebase.initializeApp({
+    apiKey: "AIzaSyAEsReYhd4No6-_-TxmzLaTZef9J8cTFe4",
+    authDomain: "kenokip-farm.firebaseapp.com",
+    projectId: "kenokip-farm",
+    storageBucket: "kenokip-farm.firebasestorage.app",
+    messagingSenderId: "386891888391",
+    appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
+  });
+  var messaging = firebase.messaging();
+  // Fires only when no tab has this app focused (a foreground tab handles
+  // urgent alerts itself via showBackgroundAlert() in index.html, so this
+  // never double-fires the same message).
+  messaging.onBackgroundMessage(function(payload){
+    var n = payload.notification || {};
+    self.registration.showNotification(n.title || 'Kenokip Farm', {
+      body: n.body || '',
+      icon: './icons/icon-192.png',
+      tag: 'kenokip-push-' + Date.now(),
+      requireInteraction: true
+    });
+  });
+}catch(e){ /* best-effort — see comment above */ }
 
 self.addEventListener('install', function(event){
   self.skipWaiting();

@@ -401,6 +401,73 @@ module.exports = function (admin, db) {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       readBy: [auth.uid],
     }, replyMeta || {}));
+
+    // Urgent messages also get a real push notification (via Firebase
+    // Cloud Messaging), so they can reach someone even with the app fully
+    // closed — not just backgrounded. Best-effort: if this fails for any
+    // reason (no VAPID key configured yet, nobody has a token, etc.) the
+    // message itself has already sent fine either way, so a failure here
+    // must never surface as an error to the sender.
+    if (urgency === 'urgent') {
+      try {
+        var targetUids = [];
+        if (to === 'all') {
+          var usersSnap = await db.collection('users').get();
+          targetUids = usersSnap.docs.map(function (d) { return d.id; }).filter(function (uid) { return uid !== auth.uid; });
+        } else {
+          targetUids = [to];
+        }
+        if (targetUids.length) {
+          var userDocs = await db.getAll.apply(db, targetUids.map(function (uid) { return db.collection('users').doc(uid); }));
+          var tokens = [];
+          var tokenOwner = {};
+          userDocs.forEach(function (snap) {
+            if (!snap.exists) return;
+            var arr = snap.data().fcmTokens;
+            if (Array.isArray(arr)) arr.forEach(function (t) { tokens.push(t); tokenOwner[t] = snap.id; });
+          });
+          if (tokens.length) {
+            var resp = await admin.messaging().sendEachForMulticast({
+              tokens: tokens,
+              notification: { title: 'Urgent — ' + fromLabel, body: body.slice(0, 180) },
+              data: { urgency: 'urgent' },
+            });
+            var deadByUid = {};
+            resp.responses.forEach(function (r, i) {
+              if (!r.success) {
+                var code = r.error && r.error.code;
+                if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+                  var uid = tokenOwner[tokens[i]];
+                  (deadByUid[uid] = deadByUid[uid] || []).push(tokens[i]);
+                }
+              }
+            });
+            await Promise.all(Object.keys(deadByUid).map(function (uid) {
+              return db.collection('users').doc(uid).set(
+                { fcmTokens: admin.firestore.FieldValue.arrayRemove.apply(null, deadByUid[uid]) },
+                { merge: true }
+              );
+            }));
+          }
+        }
+      } catch (e) {
+        logger.error('Urgent push send failed', e);
+      }
+    }
+
+    return { ok: true };
+  });
+
+  // A device calls this once it has permission and an FCM registration
+  // token, so urgent messages can reach it as a real push notification even
+  // when the app/browser is fully closed. Tokens are just stored in an
+  // array on the caller's own users/{uid} doc — dead ones get pruned
+  // automatically above whenever a send to them fails.
+  const registerPushToken = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const token = String((request.data && request.data.token) || '').trim();
+    if (!token) throw new HttpsError('invalid-argument', 'Missing token.');
+    await db.collection('users').doc(auth.uid).set({ fcmTokens: admin.firestore.FieldValue.arrayUnion(token) }, { merge: true });
     return { ok: true };
   });
 
@@ -425,7 +492,7 @@ module.exports = function (admin, db) {
     bootstrapFirstAdmin, createStaffAccount, updateStaffAccount, deleteStaffAccount, updateOwnProfile,
     logAccess,
     proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
-    sendMessage, markMessageRead,
+    sendMessage, markMessageRead, registerPushToken,
   };
 };
 
