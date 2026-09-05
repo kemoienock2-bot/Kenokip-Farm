@@ -25,13 +25,15 @@ application had to be done directly with Safaricom.
    **Generate key pair** if you don't already have one.
 5. Copy the long key it shows you (starts with something like
    `BN...` and is around 90 characters).
-6. Open `index.html` in a text editor, find this line near the top of the
-   `<script id="app-script">` section:
+6. Open `index.html` in a text editor. Don't scroll for it — use
+   **Ctrl+F** (Find) and search for `PASTE_YOUR_VAPID_KEY_HERE`. It's one
+   specific line, a few hundred lines from the end of the file, just above
+   where the Firebase project settings are listed:
    ```js
    var VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
    ```
-   and replace `PASTE_YOUR_VAPID_KEY_HERE` with the key you copied, so it
-   reads something like:
+   Replace `PASTE_YOUR_VAPID_KEY_HERE` (keep the quotes) with the key you
+   copied, so it reads something like:
    ```js
    var VAPID_KEY = 'BNa1b2c3...............................xyz';
    ```
