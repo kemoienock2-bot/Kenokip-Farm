@@ -1,6 +1,30 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed the "(internal)" error that showed up on the
+> **Update (latest):** Fixed a second, unrelated cause of the "(internal)"
+> note — this time it was showing text about a "Messaging" service worker
+> ("...unable to register the default service worker... 404...
+> messaging/failed-service-worker-registration"). That text has nothing to
+> do with receipts at all — it's from the app's (currently unused,
+> not-yet-configured) push-notification setup, and on some phones a
+> leftover/stale background check for it was misfiring at exactly the wrong
+> moment and getting mistaken for the receipt-signing answer. Fixed by
+> having the app double-check that any error it shows for a receipt
+> genuinely came from the receipt-signing server (not some unrelated
+> background hiccup) — if it didn't, the app now quietly tries again once
+> automatically before giving up, and if it's still not a real answer, it
+> shows one plain, honest message instead of confusing unrelated text.
+> Front-end only:
+> ```
+> git add .
+> git commit -m "Don't let unrelated background errors show up as the reason a receipt is unsigned"
+> git push
+> ```
+> If receipts still come out unsigned after this, try fully closing and
+> reopening the app once first (this clears out any leftover background
+> state from before) — then check the note on the receipt again; it should
+> now say the real reason if one still exists.
+
+> **Earlier update:** Fixed the "(internal)" error that showed up on the
 > receipt's unsigned note ("This copy has no verification code (internal)").
 > Root cause: signing itself was actually working fine — the code that
 > failed was a secondary step right after, which logs every signed receipt

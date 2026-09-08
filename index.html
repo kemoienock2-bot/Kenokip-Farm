@@ -2511,6 +2511,32 @@ var qrcode = (function(){
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Close</button><button type="button" class="btn primary" data-action="sign-pending-receipt">Sign &amp; download</button></div>'
     );
   }
+  // Wraps a signReceipt/verifyReceipt call with one automatic retry, and —
+  // importantly — refuses to show an error that didn't actually come from
+  // OUR Cloud Function. A genuine error from a Functions call always has a
+  // `code` starting with "functions/" (e.g. "functions/failed-precondition")
+  // — that's how the Firebase client SDK tags it. Anything else (seen for
+  // real: an unrelated, stale background service-worker check failing with
+  // a "messaging/..." error at the exact wrong moment) is some unconnected
+  // browser/SDK hiccup that happened to reject at the same time, not a real
+  // answer about the receipt. Retrying once clears most of those; if it's
+  // still not a real Functions error after the retry, callers get one
+  // clean, honest message instead of confusing, unrelated SDK text.
+  function callFunctionResilient(name, data){
+    function attempt(){ return firebase.functions().httpsCallable(name)(data); }
+    function isRealFunctionsError(err){ return !!(err && typeof err.code === 'string' && err.code.indexOf('functions/') === 0); }
+    return attempt().catch(function(err){
+      if(isRealFunctionsError(err)) throw err;
+      console.error(name+': unrelated error on first attempt, retrying', err);
+      return attempt().catch(function(err2){
+        if(isRealFunctionsError(err2)) throw err2;
+        console.error(name+': unrelated error persisted after retry', err2);
+        var cleanErr = new Error('an unexpected error happened while contacting the server — please try again');
+        cleanErr.code = 'client/unexpected';
+        throw cleanErr;
+      });
+    });
+  }
   // Step 2: capture a drawn signature, bind it (and who/when) into the
   // canonical fields, ask the server to sign them, then show the final,
   // printable document with the signature image, verification code, and QR
@@ -2554,7 +2580,7 @@ var qrcode = (function(){
         finish(null, true, offlineReason);
         return;
       }
-      firebase.functions().httpsCallable('signReceipt')({fields: fields}).then(function(res){
+      callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
         var code = res.data && res.data.code;
         var blobStr = JSON.stringify({fields: fields, code: code});
         var blobB64 = utf8ToBase64Url(blobStr);
@@ -2705,7 +2731,7 @@ var qrcode = (function(){
       return;
     }
     if(resultArea) resultArea.innerHTML = '<div class="hint">Checking…</div>';
-    firebase.functions().httpsCallable('verifyReceipt')({fields: fields, code: code}).then(function(res){
+    callFunctionResilient('verifyReceipt', {fields: fields, code: code}).then(function(res){
       if(!resultArea) return;
       var fieldsHtml = fields.map(function(f){ return '<div class="kv-row"><span>'+esc(f[0])+'</span><span>'+esc(f[1])+'</span></div>'; }).join('');
       if(res.data && res.data.valid){
