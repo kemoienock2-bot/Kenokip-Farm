@@ -1,6 +1,30 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Receipts confirmed working — signing now gets a real
+> **Update (latest):** Added a "Copy verify link" button to a signed
+> receipt — checking it from a different device (e.g. you signed on your
+> phone but want to verify on a laptop) no longer means scanning a QR code
+> and retyping what it says. Copy the link (WhatsApp, email, notes — however
+> you like to move it between your own devices), then paste it straight into
+> "Verify a receipt" anywhere; pasting the raw QR text still works too, same
+> as before. Front-end only:
+> ```
+> git add .
+> git commit -m "Add Copy verify link for checking a receipt from a different device"
+> git push
+> ```
+>
+> **If your phone specifically keeps showing an old error that your laptop
+> doesn't** (like the earlier "(internal)" note, even after this update):
+> that almost certainly means the phone is still running an old, cached
+> copy of the app from before today's fixes — a normal refresh doesn't
+> always force that update. To fix it for good: if the app is installed on
+> your home screen, long-press its icon → App info → Storage & cache →
+> Clear storage, then reopen it and sign in again. If you're using it in
+> the Chrome app instead, open Chrome → ⋮ menu → History → Clear browsing
+> data → tick "Cached images and files" → Clear, then reopen the site. This
+> forces your phone to fetch everything fresh instead of the stale copy.
+
+> **Earlier update:** Receipts confirmed working — signing now gets a real
 > verification code and QR. This update just makes signing and "Verify a
 > receipt" a bit more patient with a weak or spotty mobile signal (normal
 > out on a farm): instead of giving up after one retry, it now tries up to
