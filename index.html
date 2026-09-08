@@ -393,7 +393,8 @@
     health:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C.8 8.2 2.4 4.5 6 4.5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.6 0 5.2 3.7 3.5 7.5-2.5 4.5-9.5 9-9.5 9z"/><path d="M6.5 12h2.3l1.2-2.4L11.5 14l1.4-2h4.3"/></svg>',
     feed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l1.5 6c.6 4-1.5 8-3.5 9.5a4 4 0 0 1-4 .8"/><path d="M6 3 4.5 9c-.6 4 1.5 8 3.5 9.5.8.6 1.8.9 2.8.9"/><path d="M9 9h6"/><path d="M8 13.5h3M13 13.5h3"/></svg>',
     reports:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13l2 2 4-5"/></svg>',
-    receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3V3z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>'
+    receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3V3z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
+    customers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10.5" r="2.3"/><path d="M5.3 16.3c.6-1.9 2-2.9 3.7-2.9s3.1 1 3.7 2.9"/><path d="M14.5 9h4M14.5 12.5h4"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -492,7 +493,7 @@
           vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
         }
       },
-      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[]
+      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[], customers:[]
     };
   }
   function migrateState(data){
@@ -516,7 +517,26 @@
     merged.incomes = Array.isArray(data&&data.incomes) ? data.incomes : [];
     merged.healthRecords = Array.isArray(data&&data.healthRecords) ? data.healthRecords : [];
     merged.feedLogs = Array.isArray(data&&data.feedLogs) ? data.feedLogs : [];
+    merged.customers = Array.isArray(data&&data.customers) ? data.customers : [];
+    backfillCustomers(merged);
     return merged;
+  }
+  // One-time-per-load catch-up: any "Sold" flock or egg record that already
+  // has a buyer name typed in, from before the Customers directory existed
+  // (or synced from another device before this one had it), gets linked to
+  // a customer now instead of staying just a name on an old receipt.
+  // Idempotent — only touches records missing a customerId, and reuses a
+  // matching customer by name (case-insensitive) rather than ever making a
+  // duplicate.
+  function backfillCustomers(merged){
+    (merged.flock||[]).forEach(function(b){
+      (b.removals||[]).forEach(function(r){
+        if(r.reason==='sold' && r.buyer && !r.customerId) r.customerId = resolveOrCreateCustomer(merged, r.buyer);
+      });
+    });
+    (merged.eggLosses||[]).forEach(function(x){
+      if(x.reason==='sold' && x.buyer && !x.customerId) x.customerId = resolveOrCreateCustomer(merged, x.buyer);
+    });
   }
   function loadState(){
     // Standalone build: this file never rewrites itself, so the durable copy
@@ -739,7 +759,8 @@
       ['feed','Feed',ICONS.feed],
       ['health','Health',ICONS.health],
       ['expenses','Expenses',ICONS.expenses],
-      ['income','Income',ICONS.income]
+      ['income','Income',ICONS.income],
+      ['customers','Customers',ICONS.customers]
     ];
     if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
     if(canSeeFinance()) items.push(['reports','Reports',ICONS.reports]);
@@ -1081,10 +1102,11 @@
         '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
       '</div>'+
       '<div id="sale-fields" class="field-grid" style="margin-top:12px">'+
-        '<div class="field-row"><label>Sold to (optional)</label><input class="field" type="text" name="buyer" placeholder="Buyer\'s name"></div>'+
+        '<div class="field-row"><label>Sold to (optional)</label><input class="field" type="text" name="buyer" list="customer-names-list" placeholder="Buyer\'s name — new or existing"></div>'+
         '<div class="field-row"><label>Sale amount (optional)</label><input class="field" type="number" min="0" step="0.01" name="saleAmount" placeholder="0"></div>'+
         '<div class="field-row"><label>Currency</label><select class="field" name="saleCurrency">'+currencyOptions()+'</select></div>'+
       '</div>'+
+      customerNamesDatalist()+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" placeholder="Optional"></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
@@ -1222,10 +1244,11 @@
         '<div class="field-row"><label>Number of eggs</label><input class="field" type="number" min="1" name="count" value="'+(x?x.count:'')+'" required autofocus></div>'+
       '</div>'+
       '<div id="egg-sale-fields" class="field-grid" style="margin-top:12px; display:'+(isSold?'grid':'none')+'">'+
-        '<div class="field-row"><label>Sold to (optional)</label><input class="field" type="text" name="buyer" value="'+(x?esc(x.buyer||''):'')+'" placeholder="Buyer\'s name"></div>'+
+        '<div class="field-row"><label>Sold to (optional)</label><input class="field" type="text" name="buyer" list="customer-names-list" value="'+(x?esc(x.buyer||''):'')+'" placeholder="Buyer\'s name — new or existing"></div>'+
         '<div class="field-row"><label>Sale amount (optional)</label><input class="field" type="number" min="0" step="0.01" name="saleAmount" value="'+curCost+'" placeholder="0"></div>'+
         '<div class="field-row"><label>Currency</label><select class="field" name="saleCurrency">'+currencyOptions()+'</select></div>'+
       '</div>'+
+      customerNamesDatalist()+
       '<div class="field-row" style="margin-top:12px"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add entry')+'</button></div>'+
@@ -1544,6 +1567,83 @@
     var area = document.getElementById('receipt-print-area');
     area.innerHTML = html;
     window.print();
+  }
+
+  /* ============================= CUSTOMERS ============================= */
+  // A lightweight buyer directory that mostly builds itself: whenever a
+  // Flock or Egg sale is recorded with a name in "Sold to", that name is
+  // matched (case-insensitively) to an existing customer or turned into a
+  // new one automatically — no separate "save this buyer" step. Someone who
+  // only ever sells one-off at the local market can just leave "Sold to"
+  // blank, or type something generic like "Local market", and it becomes
+  // its own low-effort running total rather than cluttering real names.
+  // Purchase totals are always computed fresh from the actual sale records
+  // (never stored redundantly on the customer itself), the same way feed
+  // and health stats are computed from their own logs elsewhere in the app.
+  function resolveOrCreateCustomer(s, rawName){
+    var name = String(rawName||'').trim();
+    if(!name) return null;
+    if(!Array.isArray(s.customers)) s.customers = [];
+    var existing = s.customers.find(function(c){ return c.name.toLowerCase()===name.toLowerCase(); });
+    if(existing) return existing.id;
+    var rec = {id:uid('cust'), name:name, phone:'', note:'', createdDate:todayISO()};
+    s.customers.push(rec);
+    return rec.id;
+  }
+  function customerSoldRecords(customerId){
+    var out = [];
+    state.flock.forEach(function(b){
+      (b.removals||[]).forEach(function(r){ if(r.reason==='sold' && r.customerId===customerId) out.push({date:r.date, amount:r.saleAmount||0, kind:'flock'}); });
+    });
+    (state.eggLosses||[]).forEach(function(x){
+      if(x.reason==='sold' && x.customerId===customerId) out.push({date:x.date, amount:x.saleAmount||0, kind:'egg'});
+    });
+    return out;
+  }
+  function customerStats(customerId){
+    var recs = customerSoldRecords(customerId);
+    var totalSpent = recs.reduce(function(a,r){return a+r.amount;},0);
+    var lastDate = recs.length ? recs.reduce(function(a,r){return r.date>a?r.date:a;}, recs[0].date) : null;
+    return { count: recs.length, totalSpent: totalSpent, lastDate: lastDate };
+  }
+  function customerNamesDatalist(){
+    return '<datalist id="customer-names-list">'+state.customers.map(function(c){ return '<option value="'+esc(c.name)+'">'; }).join('')+'</datalist>';
+  }
+  function customersPanel(){
+    var list = (state.customers||[]).slice().map(function(c){ return Object.assign({}, c, customerStats(c.id)); })
+      .sort(function(a,b){ return b.totalSpent-a.totalSpent; });
+    var rows = list.map(function(c){
+      return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.phone||'—')+'</td><td class="num">'+fmtMoney(c.totalSpent)+'</td><td class="num">'+c.count+'</td>'+
+      '<td>'+(c.lastDate?fmtDate(parseISO(c.lastDate)):'—')+'</td><td>'+esc(c.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-customer:'+c.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-customer:'+c.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    var totalAcrossAll = list.reduce(function(a,c){return a+c.totalSpent;},0);
+    return '<div class="grid stats">'+
+      statTile('Customers', list.length.toLocaleString(), '')+
+      statTile('Total sales linked to a buyer', fmtMoney(totalAcrossAll), '')+
+    '</div>'+
+    '<div class="card"><div class="card-title"><h3>Directory</h3><span class="hint">'+list.length+' recorded'+'</span></div>'+
+      '<p class="hint" style="margin-top:-4px; margin-bottom:12px">Builds itself from "Sold to" on Flock and Egg sales — add one here only to save contact details ahead of their first sale.</p>'+
+      '<div class="table-wrap">'+
+      (list.length ? '<table><thead><tr><th>Name</th><th>Phone</th><th class="num">Total spent</th><th class="num">Purchases</th><th>Last purchase</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No customers yet — they\'ll show up here as soon as a sale names a buyer.</div></div>')+
+      '</div></div>';
+  }
+  function customerFormHtml(id){
+    var c = id ? state.customers.find(function(x){return x.id===id;}) : null;
+    return '<div class="modal-head"><h3>'+(c?'Edit customer':'Add customer')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="customer">'+
+      '<input type="hidden" name="id" value="'+(c?c.id:'')+'">'+
+      '<div class="field-row"><label>Name</label><input class="field" type="text" name="name" value="'+(c?esc(c.name):'')+'" required autofocus></div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Phone (optional)</label><input class="field" type="text" name="phone" value="'+(c?esc(c.phone||''):'')+'" placeholder="07xx xxx xxx"></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(c?esc(c.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(c?'Save changes':'Add customer')+'</button></div>'+
+    '</form>';
   }
 
   /* ============================= EXPENSES / INCOME ============================= */
@@ -2529,6 +2629,7 @@
     reports:{ topbar:function(){ return topbarHTML('Reports','Print or export a period summary', ''); }, panel:reportsPanel },
     expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
     income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
+    customers:{ topbar:function(){ return topbarHTML('Customers','Buyers, repeat and one-off', addBtn('open-add-customer','Add customer')); }, panel:customersPanel },
     finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
     about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : ''); }, panel:aboutPanel },
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
@@ -2786,6 +2887,13 @@
       case 'delete-health':
         confirmModal('Delete this health record? This can\'t be undone.', function(){ mutate(function(s){ s.healthRecords = (s.healthRecords||[]).filter(function(x){return x.id!==a1;}); }); });
         break;
+      case 'open-add-customer': openModal(customerFormHtml()); break;
+      case 'edit-customer': openModal(customerFormHtml(a1)); break;
+      case 'delete-customer':
+        confirmModal('Delete this customer? Their past sales and receipts are unaffected — this only removes them from the directory.', function(){
+          mutate(function(s){ s.customers = (s.customers||[]).filter(function(c){return c.id!==a1;}); });
+        });
+        break;
       case 'open-add-expense': openModal(moneyFormHtml('expense')); break;
       case 'edit-expense': openModal(moneyFormHtml('expense',a1)); break;
       case 'delete-expense': confirmModal('Delete this expense? This can\'t be undone.', function(){ mutate(function(s){ s.expenses = s.expenses.filter(function(x){return x.id!==a1;}); }); }); break;
@@ -3036,6 +3144,7 @@
         x.date = elDate; x.reason = elReason; x.count = elCount; x.note = elNote;
         if(elReason==='sold'){
           x.buyer = elBuyer;
+          x.customerId = resolveOrCreateCustomer(s, elBuyer);
           x.saleAmount = elSaleAmount>0 ? fromCurrency(elSaleAmount, elSaleCurrency) : 0;
           x.recordedByRole = x.recordedByRole || roleLabel(currentUser);
           if(elSaleAmount>0){
@@ -3044,7 +3153,7 @@
             x.linkedIncomeId = incRec.id;
           }
         } else {
-          x.buyer = null; x.saleAmount = 0; x.recordedByRole = null;
+          x.buyer = null; x.customerId = null; x.saleAmount = 0; x.recordedByRole = null;
         }
         newElId = x.id;
       });
@@ -3081,6 +3190,7 @@
         var rem = {id:uid('rem'), date:rdate, count:rcount, reason:reason, note:rnote};
         if(reason==='sold'){
           rem.buyer = buyer;
+          rem.customerId = resolveOrCreateCustomer(s, buyer);
           rem.saleAmount = saleAmount>0 ? fromCurrency(saleAmount, saleCurrency) : 0;
           rem.recordedByRole = roleLabel(currentUser);
           if(saleAmount>0){
@@ -3158,6 +3268,20 @@
         s.settings.about = { bio: aboutBio, mission: aboutMission, vision: aboutVision };
       });
       closeModal(); toast('About saved.');
+      return;
+    }
+    if(name==='customer'){
+      var custId = val('id') || null;
+      var custName = (val('name')||'').trim();
+      var custPhone = (val('phone')||'').trim();
+      var custNote = (val('note')||'').trim();
+      if(!custName){ toast('Enter a name.'); return; }
+      mutate(function(s){
+        s.customers = s.customers || [];
+        if(custId){ var c = s.customers.find(function(i){return i.id===custId;}); if(c){ c.name=custName; c.phone=custPhone; c.note=custNote; } }
+        else s.customers.push({id:uid('cust'), name:custName, phone:custPhone, note:custNote, createdDate:todayISO()});
+      });
+      closeModal(); toast(custId?'Saved.':'Customer added.');
       return;
     }
     if(name==='feed'){

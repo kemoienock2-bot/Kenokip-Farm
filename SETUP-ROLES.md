@@ -1,6 +1,30 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** downloadable receipts, and Finance/Income now stay in
+> **Update (latest):** a Customers directory — built for you automatically.
+> New "Customers" nav item (visible to everyone, like Flock and Eggs) listing
+> everyone who's bought from the farm: name, phone, total spent, number of
+> purchases, and their last purchase date — sorted by biggest spender first.
+> You don't have to type anything for this to fill up: whenever you record a
+> Flock sale or an Egg sale and type a buyer's name in "Sold to", that name
+> is automatically matched to an existing customer (so "John Mwangi" and
+> "john mwangi" become the same person, not two) or a new one is created
+> quietly in the background — repeat buyers build up a real purchase history
+> with zero extra work, and a one-off or local-market sale costs nothing
+> extra either (just leave the name generic, like "Local market", or blank).
+> Every past sale you've already recorded gets picked up into the directory
+> automatically too, the next time the app loads — nothing from before this
+> update is left out. Want to save a customer's phone number or a note ahead
+> of their first sale? Use the new "Add customer" button on that page.
+> Deleting a customer only removes their contact card — it never touches
+> past sales, receipts, or income records. Total spent and purchase counts
+> are always worked out fresh from the actual sales on record, so they can
+> never drift out of sync or go stale.
+>
+> Front-end only this time — `index.html` and `sw.js`. **No functions
+> redeploy needed** (`firebase deploy --only functions` can be skipped for
+> this one), and no new Firestore rules.
+
+> **Earlier update:** downloadable receipts, and Finance/Income now stay in
 > sync automatically. Three things in this one:
 > 1. **Receipts** — a printable receipt (with your logo, a receipt number,
 >    signature lines, and a stamp box) for anything the farm is paid for:
@@ -42,41 +66,6 @@
 > redeploy this time (`firebase deploy --only functions`), since the
 > Finance→Income sync lives partly in `functions/roles.js` and
 > `functions/index.js`. No new Firestore rules needed.
-
-> **Earlier update:** the farm-management basics, tightened up — plus real
-> push notifications. Four things in this one:
-> 1. **Feed** (new nav item) — log what you buy/use (type, kg, optional
->    cost, note). Today/week/month/year cards show kg used and **feed per
->    egg** in grams, so you can actually see if feed use per egg is
->    creeping up. If you enter a cost, it's added to Expenses automatically
->    under "Feed" — editing or deleting the feed entry keeps that Expense in
->    sync, so nothing needs entering twice or can go out of step.
-> 2. **Health** (new nav item) — log vaccinations, treatments, checkups,
->    and illnesses, each against the whole flock or one batch, with an
->    optional "next due" date. An **Upcoming & due** card at the top flags
->    anything overdue or due within a week, and the Overview page now shows
->    a red banner if anything's overdue, so it's impossible to miss.
-> 3. **Reports** (new nav item, Administrator/Financial Staff only) — pick
->    a period (day/week/month/year) and get one summary card: income,
->    expenses, profit or deficit, eggs produced, feed used + cost + per-egg,
->    flock change, total birds, and overdue health reminders. **Print /
->    Save as PDF** uses your browser's own print dialog (no new library
->    needed) to print just that summary, cleanly, without the rest of the
->    app around it. **Download CSV** exports every income/expense
->    transaction in the selected period as a spreadsheet file.
-> 4. **Real push notifications** — Urgent messages can now reach your phone
->    even with the app **fully closed**, not just backgrounded like before.
->    This needs one manual step only you can do (getting a free key from
->    your own Firebase console) — see the new `SETUP-PUSH.md` for exactly
->    how. Until that key is in place, everything above works as normal and
->    urgent alerts still work exactly as they did while a tab is open
->    somewhere; the fully-closed-app case just waits for that one step.
->
-> Needs both a front-end update (`index.html`, `sw.js`) and a functions
-> redeploy this time (`firebase deploy --only functions`), since the push
-> notification backend lives in `functions/roles.js`. No new Firestore rules
-> needed — Feed and Health logs live in the same `farms/kenokip` document
-> Flock and Eggs already use.
 
 > **Earlier update:** fixed the 10-minute sign-out for you and Financial
 > Staff — it was a flat 10-minute clock from sign-in regardless of whether
