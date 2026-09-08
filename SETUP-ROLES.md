@@ -1,6 +1,34 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed "Print / Save as PDF" producing a blank page
+> **Update (latest):** Fixed the "(internal)" error that showed up on the
+> receipt's unsigned note ("This copy has no verification code (internal)").
+> Root cause: signing itself was actually working fine — the code that
+> failed was a secondary step right after, which logs every signed receipt
+> to a private admin-only record for accountability. That record was being
+> handed the receipt's numbers in a shape Firestore doesn't allow (a list of
+> pairs nested directly inside another list), so the write crashed, and
+> because it crashed instead of failing gracefully, the whole request came
+> back as a generic "(internal)" error instead of the receipt you'd already
+> earned. Fixed by reshaping just that log entry, and by making sure that
+> even if this accountability log ever fails again for some other reason,
+> it can never again block you from getting your signed receipt. **This one
+> needs a Cloud Functions redeploy — no new secret, no Firestore rules
+> change:**
+> ```
+> cd functions
+> npm install
+> cd ..
+> firebase deploy --only functions
+> git add .
+> git commit -m "Fix (internal) error signing receipts — Firestore rejected nested-array audit log entry"
+> git push
+> ```
+> After deploying, try signing a receipt again — it should now get a real
+> verification code and QR code instead of the unsigned note. If it still
+> comes out unsigned, the note will say the new real reason (thanks to the
+> earlier update below) — that's the next thing to check.
+
+> **Earlier update:** Fixed "Print / Save as PDF" producing a blank page
 > for receipts and the Activity Statement. Root cause: a CSS rule that
 > positions the hidden print copy off-screen (so it doesn't show up in the
 > app itself) was accidentally still winning at print time too, due to

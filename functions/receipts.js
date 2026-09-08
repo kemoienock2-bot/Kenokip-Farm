@@ -81,17 +81,35 @@ module.exports = function (admin, db, secretRef) {
       );
     }
     const code = computeCode(secret, canonicalPayload(fields));
-    // A running log of every receipt ever signed — administrator-only,
-    // this IS the accountability trail: who generated a receipt, exactly
-    // what it said, and when, independent of any copy that gets printed
-    // or handed out afterward.
-    await db.collection('receiptLog').add({
-      fields,
-      code,
-      signedByUid: auth.uid,
-      signedByEmail: (auth.token && auth.token.email) || null,
-      at: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    try {
+      // A running log of every receipt ever signed — administrator-only,
+      // this IS the accountability trail: who generated a receipt, exactly
+      // what it said, and when, independent of any copy that gets printed
+      // or handed out afterward.
+      //
+      // Firestore doesn't allow an array to directly contain another array
+      // (`fields` here is an array of [label, value] pairs) — writing it
+      // as-is throws, which is exactly what was happening: signing worked,
+      // but this audit-log write crashed right after, and the crash (an
+      // unexpected, non-HttpsError exception) is what Firebase masks to
+      // the client as a bare "internal" error. Converting each pair to a
+      // {label, value} object sidesteps the restriction — arrays of
+      // objects are fine, arrays of arrays are not.
+      const fieldsForLog = fields.map((f) => ({ label: String(f[0]), value: f[1] == null ? '' : String(f[1]) }));
+      await db.collection('receiptLog').add({
+        fields: fieldsForLog,
+        code,
+        signedByUid: auth.uid,
+        signedByEmail: (auth.token && auth.token.email) || null,
+        at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (err) {
+      // The receipt is already validly signed at this point (the `code`
+      // above is real and correct) — a broken audit log shouldn't block
+      // someone from getting their receipt. Still surface a real error
+      // message if this ever throws, though, instead of failing silently.
+      console.error('signReceipt: receiptLog write failed', err);
+    }
     return { code };
   });
 
