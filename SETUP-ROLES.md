@@ -1,6 +1,20 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed a second, unrelated cause of the "(internal)"
+> **Update (latest):** Receipts confirmed working — signing now gets a real
+> verification code and QR. This update just makes signing and "Verify a
+> receipt" a bit more patient with a weak or spotty mobile signal (normal
+> out on a farm): instead of giving up after one retry, it now tries up to
+> three times total, a short pause between each, before showing an error.
+> A genuine problem (like signing not being set up) still shows immediately
+> — this only adds patience for dropped-connection type hiccups. Front-end
+> only:
+> ```
+> git add .
+> git commit -m "More patient retries for signReceipt/verifyReceipt on a weak connection"
+> git push
+> ```
+
+> **Earlier update:** Fixed a second, unrelated cause of the "(internal)"
 > note — this time it was showing text about a "Messaging" service worker
 > ("...unable to register the default service worker... 404...
 > messaging/failed-service-worker-registration"). That text has nothing to

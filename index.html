@@ -2511,31 +2511,34 @@ var qrcode = (function(){
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Close</button><button type="button" class="btn primary" data-action="sign-pending-receipt">Sign &amp; download</button></div>'
     );
   }
-  // Wraps a signReceipt/verifyReceipt call with one automatic retry, and —
-  // importantly — refuses to show an error that didn't actually come from
-  // OUR Cloud Function. A genuine error from a Functions call always has a
-  // `code` starting with "functions/" (e.g. "functions/failed-precondition")
-  // — that's how the Firebase client SDK tags it. Anything else (seen for
-  // real: an unrelated, stale background service-worker check failing with
-  // a "messaging/..." error at the exact wrong moment) is some unconnected
-  // browser/SDK hiccup that happened to reject at the same time, not a real
-  // answer about the receipt. Retrying once clears most of those; if it's
-  // still not a real Functions error after the retry, callers get one
-  // clean, honest message instead of confusing, unrelated SDK text.
+  // Wraps a signReceipt/verifyReceipt call with a couple of automatic
+  // retries (a short pause between each — worth it on a spotty rural mobile
+  // signal, which is the normal case out on a farm), and — importantly —
+  // refuses to show an error that didn't actually come from OUR Cloud
+  // Function. A genuine error from a Functions call always has a `code`
+  // starting with "functions/" (e.g. "functions/failed-precondition") —
+  // that's how the Firebase client SDK tags it. Anything else (a dropped
+  // connection, or an unrelated background hiccup rejecting at the exact
+  // wrong moment) isn't a real answer about the receipt. If it's still not
+  // a real Functions error after all retries are used up, callers get one
+  // clean, honest message instead of confusing, unrelated text.
   function callFunctionResilient(name, data){
     function attempt(){ return firebase.functions().httpsCallable(name)(data); }
     function isRealFunctionsError(err){ return !!(err && typeof err.code === 'string' && err.code.indexOf('functions/') === 0); }
-    return attempt().catch(function(err){
-      if(isRealFunctionsError(err)) throw err;
-      console.error(name+': unrelated error on first attempt, retrying', err);
-      return attempt().catch(function(err2){
-        if(isRealFunctionsError(err2)) throw err2;
-        console.error(name+': unrelated error persisted after retry', err2);
-        var cleanErr = new Error('an unexpected error happened while contacting the server — please try again');
-        cleanErr.code = 'client/unexpected';
-        throw cleanErr;
+    function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+    function tryOnce(attemptsLeft){
+      return attempt().catch(function(err){
+        if(isRealFunctionsError(err)) throw err;
+        console.error(name+': unrelated error, '+attemptsLeft+' retries left', err);
+        if(attemptsLeft <= 0){
+          var cleanErr = new Error('an unexpected error happened while contacting the server — please try again');
+          cleanErr.code = 'client/unexpected';
+          throw cleanErr;
+        }
+        return delay(900).then(function(){ return tryOnce(attemptsLeft-1); });
       });
-    });
+    }
+    return tryOnce(2);
   }
   // Step 2: capture a drawn signature, bind it (and who/when) into the
   // canonical fields, ask the server to sign them, then show the final,
