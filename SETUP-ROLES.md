@@ -1,6 +1,18 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Two small fixes to signed receipts, both front-end
+> **Update (latest):** Fixed "Print / Save as PDF" producing a blank page
+> for receipts and the Activity Statement. Root cause: a CSS rule that
+> positions the hidden print copy off-screen (so it doesn't show up in the
+> app itself) was accidentally still winning at print time too, due to
+> how specific it was — so the printed page was correctly "there", just
+> parked 99999 pixels off the left edge of the paper. Front-end only:
+> ```
+> git add .
+> git commit -m "Fix blank page when printing/saving a receipt or Activity Statement as PDF"
+> git push
+> ```
+
+> **Earlier update:** Two small fixes to signed receipts, both front-end
 > only:
 > 1. **The signature was too faint and small when printed.** The drawn
 >    line is now bolder and solid black, and it's printed noticeably

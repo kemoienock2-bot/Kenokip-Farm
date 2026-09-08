@@ -351,6 +351,13 @@
     .print-area, .print-area *{ visibility:visible; }
     .print-area{ position:absolute; left:0; top:0; width:100%; padding:0; }
     .rail, .topbar, #toast-root, #global-banner{ display:none !important; }
+    /* #receipt-print-area's own ID rule below (position:fixed; left:-99999px)
+       otherwise wins over .print-area here on specificity alone (an ID
+       always beats a class, regardless of source order) — which is why
+       printing a receipt produced a blank page: the content was correctly
+       "visible", just sitting 99999px off the left edge of the printed
+       page. !important forces this print-time position to actually apply. */
+    #receipt-print-area{ position:absolute !important; left:0 !important; top:0 !important; width:100% !important; }
   }
   #receipt-print-area{ position:fixed; left:-99999px; top:0; width:680px; }
 
