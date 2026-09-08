@@ -1600,10 +1600,55 @@ var qrcode = (function(){
           '<table><thead><tr><th>Added</th><th>Gender</th><th>Age</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
           : '<div class="empty">'+ICONS.empty+'<div>No birds recorded yet. Use the '+'+ '+'button above — or on any Chicks / Growers / Layers card — to add your first batch.</div></div>')+
         '</div></div>'+
+      flockActivityPanelHTML()+
       broodingPanelHTML()+
       '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
         countBars(lossEntries)+
       '</div>';
+  }
+  // Every recorded loss or sale, across every batch, in one flat list right
+  // on the Flock page — edit, view a receipt (if sold), or undo, without
+  // having to open a batch's History first. Re-sexing splits aren't "losses"
+  // in the usual sense (nothing left the farm), so they stay History-only —
+  // undo them from the batch they created instead.
+  function flockActivityRows(){
+    var out = [];
+    state.flock.forEach(function(b){
+      (b.removals||[]).forEach(function(r){
+        if(r.reason!=='resexed') out.push({batch:b, removal:r});
+      });
+    });
+    out.sort(function(a,b){ return a.removal.date<b.removal.date?1:-1; });
+    return out;
+  }
+  function flockActivityPanelHTML(){
+    var activity = flockActivityRows();
+    var rows = activity.map(function(item){
+      var b = item.batch, r = item.removal;
+      var batchLabel = genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+' · added '+fmtDate(parseISO(b.dateAdded));
+      var amountText = r.reason==='sold' ? (r.saleAmount>0 ? fmtMoney(r.saleAmount) : 'Not recorded') : '—';
+      return '<tr>'+
+        '<td>'+fmtDate(parseISO(r.date))+'</td>'+
+        '<td>'+esc(batchLabel)+'</td>'+
+        '<td><span class="pill">'+removalReasonLabel(r.reason)+'</span></td>'+
+        '<td class="num">'+r.count+'</td>'+
+        '<td>'+(r.reason==='sold' ? esc(r.buyer||'Walk-in customer') : '—')+'</td>'+
+        '<td class="num">'+amountText+'</td>'+
+        '<td>'+esc(r.note||'—')+'</td>'+
+        '<td><div class="row-actions">'+
+          (r.reason==='sold' ? '<button class="icon-btn" data-action="view-flock-receipt:'+b.id+':'+r.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
+          '<button class="icon-btn" data-action="edit-removal:'+b.id+':'+r.id+'" title="Edit this entry" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+          '<button class="icon-btn" data-action="delete-removal:'+b.id+':'+r.id+'" title="Undo this entry" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+        '</div></td>'+
+      '</tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Losses &amp; sales</h3><span class="hint">'+activity.length+' recorded</span></div>'+
+      '<p class="hint" style="margin-top:-4px; margin-bottom:12px">Every loss or sale across every batch — use "Record loss or sale" on a batch above to add one.</p>'+
+      '<div class="table-wrap">'+
+      (activity.length ?
+        '<table><thead><tr><th>Date</th><th>Batch</th><th>Reason</th><th class="num">Count</th><th>Buyer</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
+      '</div></div>';
   }
   function broodingPanelHTML(){
     var list = (state.broodings||[]).slice().sort(function(a,b){ return a.dateStarted<b.dateStarted?1:-1; });

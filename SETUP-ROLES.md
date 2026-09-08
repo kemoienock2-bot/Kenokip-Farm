@@ -1,6 +1,20 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** "Record loss or sale" can now be edited, and receipts
+> **Update (latest):** Every recorded flock loss/sale now shows up directly
+> on the Flock page itself, in a new "Losses & sales" card right below the
+> Batches table — date, batch, reason, count, buyer, amount, and note, with
+> Edit and (for a sale) receipt buttons right there. No backend changes —
+> front-end only:
+> ```
+> git add .
+> git commit -m "Show flock losses/sales directly on the Flock page"
+> git push
+> ```
+> "History" (per batch) still exists too, for undoing a re-sexing split or
+> a quick per-batch view — this new card is the faster way to get to
+> edit/receipt for any loss or sale without opening it first.
+
+> **Earlier update:** "Record loss or sale" can now be edited, and receipts
 > got a real accountability upgrade — an electronic signature you draw in
 > the app, a verification code, and a QR code that together make it much
 > harder to quietly edit a receipt and pass it off as genuine. There's also
