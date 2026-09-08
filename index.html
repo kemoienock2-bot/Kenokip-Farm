@@ -173,7 +173,8 @@
   .kemai-bubble{ position:fixed; right:20px; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); cursor:pointer; z-index:45; }
   .kemai-bubble:hover{ background:var(--accent-strong); }
   .kemai-bubble svg{ width:24px; height:24px; }
-  .kemai-panel{ position:fixed; right:20px; bottom:82px; width:min(340px, calc(100vw - 40px)); max-height:min(500px, calc(100vh - 120px)); background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden; z-index:44; }
+  .kemai-panel{ position:fixed; right:20px; bottom:82px; width:min(340px, calc(100vw - 40px)); max-height:min(500px, calc(100vh - 120px)); background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); flex-direction:column; overflow:hidden; z-index:44; }
+  .kemai-panel:not([hidden]){ display:flex; }
   .kemai-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border-soft); flex-shrink:0; }
   .kemai-head h3{ margin:0; font-size:14.5px; display:flex; align-items:center; gap:8px; }
   .kemai-head h3 svg{ width:18px; height:18px; color:var(--accent); }
@@ -3234,6 +3235,33 @@
     if(/\b(thank you|thanks|asante)\b/.test(q)) return "You're welcome — anytime.";
     if(/\bwho are you\b|\bwhat are you\b|\byour name\b/.test(q)) return "I'm Kem, the Kenokip Farm assistant — a free, built-in helper, not a connection to any outside AI service. I can work out numbers from what's already in the app, and explain how to use any feature. I don't chat about anything outside the farm.";
 
+    /* ---- how-to first: these are checked before the live numbers below on
+       purpose. "How do I log eggs" mentions "eggs" too, and if the numbers
+       check ran first it would answer with today's egg count instead of
+       ever explaining how to log one — every how-to pattern here requires
+       an action word (add/log/record/set up/...) alongside the topic, so a
+       plain "how many eggs" still falls through to the number below. ---- */
+    if(/\badd\b.*\b(bird|flock|chick|hen|rooster)\b|\bnew batch\b/.test(q)) return 'Go to Flock, then tap "Add birds" (or the + on a Chicks/Growers/Layers card) — enter how many, their gender, and where they came from.';
+    if(/\b(sold|sell|lost|died|predator|cull)\b.*\b(bird|flock|hen)\b|\brecord loss\b/.test(q)) return 'On the Flock page, find the batch\'s row and tap "Record loss" (or "Record loss or sale" next to it) — pick the reason, how many, and for a sale, the buyer and amount.';
+    if(/\b(log|add|record)\b.*\begg/.test(q)) return 'Go to Eggs and tap "Log eggs" — enter the date and how many were collected.';
+    if(/\b(log|add|record)\b.*\bfeed/.test(q)) return 'Go to Feed and tap "Log feed" — enter the type, quantity in kg, and cost.';
+    if(/\b(add|record)\b.*\bhealth|\bvaccinat.*\bhow\b|\b(log|record)\b.*\btreatment/.test(q)) return 'Go to Health and tap "Add record" — pick vaccination, treatment, checkup, or illness, which batch it\'s for, and (optionally) a follow-up reminder date.';
+    if(/\b(add|record)\b.*\bexpense/.test(q)) return 'Go to Expenses and tap "Add expense" — pick a category, amount, date, and an optional note.';
+    if(/\b(add|record)\b.*\bincome/.test(q)) return 'Go to Income and tap "Add income" — pick a category, amount, date, and an optional note.';
+    if(/\badd\b.*\bcustomer/.test(q)) return 'Go to Customers and tap "Add customer" — their name is enough to start; phone and notes are optional. Sales linked to them (from Flock or Eggs) show up automatically.';
+    if(/\bdeposit\b|\badd.*money\b|\bstk\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Add via M-Pesa" and confirm the PIN prompt on your phone — Safaricom handles that step directly, this app never sees your M-Pesa PIN.'; }
+    if(/\bwithdraw\b|\bsend.*money\b|\bpay ?out\b|\bb2c\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Send via M-Pesa", enter the phone number and amount — it goes out as a normal M-Pesa payment.'; }
+    if(/\bfingerprint\b|\bface unlock\b|\bfinance pin\b/.test(q)) return 'From Settings → Your account: set a personal Finance PIN, then tap "Set up fingerprint / Face unlock" and follow your device\'s own prompt. After that, the Finance portal offers a Fingerprint + PIN tab as a faster alternative to password + code — either one alone still can\'t get in.';
+    if(/\bsearch box\b|\bhow.*search\b/.test(q)) return 'The search box above every page searches flock, eggs, feed, health, expenses, income, and customers as you type (plus Finance and Team if your account can see those) — tap a result to jump straight to it.';
+    if(/\bvoice\b/.test(q)) return 'Tap the mic in the search box and say something like "open eggs" to jump to a page, or just say what you\'re looking for and it searches for it. Needs Chrome, Edge, or Safari.';
+    if(/\bchange.*password\b|\breset.*password\b/.test(q)) return 'From Settings → Your account, tap "Change password". If you\'re signed out and can\'t remember it, use "Forgot password?" on the sign-in screen instead.';
+    if(/\badd\b.*\b(team member|staff|employee)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('Team'); return 'From Team, tap "Add team member" — set their name, email, a temporary password, and role (Supervisor, Vet, Financial Staff, or Farmhand), then share the login with them directly.'; }
+    if(/\bnotification\b|\bpush\b|\balert\b/.test(q)) return 'From Settings → Your account, tap "Enable background urgent alerts" — that lets an Urgent message pop up on this device even when the app is in the background.';
+    if(/\bcurrency\b/.test(q)) return 'From Settings, pick your display currency — everything already recorded converts automatically, nothing needs re-entering.';
+    if(/\bbackup\b|\bexport\b/.test(q)) return 'Settings has a backup/export option for your records. Ask an administrator if you\'re not sure where your farm\'s backups are kept.';
+    if(/\bsecurity log\b|\baccess log\b|\bwho.*(logged in|accessed)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('the security and access logs'); return 'Team → Access log shows every sign-in, and Team → Finance security shows every Finance unlock attempt with device and rough location.'; }
+    if(/\babout page\b/.test(q)) return 'The About page tells your farm\'s story — administrators can edit it with the pencil icon at the top of that page.';
+
     /* ---- live numbers, worked out fresh from state every time ---- */
     if(/\begg/.test(q)){
       if(/\btoday\b/.test(q)){ var r=getRange('day'); return "You've logged "+sumEggs(r.startISO,r.endISO).toLocaleString()+" eggs today."; }
@@ -3265,7 +3293,7 @@
       }
       return list.length+" customer"+(list.length===1?'':'s')+" recorded.";
     }
-    if(/\bexpense/.test(q)){
+    if(/\bexpense|\bspen[dt]/.test(q)){
       if(canSeeFinance()===false && /\bfinance\b/.test(q)) return kemAiRestricted('Finance');
       var r3 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : (/\btoday\b/.test(q) ? getRange('day') : getRange('week'));
       return fmtMoney(sumMoney(state.expenses, r3.startISO, r3.endISO))+" in expenses "+r3.label.toLowerCase()+".";
@@ -3288,28 +3316,6 @@
       if(!isAdmin()) return kemAiRestricted('Team');
       return teamUsers.length+" team account"+(teamUsers.length===1?'':'s')+" set up.";
     }
-
-    /* ---- how-to, grouped by topic ---- */
-    if(/\badd\b.*\b(bird|flock|chick|hen|rooster)\b|\bnew batch\b/.test(q)) return 'Go to Flock, then tap "Add birds" (or the + on a Chicks/Growers/Layers card) — enter how many, their gender, and where they came from.';
-    if(/\b(sold|sell|lost|died|predator|cull)\b.*\b(bird|flock|hen)\b|\brecord loss\b/.test(q)) return 'On the Flock page, find the batch\'s row and tap "Record loss" (or "Record loss or sale" next to it) — pick the reason, how many, and for a sale, the buyer and amount.';
-    if(/\blog\b.*\begg|\badd\b.*\begg/.test(q)) return 'Go to Eggs and tap "Log eggs" — enter the date and how many were collected.';
-    if(/\blog\b.*\bfeed|\badd\b.*\bfeed/.test(q)) return 'Go to Feed and tap "Log feed" — enter the type, quantity in kg, and cost.';
-    if(/\badd\b.*\bhealth|\bvaccinat.*\bhow\b|\blog\b.*\btreatment/.test(q)) return 'Go to Health and tap "Add record" — pick vaccination, treatment, checkup, or illness, which batch it\'s for, and (optionally) a follow-up reminder date.';
-    if(/\badd\b.*\bexpense/.test(q)) return 'Go to Expenses and tap "Add expense" — pick a category, amount, date, and an optional note.';
-    if(/\badd\b.*\bincome/.test(q)) return 'Go to Income and tap "Add income" — pick a category, amount, date, and an optional note.';
-    if(/\badd\b.*\bcustomer/.test(q)) return 'Go to Customers and tap "Add customer" — their name is enough to start; phone and notes are optional. Sales linked to them (from Flock or Eggs) show up automatically.';
-    if(/\bdeposit\b|\badd.*money\b|\bstk\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Add via M-Pesa" and confirm the PIN prompt on your phone — Safaricom handles that step directly, this app never sees your M-Pesa PIN.'; }
-    if(/\bwithdraw\b|\bsend.*money\b|\bpay ?out\b|\bb2c\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Send via M-Pesa", enter the phone number and amount — it goes out as a normal M-Pesa payment.'; }
-    if(/\bfingerprint\b|\bface unlock\b|\bfinance pin\b/.test(q)) return 'From Settings → Your account: set a personal Finance PIN, then tap "Set up fingerprint / Face unlock" and follow your device\'s own prompt. After that, the Finance portal offers a Fingerprint + PIN tab as a faster alternative to password + code — either one alone still can\'t get in.';
-    if(/\bsearch box\b|\bhow.*search\b/.test(q)) return 'The search box above every page searches flock, eggs, feed, health, expenses, income, and customers as you type (plus Finance and Team if your account can see those) — tap a result to jump straight to it.';
-    if(/\bvoice\b/.test(q)) return 'Tap the mic in the search box and say something like "open eggs" to jump to a page, or just say what you\'re looking for and it searches for it. Needs Chrome, Edge, or Safari.';
-    if(/\bchange.*password\b|\breset.*password\b/.test(q)) return 'From Settings → Your account, tap "Change password". If you\'re signed out and can\'t remember it, use "Forgot password?" on the sign-in screen instead.';
-    if(/\badd\b.*\b(team member|staff|employee)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('Team'); return 'From Team, tap "Add team member" — set their name, email, a temporary password, and role (Supervisor, Vet, Financial Staff, or Farmhand), then share the login with them directly.'; }
-    if(/\bnotification\b|\bpush\b|\balert\b/.test(q)) return 'From Settings → Your account, tap "Enable background urgent alerts" — that lets an Urgent message pop up on this device even when the app is in the background.';
-    if(/\bcurrency\b/.test(q)) return 'From Settings, pick your display currency — everything already recorded converts automatically, nothing needs re-entering.';
-    if(/\bbackup\b|\bexport\b/.test(q)) return 'Settings has a backup/export option for your records. Ask an administrator if you\'re not sure where your farm\'s backups are kept.';
-    if(/\bsecurity log\b|\baccess log\b|\bwho.*(logged in|accessed)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('the security and access logs'); return 'Team → Access log shows every sign-in, and Team → Finance security shows every Finance unlock attempt with device and rough location.'; }
-    if(/\babout page\b/.test(q)) return 'The About page tells your farm\'s story — administrators can edit it with the pencil icon at the top of that page.';
 
     return "I don't have an answer for that yet. Try asking about eggs, flock, feed, health, money, or customers — or \"how do I\" do something. You can also use the search box above to find a specific record.";
   }

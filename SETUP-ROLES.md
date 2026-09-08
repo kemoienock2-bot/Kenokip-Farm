@@ -1,6 +1,26 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Kem AI Assistant — a free, built-in helper, available
+> **Update (latest):** Two Kem AI Assistant bug fixes, both from real
+> feedback after trying it out. Front-end only — no functions or Firestore
+> redeploy needed, just `git add` / `git commit` / `git push`.
+> 1. **The close (×) button didn't actually close the chat panel** — a CSS
+>    rule was fighting with itself, so the panel stayed visually open even
+>    after being told to hide. Fixed.
+> 2. **"How do I add/log eggs" (and feed, customers, health records,
+>    expenses, income) answered with today's number instead of explaining
+>    how** — those questions matched the live-number check first, which
+>    always wins once it sees a topic word like "eggs" at all. How-to
+>    questions are now checked first, so "how do I log eggs" explains how,
+>    and a plain "how many eggs today" still gives you the number.
+>
+> Nothing to deploy on the Firebase side:
+> ```
+> git add .
+> git commit -m "Fix Kem AI close button and how-to answers"
+> git push
+> ```
+
+> **Earlier update:** Kem AI Assistant — a free, built-in helper, available
 > to every signed-in team member from a chat bubble in the bottom-right
 > corner of every page. Front-end only — no functions or Firestore redeploy
 > needed, just the usual `git add` / `git commit` / `git push`.
