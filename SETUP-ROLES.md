@@ -1,6 +1,23 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Every recorded flock loss/sale now shows up directly
+> **Update (latest):** Two small fixes to signed receipts, both front-end
+> only:
+> 1. **The signature was too faint and small when printed.** The drawn
+>    line is now bolder and solid black, and it's printed noticeably
+>    bigger on the receipt.
+> 2. **"No verification code" now says exactly why**, instead of always
+>    showing the same generic "signing isn't set up yet" message even
+>    when the real reason was something else (e.g. offline, or a
+>    different server error). If a receipt still comes out unsigned after
+>    this update, the note on the receipt itself will now say the real
+>    reason — that's the thing to go check next.
+> ```
+> git add .
+> git commit -m "Bolder/bigger signature on receipts; show the real reason when unsigned"
+> git push
+> ```
+
+> **Earlier update:** Every recorded flock loss/sale now shows up directly
 > on the Flock page itself, in a new "Losses & sales" card right below the
 > Batches table — date, batch, reason, count, buyer, amount, and note, with
 > Edit and (for a sale) receipt buttons right there. No backend changes —
