@@ -1,6 +1,62 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Two Kem AI Assistant bug fixes, both from real
+> **Update (latest):** "Record loss or sale" can now be edited, and receipts
+> got a real accountability upgrade — an electronic signature you draw in
+> the app, a verification code, and a QR code that together make it much
+> harder to quietly edit a receipt and pass it off as genuine. There's also
+> a new "Activity Statement" that covers everything on the farm for any
+> date range you pick, and a "Verify a receipt" checker anyone can use to
+> confirm a receipt hasn't been tampered with. **This one needs a Cloud
+> Functions deploy, a Firestore rules deploy, and a one-time secret setup —
+> see [SETUP-RECEIPTS.md](SETUP-RECEIPTS.md) for the exact steps.**
+> 1. **Flock → History → the pencil icon** next to any removal/sale entry
+>    (other than a re-sexing split) now opens it prefilled and lets you fix
+>    a mistake — count, date, buyer, amount, reason, note — the same way
+>    egg-loss entries already worked. It relinks or removes the matching
+>    Income entry automatically if the sale amount or "sold" status
+>    changes.
+> 2. **Every receipt is now signed electronically before it downloads.**
+>    Clicking the receipt icon opens a preview first, then "Sign &
+>    download" asks you to draw your signature on a small pad (mouse or
+>    finger) — that drawing is embedded in the receipt and locked into its
+>    verification code, so a receipt can no longer be re-printed from a
+>    blank pen line.
+> 3. **A verification code and QR code make forgery much harder.** Signing
+>    asks the server (which holds a private key that never leaves it, never
+>    ships in the app, and never touches GitHub) to compute a short code
+>    from the receipt's exact numbers. That code — and a QR code encoding
+>    the same thing — get printed on the receipt. Anyone can later open
+>    "Verify a receipt", enter (or scan) it, and see immediately whether
+>    even one digit was changed since it was generated. This doesn't stop
+>    someone from editing the printed paper — it stops an edited paper from
+>    checking out as genuine.
+> 4. **Receipts now cover Expenses, Feed, and Health records too** — not
+>    just flock/egg sales and Finance deposits. Look for the receipt icon
+>    next to any row on those pages.
+> 5. **A new "Activity Statement"** on the Reports page bundles Flock, Eggs,
+>    Feed, Health, Expenses, Income, and Finance (if you can see it) into
+>    one signed, itemized document for a date range you choose — with the
+>    same signature/code/QR treatment as a single receipt.
+> 6. **A new "Verify a receipt" checker**, also on Reports, lets anyone
+>    paste (or scan) a receipt's printed verification details and see a
+>    clear ✓ genuine / ✗ doesn't match result.
+>
+> To deploy (front-end, functions, AND rules this time):
+> ```
+> cd functions
+> npm install
+> cd ..
+> firebase deploy --only functions
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Editable record loss; signed receipts with verification code, QR, and Activity Statement"
+> git push
+> ```
+> Then do the one-time `RECEIPT_SIGNING_SECRET` setup described in
+> [SETUP-RECEIPTS.md](SETUP-RECEIPTS.md) — receipts still work without it,
+> just without a verification code until it's set.
+
+> **Earlier update:** Two Kem AI Assistant bug fixes, both from real
 > feedback after trying it out. Front-end only — no functions or Firestore
 > redeploy needed, just `git add` / `git commit` / `git push`.
 > 1. **The close (×) button didn't actually close the chat panel** — a CSS
