@@ -77,6 +77,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Finance security alerts (failed Finance-portal attempts, lockouts,
+    // and the administrator clearing a lock). Same shape as accessLogs —
+    // administrator-only, and only financeGuard.js's Cloud Functions may
+    // write here.
+    match /securityEvents/{id} {
+      allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

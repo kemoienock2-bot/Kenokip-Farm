@@ -1,6 +1,89 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** a Customers directory — built for you automatically.
+> **Update (latest):** Kem AI Assistant — a free, built-in helper, available
+> to every signed-in team member from a chat bubble in the bottom-right
+> corner of every page. Front-end only — no functions or Firestore redeploy
+> needed, just the usual `git add` / `git commit` / `git push`.
+> 1. **It's scripted, not a connection to an outside AI service.** It
+>    matches your question against things it knows how to answer — nothing
+>    you type is sent anywhere. It can't hold a free-flowing conversation
+>    about anything else, but it also can't be tricked into leaking
+>    something it shouldn't, or cost anything to run.
+> 2. **Live numbers, worked out from what's already in the app** — "how
+>    many eggs today", "what's my flock total", "how much feed this month",
+>    "who's my top customer", and more. Finance figures ("what's my Finance
+>    balance", "what's my profit") only answer for accounts that can see
+>    Finance, respecting the same reveal/mask toggle as the Finance page
+>    itself; Team questions ("how many team members") only answer for
+>    administrators. Anyone else asking gets a polite "that's not available
+>    on your account" instead of the real number.
+> 3. **How-to answers** for the app's own features — adding birds, logging
+>    eggs/feed/health, adding a customer, M-Pesa deposits/payouts, setting
+>    up fingerprint unlock, using the search box or voice control, adding a
+>    team member, and more.
+> 4. **Nothing is saved.** The conversation lives only in that browser tab
+>    for that visit — reload the page, or sign out, and it's gone. Signing
+>    out also hides the assistant entirely until the next sign-in, so a
+>    shared farm computer never shows one person's chat to the next.
+>
+> Nothing to deploy on the Firebase side this time:
+> ```
+> git add .
+> git commit -m "Add Kem AI Assistant"
+> git push
+> ```
+
+> **Earlier update:** A search box on every page, plus voice control.
+> Front-end only — no functions or Firestore redeploy needed this time, just
+> the usual `git add` / `git commit` / `git push` and Netlify does the rest.
+> 1. **Search box at the top of every page** — searches flock, eggs, feed,
+>    health records, expenses, income, and customers as you type, plus
+>    Finance transactions (if you can see Finance) and Team (administrators
+>    only). Tap a result to jump straight there. It lives above the page
+>    content, not inside it, so it's always there no matter which page
+>    you're on, and typing in it is never interrupted by the app refreshing
+>    data in the background.
+> 2. **Voice control** — tap the mic in the search box and say something
+>    like "open eggs" or "go to finance" to jump to a page, or just say what
+>    you're looking for (e.g. "find Kapchanga") and it searches for it. This
+>    is a convenience layer only, built with your browser's own speech
+>    recognition — needs Chrome, Edge, or Safari, and never unlocks or
+>    approves anything on its own.
+>
+> Nothing to deploy on the Firebase side this time:
+> ```
+> git add .
+> git commit -m "Add search box and voice control"
+> git push
+> ```
+
+> **Earlier update:** Finance security — a second way in, a lockout, and a
+> tightened M-Pesa webhook. See the new **SETUP-SECURITY.md** for the full
+> picture (including an honest answer to "can someone hack this"); short
+> version:
+> 1. **Fingerprint / Face + your own PIN** to unlock the Finance portal —
+>    an additional option alongside the password + authenticator-code
+>    method, which still works exactly as before. Set both up from
+>    Settings → Your account.
+> 2. **3 wrong attempts, on either method, locks the whole Finance portal**
+>    for everyone — even with correct details — until the administrator
+>    clears it from Settings → Team → Finance security. Every attempt is
+>    logged there with device, rough IP-based location, and an immediate
+>    Urgent alert.
+> 3. **M-Pesa webhook URLs can now require a shared key** so a stranger who
+>    finds one can't feed it fake payment data — this needs one optional
+>    manual step (generating and setting the key) covered in
+>    SETUP-SECURITY.md; skip it for now if you're not ready, nothing
+>    breaks either way.
+>
+> Needs a functions redeploy AND a Firestore rules deploy this time
+> (the new Finance security log is its own collection):
+> ```
+> firebase deploy --only functions
+> firebase deploy --only firestore:rules
+> ```
+
+> **Earlier update:** a Customers directory — built for you automatically.
 > New "Customers" nav item (visible to everyone, like Flock and Eggs) listing
 > everyone who's bought from the farm: name, phone, total spent, number of
 > purchases, and their last purchase date — sorted by biggest spender first.

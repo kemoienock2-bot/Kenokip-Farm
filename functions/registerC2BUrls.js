@@ -34,13 +34,18 @@ async function main() {
     console.error('Fill in functions/c2b.env first — see c2b.env.example.');
     process.exit(1);
   }
+  const webhookSecret = env('MPESA_WEBHOOK_SECRET', '');
+  const qs = webhookSecret ? ('?key=' + encodeURIComponent(webhookSecret)) : '';
+  if (!webhookSecret) {
+    console.warn('MPESA_WEBHOOK_SECRET is blank in c2b.env — registering WITHOUT the extra protection. See SETUP-SECURITY.md.');
+  }
   const result = await registerC2BUrls({
     env: envName,
     consumerKey,
     consumerSecret,
     shortcode,
-    confirmationUrl: base + '/c2bConfirmation',
-    validationUrl: base + '/c2bValidation',
+    confirmationUrl: base + '/c2bConfirmation' + qs,
+    validationUrl: base + '/c2bValidation' + qs,
   });
   console.log('C2B URLs registered:', result);
 }

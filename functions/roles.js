@@ -17,6 +17,8 @@
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
+const { describeDevice } = require('./deviceInfo');
+const { sendUrgentPush } = require('./push');
 
 const JOB_TITLES = ['supervisor', 'vet', 'financial', 'farmhand'];
 const JOB_TITLE_LABELS = { supervisor: 'Supervisor', vet: 'Vet / Doctor', financial: 'Financial Staff', farmhand: 'Farmhand' };
@@ -46,32 +48,6 @@ function roleLabelFor(role, jobTitle) {
   return role === 'administrator' ? 'Administrator' : (JOB_TITLE_LABELS[jobTitle] || jobTitle || 'Employee');
 }
 
-// Turns a browser's User-Agent header into something readable in the access
-// log, e.g. "iPhone · Safari" or "Windows · Chrome". Best-effort string
-// matching, not a full parser — good enough for an audit log, not meant to
-// be exact for every possible browser/OS combination.
-function describeDevice(ua) {
-  if (!ua) return 'Unknown device';
-  let os = 'Unknown OS';
-  if (/iPhone/.test(ua)) os = 'iPhone';
-  else if (/iPad/.test(ua)) os = 'iPad';
-  else if (/Android/.test(ua)) {
-    const m = ua.match(/Android [\d.]+; ([^;)]+)/);
-    os = m ? m[1].trim() : 'Android';
-  } else if (/Windows/.test(ua)) os = 'Windows';
-  else if (/Mac OS X/.test(ua)) os = 'Mac';
-  else if (/Linux/.test(ua)) os = 'Linux';
-
-  let browser = 'Unknown browser';
-  if (/Edg\//.test(ua)) browser = 'Edge';
-  else if (/OPR\//.test(ua) || /Opera/.test(ua)) browser = 'Opera';
-  else if (/CriOS\//.test(ua)) browser = 'Chrome';
-  else if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
-  else if (/Firefox\//.test(ua)) browser = 'Firefox';
-  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
-
-  return os + ' · ' + browser;
-}
 
 module.exports = function (admin, db) {
   const FINANCE_REF = db.collection('finance').doc('kenokip');
@@ -468,39 +444,7 @@ module.exports = function (admin, db) {
         } else {
           targetUids = [to];
         }
-        if (targetUids.length) {
-          var userDocs = await db.getAll.apply(db, targetUids.map(function (uid) { return db.collection('users').doc(uid); }));
-          var tokens = [];
-          var tokenOwner = {};
-          userDocs.forEach(function (snap) {
-            if (!snap.exists) return;
-            var arr = snap.data().fcmTokens;
-            if (Array.isArray(arr)) arr.forEach(function (t) { tokens.push(t); tokenOwner[t] = snap.id; });
-          });
-          if (tokens.length) {
-            var resp = await admin.messaging().sendEachForMulticast({
-              tokens: tokens,
-              notification: { title: 'Urgent — ' + fromLabel, body: body.slice(0, 180) },
-              data: { urgency: 'urgent' },
-            });
-            var deadByUid = {};
-            resp.responses.forEach(function (r, i) {
-              if (!r.success) {
-                var code = r.error && r.error.code;
-                if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
-                  var uid = tokenOwner[tokens[i]];
-                  (deadByUid[uid] = deadByUid[uid] || []).push(tokens[i]);
-                }
-              }
-            });
-            await Promise.all(Object.keys(deadByUid).map(function (uid) {
-              return db.collection('users').doc(uid).set(
-                { fcmTokens: admin.firestore.FieldValue.arrayRemove.apply(null, deadByUid[uid]) },
-                { merge: true }
-              );
-            }));
-          }
-        }
+        await sendUrgentPush(admin, db, targetUids, 'Urgent — ' + fromLabel, body, { urgency: 'urgent' });
       } catch (e) {
         logger.error('Urgent push send failed', e);
       }

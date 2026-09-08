@@ -21,6 +21,7 @@ const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 const { stkPush, buildSecurityCredential, b2cSend } = require('./daraja');
+const { timingSafeStringEqual } = require('./cryptoHelpers');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -28,10 +29,18 @@ const db = admin.firestore();
 // Accounts, roles, Finance approvals, and access logging — see roles.js.
 Object.assign(exports, require('./roles')(admin, db));
 
+// Lockout + alerting for repeated failed Finance portal attempts, plus
+// fingerprint/Face + PIN unlock — see financeGuard.js. Built before
+// security.js so its lockout helpers can be wired into the existing
+// password + authenticator-code unlock too (one shared 3-strikes rule,
+// whichever method someone gets wrong).
+const financeGuard = require('./financeGuard')(admin, db);
+Object.assign(exports, financeGuard.triggers);
+
 // Authenticator-app (2FA) enrollment + verification — see security.js.
 // verifyTotpForUid is used directly below, inside initiateWithdrawal, not
 // just as the callable verifyTotpCode export.
-const security = require('./security')(admin, db);
+const security = require('./security')(admin, db, financeGuard.helpers);
 Object.assign(exports, security.triggers);
 
 const MPESA_CONSUMER_KEY = defineSecret('MPESA_CONSUMER_KEY');
@@ -41,6 +50,14 @@ const MPESA_PASSKEY = defineSecret('MPESA_PASSKEY');
 const MPESA_ENV = defineSecret('MPESA_ENV'); // "sandbox" or "production"
 const MPESA_CALLBACK_BASE_URL = defineSecret('MPESA_CALLBACK_BASE_URL'); // e.g. https://us-central1-kenokip-farm.cloudfunctions.net
 const MPESA_ACCOUNT_TYPE = defineSecret('MPESA_ACCOUNT_TYPE'); // "till" (Buy Goods) or "paybill"
+// A shared secret embedded as `?key=...` in every M-Pesa webhook URL below,
+// so a stranger who finds or guesses this Cloud Function's public URL
+// (project IDs aren't secret — this one's visible in the app's own Firebase
+// config) can't feed it a fake "payment received" and pollute Finance/
+// Income. See SETUP-SECURITY.md for the one-time setup this needs — until
+// it's set, every check below is skipped so nothing breaks on a fresh
+// install or before you've gotten to that step.
+const MPESA_WEBHOOK_SECRET = defineSecret('MPESA_WEBHOOK_SECRET');
 
 // B2C ("send money out") credentials — separate from the collections
 // secrets above, and only usable once Safaricom has approved B2C for your
@@ -49,7 +66,7 @@ const MPESA_INITIATOR_NAME = defineSecret('MPESA_INITIATOR_NAME');
 const MPESA_INITIATOR_PASSWORD = defineSecret('MPESA_INITIATOR_PASSWORD');
 const MPESA_B2C_CERT = defineSecret('MPESA_B2C_CERT'); // the Safaricom public certificate for your environment, as PEM text
 
-const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE];
+const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET];
 const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT]);
 
 // Secrets set via `echo value| firebase functions:secrets:set NAME --data-file -`
@@ -64,6 +81,20 @@ function sval(secretRef, fallback) {
 
 const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 const FARM_REF = () => db.collection('farms').doc('kenokip');
+
+// See the MPESA_WEBHOOK_SECRET comment above. Returns true (and lets the
+// caller continue) when the request is allowed through; returns false (and
+// has already sent a 403) when it wasn't — every onRequest handler below
+// starts with `if (!checkWebhookSecret(req, res)) return;`.
+function checkWebhookSecret(req, res) {
+  const configured = sval(MPESA_WEBHOOK_SECRET);
+  if (!configured) return true; // not set up yet on this deployment — don't break anything
+  const provided = (req.query && req.query.key) || '';
+  if (timingSafeStringEqual(provided, configured)) return true;
+  logger.warn('Webhook called with a missing/incorrect key', { path: req.path });
+  res.status(403).send('forbidden');
+  return false;
+}
 
 function normalizePhone(raw) {
   if (!raw) return null;
@@ -137,7 +168,8 @@ exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }
   if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
   if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
 
-  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback`;
+  const webhookKey = sval(MPESA_WEBHOOK_SECRET);
+  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback` + (webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '');
   try {
     const result = await stkPush({
       env: sval(MPESA_ENV, 'sandbox'),
@@ -165,7 +197,8 @@ exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }
 
 // Safaricom calls this once the customer (owner, in this flow) responds to
 // the STK Push prompt on their phone, whether they completed it or not.
-exports.mpesaStkCallback = onRequest({ secrets: [] }, async (req, res) => {
+exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
   try {
     const stk = req.body && req.body.Body && req.body.Body.stkCallback;
     if (!stk) { res.status(200).send('ignored'); return; }
@@ -229,6 +262,8 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
     throw new HttpsError('failed-precondition', "B2C isn't set up on this deployment yet — see SETUP-B2C.md.");
   }
   const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
+  const webhookKey = sval(MPESA_WEBHOOK_SECRET);
+  const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
   try {
     const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
     const result = await b2cSend({
@@ -241,8 +276,8 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
       phone,
       amount,
       remarks: note || 'Kenokip Farm payout',
-      resultUrl: `${callbackBase}/mpesaB2CResult`,
-      timeoutUrl: `${callbackBase}/mpesaB2CTimeout`,
+      resultUrl: `${callbackBase}/mpesaB2CResult${webhookQs}`,
+      timeoutUrl: `${callbackBase}/mpesaB2CTimeout${webhookQs}`,
       commandId: 'BusinessPayment',
     });
     return {
@@ -260,7 +295,8 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
 // or not. Only a genuinely successful result (ResultCode 0) gets logged as
 // an approved withdrawal — same principle as deposits: nothing is counted
 // until Safaricom itself confirms it.
-exports.mpesaB2CResult = onRequest({ secrets: [] }, async (req, res) => {
+exports.mpesaB2CResult = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
   try {
     const result = req.body && req.body.Result;
     if (result && result.ResultCode === 0) {
@@ -291,7 +327,8 @@ exports.mpesaB2CResult = onRequest({ secrets: [] }, async (req, res) => {
 
 // Safaricom calls this instead of mpesaB2CResult if the request timed out
 // before it could even be processed — nothing to log, just acknowledge it.
-exports.mpesaB2CTimeout = onRequest({ secrets: [] }, async (req, res) => {
+exports.mpesaB2CTimeout = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
   logger.info('B2C payout timed out', req.body);
   res.status(200).send('ok');
 });
@@ -299,13 +336,21 @@ exports.mpesaB2CTimeout = onRequest({ secrets: [] }, async (req, res) => {
 // Safaricom asks this before accepting any direct payment into the till —
 // return 0 to accept. Add checks here later if you ever want to reject
 // something (e.g. cap a single payment amount).
-exports.c2bValidation = onRequest({}, async (req, res) => {
+//
+// These two C2B URLs (this one and c2bConfirmation below) are registered
+// with Safaricom once, up front — via `npm run register-c2b`, not built
+// fresh on every request the way the STK/B2C ones above are — so the
+// `?key=...` here only takes effect once you've re-run that registration
+// script after setting MPESA_WEBHOOK_SECRET. See SETUP-SECURITY.md.
+exports.c2bValidation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });
 
 // Safaricom calls this automatically whenever someone pays the till
 // directly from their own phone (not through our STK push flow above).
-exports.c2bConfirmation = onRequest({}, async (req, res) => {
+exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
   try {
     const b = req.body || {};
     const payer = [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ');

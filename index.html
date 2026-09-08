@@ -151,6 +151,48 @@
 
   .panel{ padding:26px 32px 60px; display:flex; flex-direction:column; gap:22px; }
 
+  /* ---- global search (every page) ---- */
+  .global-search-bar{ padding:10px 32px; border-bottom:1px solid var(--border-soft); background:var(--surface); position:relative; z-index:5; }
+  .global-search-box{ display:flex; align-items:center; gap:8px; max-width:520px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:999px; padding:6px 8px 6px 14px; }
+  .global-search-box svg{ width:16px; height:16px; flex-shrink:0; }
+  .global-search-box .gs-search-ico{ color:var(--ink-3); }
+  .global-search-box input{ flex:1; min-width:0; border:none; background:none; outline:none; font-size:14px; color:var(--ink); font-family:inherit; }
+  .global-search-box .icon-btn{ color:var(--ink-2); flex-shrink:0; }
+  .global-search-box .icon-btn.listening{ color:var(--bad); animation: gs-pulse 1.1s ease-in-out infinite; }
+  @keyframes gs-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+  .global-search-results{ position:absolute; left:32px; right:32px; max-width:520px; margin-top:6px; background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); max-height:min(420px,60vh); overflow-y:auto; }
+  .global-search-results .gs-group{ padding:9px 14px 3px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); font-weight:700; }
+  .global-search-results button.gs-item{ display:block; width:100%; text-align:left; padding:8px 14px; border:none; background:none; cursor:pointer; font-size:13.5px; color:var(--ink); font-family:inherit; }
+  .global-search-results button.gs-item:hover, .global-search-results button.gs-item.gs-active{ background:var(--surface-2); }
+  .global-search-results .gs-sub{ display:block; font-size:12px; color:var(--ink-2); margin-top:1px; }
+  .global-search-results .gs-empty, .global-search-results .gs-hint{ padding:16px 14px; font-size:13px; color:var(--ink-2); }
+
+  /* ---- Kem AI Assistant: a floating bubble + chat panel, present on every
+     page, outside the normal render() cycle for the same reason as the
+     search bar above. ---- */
+  .kemai-bubble{ position:fixed; right:20px; bottom:20px; width:52px; height:52px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow); cursor:pointer; z-index:45; }
+  .kemai-bubble:hover{ background:var(--accent-strong); }
+  .kemai-bubble svg{ width:24px; height:24px; }
+  .kemai-panel{ position:fixed; right:20px; bottom:82px; width:min(340px, calc(100vw - 40px)); max-height:min(500px, calc(100vh - 120px)); background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden; z-index:44; }
+  .kemai-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border-soft); flex-shrink:0; }
+  .kemai-head h3{ margin:0; font-size:14.5px; display:flex; align-items:center; gap:8px; }
+  .kemai-head h3 svg{ width:18px; height:18px; color:var(--accent); }
+  .kemai-messages{ flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .kemai-msg{ max-width:85%; padding:8px 12px; border-radius:14px; font-size:13.5px; line-height:1.4; white-space:pre-wrap; }
+  .kemai-msg.user{ align-self:flex-end; background:var(--accent); color:var(--accent-ink); border-bottom-right-radius:4px; }
+  .kemai-msg.assistant{ align-self:flex-start; background:var(--surface-2); color:var(--ink); border-bottom-left-radius:4px; }
+  .kemai-intro{ font-size:13px; color:var(--ink-2); padding:2px 2px 8px; }
+  .kemai-suggestions{ display:flex; flex-wrap:wrap; gap:6px; padding:0 2px 4px; }
+  .kemai-chip{ font-size:12px; padding:6px 11px; border-radius:999px; border:1px solid var(--border-soft); background:var(--surface-2); color:var(--ink-2); cursor:pointer; }
+  .kemai-chip:hover{ background:var(--accent-tint); color:var(--accent-ink); border-color:var(--accent-tint); }
+  .kemai-inputrow{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--border-soft); flex-shrink:0; }
+  .kemai-inputrow input{ flex:1; min-width:0; border:1px solid var(--border-soft); background:var(--surface-2); border-radius:999px; padding:8px 14px; font-size:13.5px; color:var(--ink); font-family:inherit; outline:none; }
+  .kemai-inputrow input:focus{ border-color:var(--accent); }
+  .kemai-send{ width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--accent-ink); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .kemai-send:hover{ background:var(--accent-strong); }
+  .kemai-send svg{ width:16px; height:16px; }
+  @media (max-width:520px){ .kemai-panel{ right:12px; left:12px; width:auto; bottom:78px; } .kemai-bubble{ right:14px; bottom:14px; } }
+
   /* ---- controls ---- */
   .segmented{ display:inline-flex; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:999px; padding:3px; gap:2px; }
   .segmented button{ border:none; background:none; padding:6px 13px; border-radius:999px; font-size:13px; font-weight:600; color:var(--ink-2); }
@@ -348,12 +390,14 @@
   <nav class="rail" id="rail"></nav>
   <div class="main">
     <header class="topbar" id="topbar"></header>
+    <div class="global-search-bar" id="global-search-bar"></div>
     <main class="panel" id="panel"></main>
   </div>
 </div>
 <div id="modal-root"></div>
 <div class="toast-root" id="toast-root"></div>
 <div id="urgent-alert" hidden></div>
+<div id="kem-ai-root" hidden></div>
 <div id="receipt-print-area" class="print-area"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -389,12 +433,18 @@
     eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
     eyeOff:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.2 0 10 7 10 7a15.5 15.5 0 0 1-3.6 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8"/><path d="M9.9 10a3 3 0 0 0 4.2 4.2"/></svg>',
     shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+    fingerprint:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5c-4.4 0-8 3.4-8 8.5 0 2 .5 3.6 1.2 5"/><path d="M12 4.5c4.4 0 8 3.4 8 8.5 0 1.2-.1 2.2-.4 3.2"/><path d="M8 18.5c-1-2-1.5-3.7-1.5-5.5 0-3 2.4-5.5 5.5-5.5s5.5 2.5 5.5 5.5c0 .6-.03 1.1-.1 1.6"/><path d="M9.7 20c-1.3-2.3-2-4.3-2-7 0-2.4 1.9-4.3 4.3-4.3s4.3 1.9 4.3 4.3c0 .9-.1 1.7-.3 2.5"/><path d="M12 13c.3 1.9.9 3.4 2 5"/></svg>',
+    lockClosed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></svg>',
+    search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></svg>',
+    mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>',
     info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none"/></svg>',
     health:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C.8 8.2 2.4 4.5 6 4.5c2 0 3.4 1.1 4 2.2.6-1.1 2-2.2 4-2.2 3.6 0 5.2 3.7 3.5 7.5-2.5 4.5-9.5 9-9.5 9z"/><path d="M6.5 12h2.3l1.2-2.4L11.5 14l1.4-2h4.3"/></svg>',
     feed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l1.5 6c.6 4-1.5 8-3.5 9.5a4 4 0 0 1-4 .8"/><path d="M6 3 4.5 9c-.6 4 1.5 8 3.5 9.5.8.6 1.8.9 2.8.9"/><path d="M9 9h6"/><path d="M8 13.5h3M13 13.5h3"/></svg>',
     reports:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13l2 2 4-5"/></svg>',
     receipt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3V3z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
-    customers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10.5" r="2.3"/><path d="M5.3 16.3c.6-1.9 2-2.9 3.7-2.9s3.1 1 3.7 2.9"/><path d="M14.5 9h4M14.5 12.5h4"/></svg>'
+    customers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10.5" r="2.3"/><path d="M5.3 16.3c.6-1.9 2-2.9 3.7-2.9s3.1 1 3.7 2.9"/><path d="M14.5 9h4M14.5 12.5h4"/></svg>',
+    kemai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="4"/><circle cx="9" cy="13" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.3" fill="currentColor" stroke="none"/><path d="M12 7V4"/><circle cx="12" cy="3" r="1" fill="currentColor" stroke="none"/><path d="M4 12H2M22 12h-2"/></svg>',
+    send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12L20 4l-6.5 16-2.7-7.3z"/><path d="M4 12l9-1"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -1826,6 +1876,42 @@
           '<button class="btn sm" data-action="open-portal-authapp-setup">Set up on a new device</button>'
         : '<p class="hint">Not set up yet. This is a second, separate code from the one above — set it up here, then ask the administrator for the Finance portal password, to be able to open Finance.</p>'+
           '<button class="btn sm primary" data-action="open-portal-authapp-setup">Set up Finance portal authenticator</button>')+
+    '</div>'+
+    financeFingerprintPinSectionHTML();
+  }
+  // Fingerprint/Face + personal PIN — a faster alternative to the password
+  // + authenticator-code method above, not a replacement for it (that one
+  // still works exactly as before). Both your PIN and enrolled devices are
+  // yours alone; nobody else, including the administrator, can see or use
+  // them, and losing one without the other still can't unlock Finance.
+  function financeFingerprintPinSectionHTML(){
+    var supported = webauthnSupported();
+    var gs = financeGuardStatus;
+    var devices = (gs && gs.fingerprintDevices) || [];
+    var deviceRows = devices.map(function(d){
+      return '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-top:1px solid var(--border, #eee)">'+
+        '<span>'+ICONS.fingerprint+' '+esc(d.label||'A device')+(d.addedAt?' <span class="hint">— added '+fmtDate(new Date(d.addedAt))+'</span>':'')+'</span>'+
+        '<button class="icon-btn" data-action="remove-finance-fingerprint:'+esc(d.id||'')+'" title="Remove">'+ICONS.trash+'</button>'+
+      '</div>';
+    }).join('');
+    return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.fingerprint+'</span><strong>Fingerprint / Face unlock for Finance</strong></div>'+
+      (!supported
+        ? '<p class="hint">This browser doesn\'t support it yet — try an up-to-date Chrome, Edge, or Safari. The password + code method above always works.</p>'
+        : (!gs
+          ? '<p class="hint">Loading…</p>'
+          : ((gs.fingerprintEnrolled ? '<div style="margin-bottom:8px">'+deviceRows+'</div>' : '<p class="hint">Not set up yet. Once it is, you can open the Finance portal with your fingerprint or Face unlock plus your personal PIN below, instead of the password + code.</p>')+
+            '<button class="btn sm '+(gs.fingerprintEnrolled?'':'primary')+'" data-action="enroll-finance-fingerprint">'+ICONS.fingerprint+' '+(gs.fingerprintEnrolled?'Add this device':'Set up fingerprint / Face unlock')+'</button>')))+
+    '</div>'+
+    '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.lockClosed+'</span><strong>Your personal Finance PIN</strong></div>'+
+      '<p class="hint">Required together with fingerprint/Face unlock above — yours alone, separate from the shared Finance portal password and from your own sign-in password. Nobody else knows it, not even the administrator.</p>'+
+      (gs && gs.pinSet ? '<p class="hint">✓ A PIN is set.</p>' : '')+
+      '<form data-form="set-finance-pin" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap">'+
+        '<div class="field-row" style="max-width:160px"><label>'+(gs && gs.pinSet ? 'New PIN' : 'PIN')+' (4–8 digits)</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin" required></div>'+
+        '<div class="field-row" style="max-width:160px"><label>Confirm PIN</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin2" required></div>'+
+        '<button class="btn" type="submit">'+(gs && gs.pinSet ? 'Change PIN' : 'Set PIN')+'</button>'+
+      '</form>'+
     '</div>';
   }
 
@@ -2028,10 +2114,12 @@
     initDirectorySync();
     initMessagesSync();
     initOwnProfileSync();
-    if(isAdmin()) initAdminLogsSync();
+    if(isAdmin()){ initAdminLogsSync(); initSecurityEventsSync(); }
+    if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
     captureAccessLog();
     startIdleTimer();
     if(typeof Notification!=='undefined' && Notification.permission==='granted') registerForPush();
+    kemAiSetVisible(true);
     render();
   }
   function handleSignedInUser(user, claims){
@@ -2075,6 +2163,29 @@
       if(ui.section==='team') render();
     }, function(){});
   }
+  /* ---- Finance security alerts (administrator only) ---- */
+  function initSecurityEventsSync(){
+    if(securityEventsSyncStarted || !db || !isAdmin()) return;
+    securityEventsSyncStarted = true;
+    db.collection('securityEvents').orderBy('at','desc').limit(200).onSnapshot(function(snap){
+      securityEvents = [];
+      snap.forEach(function(doc){ securityEvents.push(Object.assign({id:doc.id}, doc.data())); });
+      if(ui.section==='team') render();
+    }, function(){});
+  }
+  // Locked state, and whether THIS person has fingerprint/PIN unlock set
+  // up — fetched once per sign-in (see finishSignIn) and again right after
+  // any action that could change it (enrolling, setting a PIN, an unlock
+  // attempt). Safe to call often — it's a single lightweight read.
+  function refreshFinanceGuardStatus(){
+    if(!currentUser || !canSeeFinance() || financeGuardStatusLoading) return;
+    financeGuardStatusLoading = true;
+    firebase.functions().httpsCallable('getFinanceGuardStatus')().then(function(res){
+      financeGuardStatus = res.data;
+      financeGuardStatusLoading = false;
+      render();
+    }).catch(function(){ financeGuardStatusLoading = false; });
+  }
   function staffFormHtml(){
     return '<div class="modal-head"><h3>Add team member</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">Creates a sign-in for an employee. Share the email and password with them directly — there\'s no self-registration.</p>'+
@@ -2117,6 +2228,54 @@
       '<div class="field-row"><label>New password</label><input class="field" type="text" name="password" minlength="6" placeholder="At least 6 characters" required autofocus></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Set password</button></div>'+
     '</form>';
+  }
+  // Rough-location note shown once, above the table, so the numbers below
+  // are never mistaken for more than they are: a real clue, not a precise
+  // address, and easy for someone on a VPN or mobile data to throw off.
+  function describeEventGeo(ev){
+    if(ev.geo && (ev.geo.city || ev.geo.country)) return [ev.geo.city, ev.geo.country].filter(Boolean).join(', ');
+    if(ev.ip) return 'Unresolved (IP: '+ev.ip+')';
+    return 'Unknown';
+  }
+  var SECURITY_EVENT_LABELS = {
+    'password-totp': 'Password + code', 'fingerprint-pin': 'Fingerprint + PIN', 'admin-clear': 'Admin cleared lock',
+  };
+  var SECURITY_OUTCOME_PILLS = {
+    success: '<span class="pill" style="background:var(--good-tint); color:var(--good)">Success</span>',
+    fail: '<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Wrong attempt</span>',
+    locked: '<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Locked portal</span>',
+    'blocked-while-locked': '<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Tried while locked</span>',
+  };
+  function financeSecurityCardHTML(){
+    var locked = financeGuardStatus && financeGuardStatus.locked;
+    var LOG_PAGE_SIZE = 10;
+    var totalPages = Math.max(1, Math.ceil(securityEvents.length / LOG_PAGE_SIZE));
+    if(securityEventPage >= totalPages) securityEventPage = totalPages - 1;
+    if(securityEventPage < 0) securityEventPage = 0;
+    var paged = securityEvents.slice(securityEventPage*LOG_PAGE_SIZE, securityEventPage*LOG_PAGE_SIZE + LOG_PAGE_SIZE);
+    var rows = paged.map(function(ev){
+      var when = (ev.at && ev.at.toDate) ? fmtDate(ev.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      return '<tr><td>'+when+'</td>'+
+        '<td>'+(SECURITY_OUTCOME_PILLS[ev.outcome]||esc(ev.outcome||'—'))+'</td>'+
+        '<td>'+esc(SECURITY_EVENT_LABELS[ev.method]||ev.method||'—')+'</td>'+
+        '<td>'+esc(ev.device||'—')+'</td>'+
+        '<td>'+ICONS.pin+' '+esc(describeEventGeo(ev))+'</td>'+
+        '<td>'+esc(ev.email||'—')+'</td></tr>';
+    }).join('');
+    var pagerHtml = securityEvents.length ? '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:10px">'+
+        '<button class="btn sm" data-action="security-log-page:prev" '+(securityEventPage<=0?'disabled':'')+'>Prev</button>'+
+        '<span class="hint">Page '+(securityEventPage+1)+' of '+totalPages+'</span>'+
+        '<button class="btn sm" data-action="security-log-page:next" '+(securityEventPage>=totalPages-1?'disabled':'')+'>Next</button>'+
+      '</div>' : '';
+    return '<div class="card">'+
+      '<div class="card-title"><h3>Finance security</h3>'+(locked?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Locked</span>':'')+'</div>'+
+      (locked
+        ? '<div class="banner bad" style="margin-bottom:12px">🔒 The Finance portal is locked after '+3+' wrong attempts in a row — nobody can get in, even with correct details, until you clear it.</div>'+
+          '<button class="btn primary" data-action="open-clear-finance-lock">Clear lock</button>'
+        : '<p class="hint">Locks itself automatically after 3 wrong attempts on either unlock method, and alerts you immediately (as an Urgent message + notification) every time one is wrong. Rough location below is based on IP address — genuinely useful, but only ever a clue: it\'s city-level at best, and a VPN or mobile data can throw it off.</p>')+
+      (securityEvents.length ? '<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>When</th><th>Result</th><th>Method</th><th>Device</th><th>Rough location</th><th>Account</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+pagerHtml
+        : '<div class="empty" style="margin-top:12px">'+ICONS.empty+'<div>No Finance unlock attempts recorded yet.</div></div>')+
+    '</div>';
   }
   function teamPanel(){
     if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
@@ -2181,6 +2340,7 @@
           '<button class="btn primary" type="submit">Save</button>'+
         '</form>'+
       '</div>'+
+      financeSecurityCardHTML()+
       '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, 10 per page — visible only to you</span></div>'+
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
         '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
@@ -2460,16 +2620,108 @@
         : '<div class="empty">'+ICONS.empty+'<div>No transactions recorded yet.</div></div>')+
       '</div></div>';
   }
+  // WebAuthn (fingerprint/Face) needs the browser's newer JSON-friendly
+  // helpers (PublicKeyCredential.parseCreationOptionsFromJSON etc.) — most
+  // current Chrome/Edge/Safari have them; a few older or less common
+  // browsers don't. Feature-detected rather than assumed, so those
+  // browsers just don't show the tab at all and fall back to the
+  // password + code method, which always works everywhere.
+  function webauthnSupported(){
+    return !!(window.PublicKeyCredential && PublicKeyCredential.parseCreationOptionsFromJSON && PublicKeyCredential.parseRequestOptionsFromJSON && navigator.credentials);
+  }
+  // The fingerprint/Face prompt itself is entirely the browser's/OS's own
+  // native UI (Windows Hello, Touch ID, Android's fingerprint sheet) — this
+  // app never sees the fingerprint or face data, only a yes/no "the
+  // platform verified this person" result plus a signed proof, exactly
+  // like a normal website sign-in with a security key.
+  function enrollFinanceFingerprint(){
+    if(!webauthnSupported()){ toast('Fingerprint/Face unlock needs a newer browser — try an up-to-date Chrome, Edge, or Safari.'); return; }
+    firebase.functions().httpsCallable('startFinanceFingerprintEnrollment')().then(function(res){
+      var publicKey = PublicKeyCredential.parseCreationOptionsFromJSON(res.data);
+      return navigator.credentials.create({ publicKey: publicKey });
+    }).then(function(cred){
+      return firebase.functions().httpsCallable('finishFinanceFingerprintEnrollment')({ response: cred.toJSON() });
+    }).then(function(){
+      toast('Fingerprint/Face unlock set up on this device.');
+      refreshFinanceGuardStatus();
+    }).catch(function(err){
+      if(err && (err.name==='NotAllowedError' || err.code==='cancelled')){ toast('Cancelled.'); return; }
+      toast((err&&err.message)||'Could not set up fingerprint/Face unlock.');
+    });
+  }
+  function removeFinanceFingerprintDevice(id){
+    firebase.functions().httpsCallable('removeFinanceFingerprint')({ id: id }).then(function(){
+      toast('Removed.');
+      refreshFinanceGuardStatus();
+    }).catch(function(err){ toast((err&&err.message)||'Could not remove that device.'); });
+  }
+  function unlockWithFinanceFingerprint(){
+    if(!webauthnSupported()){ toast('Fingerprint/Face unlock needs a newer browser.'); return; }
+    var pinEl = document.getElementById('finance-fingerprint-pin');
+    var pin = pinEl ? pinEl.value : '';
+    if(!pin){ toast('Enter your personal PIN.'); return; }
+    var btn = document.getElementById('unlock-finance-fingerprint-submit');
+    var resetBtn = function(){ if(btn){ btn.disabled = false; btn.innerHTML = ICONS.fingerprint+' Unlock with fingerprint / Face'; } };
+    if(btn){ btn.disabled = true; btn.textContent = 'Checking…'; }
+    firebase.functions().httpsCallable('startFinanceFingerprintUnlock')().then(function(res){
+      var publicKey = PublicKeyCredential.parseRequestOptionsFromJSON(res.data);
+      return navigator.credentials.get({ publicKey: publicKey });
+    }).then(function(cred){
+      return firebase.functions().httpsCallable('finishFinanceFingerprintUnlock')({ response: cred.toJSON(), pin: pin });
+    }).then(function(){
+      financePortalUnlocked = true;
+      startFinancePortalTimer();
+      toast('Finance portal unlocked.');
+      render();
+    }).catch(function(err){
+      resetBtn();
+      refreshFinanceGuardStatus();
+      if(err && err.name==='NotAllowedError'){ toast('Cancelled.'); return; }
+      toast((err&&err.message)||'Could not unlock the Finance portal.');
+      render();
+    });
+  }
   function financePortalGateHTML(){
-    return '<div class="card" style="max-width:420px; margin:0 auto">'+
-      '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px">'+ICONS.shield+'</span>Finance portal locked</h3></div>'+
-      '<p class="hint">Enter the Finance portal password and a current Finance portal authenticator code to continue. Both are separate from your regular sign-in password and from the authenticator code used to reveal amounts or send M-Pesa payouts.</p>'+
-      '<form data-form="unlock-finance-portal">'+
+    if(financeGuardStatus===null) refreshFinanceGuardStatus();
+    if(financeGuardStatus && financeGuardStatus.locked){
+      return '<div class="card" style="max-width:420px; margin:0 auto">'+
+        '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px; color:var(--bad)">'+ICONS.lockClosed+'</span>Finance portal locked</h3></div>'+
+        '<p class="hint">Locked after repeated wrong attempts, for safety — nobody can get in, including with correct details, until it\'s cleared.</p>'+
+        '<p class="hint">'+(isAdmin()
+          ? 'As the administrator, clear it from Settings → Team → Finance security, once you know it was you or you\'ve checked who it was.'
+          : 'Ask the administrator to clear it from Settings.')+'</p>'+
+      '</div>';
+    }
+    var showFingerprintTab = webauthnSupported();
+    var tabsHtml = showFingerprintTab ? '<div class="segmented" style="margin-bottom:14px">'+
+        '<button class="'+(financeUnlockTab==='password'?'active':'')+'" data-action="finance-unlock-tab:password" type="button">Password + code</button>'+
+        '<button class="'+(financeUnlockTab==='fingerprint'?'active':'')+'" data-action="finance-unlock-tab:fingerprint" type="button">'+ICONS.fingerprint+' Fingerprint + PIN</button>'+
+      '</div>' : '';
+    var passwordTabHtml = '<form data-form="unlock-finance-portal">'+
         '<div class="field-row"><label>Finance portal password</label><input class="field" type="password" name="password" autocomplete="off" required autofocus></div>'+
         '<div class="field-row" style="margin-top:12px"><label>Finance portal authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required></div>'+
         '<button class="btn primary" type="submit" style="width:100%; margin-top:16px" id="unlock-finance-portal-submit">Unlock Finance</button>'+
       '</form>'+
-      (!(currentUser && currentUser.portalTotpEnrolled) ? '<p class="hint" style="margin-top:14px">Haven\'t set up the Finance portal authenticator yet? Do that first from Settings → Your account.</p>' : '')+
+      (!(currentUser && currentUser.portalTotpEnrolled) ? '<p class="hint" style="margin-top:14px">Haven\'t set up the Finance portal authenticator yet? Do that first from Settings → Your account.</p>' : '');
+    var fingerprintTabHtml;
+    if(!showFingerprintTab){
+      fingerprintTabHtml = '';
+    } else if(!financeGuardStatus){
+      fingerprintTabHtml = '<p class="hint">Loading…</p>';
+    } else if(!financeGuardStatus.fingerprintEnrolled || !financeGuardStatus.pinSet){
+      fingerprintTabHtml = '<p class="hint">Set up '+(!financeGuardStatus.fingerprintEnrolled?'fingerprint/Face unlock':'')+
+        (!financeGuardStatus.fingerprintEnrolled && !financeGuardStatus.pinSet?' and ':'')+
+        (!financeGuardStatus.pinSet?'your personal Finance PIN':'')+' first, from Settings → Your account.</p>';
+    } else {
+      fingerprintTabHtml = '<p class="hint">Your fingerprint or Face unlock proves this is your device; your personal PIN proves it\'s you — both are checked, every time.</p>'+
+        '<div class="field-row"><label>Your personal Finance PIN</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="finance-fingerprint-pin" placeholder="Your PIN" autocomplete="off"></div>'+
+        '<button class="btn primary" type="button" style="width:100%; margin-top:16px" id="unlock-finance-fingerprint-submit" data-action="unlock-finance-fingerprint">'+ICONS.fingerprint+' Unlock with fingerprint / Face</button>';
+    }
+    return '<div class="card" style="max-width:420px; margin:0 auto">'+
+      '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px">'+ICONS.shield+'</span>Finance portal locked</h3></div>'+
+      (financeUnlockTab==='password' ? '<p class="hint">Enter the Finance portal password and a current Finance portal authenticator code to continue. Both are separate from your regular sign-in password and from the authenticator code used to reveal amounts or send M-Pesa payouts.</p>' : '')+
+      tabsHtml+
+      ((financeUnlockTab==='fingerprint' && showFingerprintTab) ? fingerprintTabHtml : passwordTabHtml)+
     '</div>';
   }
   function financeFormHtml(id){
@@ -2610,6 +2862,14 @@
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Confirm</button></div>'+
     '</form>';
   }
+  function clearFinanceLockFormHtml(){
+    return '<div class="modal-head"><h3>Clear Finance portal lock</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Confirm it\'s really you with your main authenticator code (Settings → Your account — the same one used to reveal Finance figures and send M-Pesa payouts, not the Finance portal one). This also resets the failed-attempt count to zero.</p>'+
+    '<form data-form="clear-finance-lock">'+
+      '<div class="field-row"><label>Your authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Clear lock</button></div>'+
+    '</form>';
+  }
   function initFinanceSync(){
     if(financeSyncStarted || !db) return;
     financeSyncStarted = true;
@@ -2636,6 +2896,423 @@
     team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
     messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel }
   };
+  // Plain display names for each section key — used by voice control's
+  // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
+  // functions, not a label string.
+  var SECTION_LABELS = {
+    overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', health:'Health',
+    reports:'Reports', expenses:'Expenses', income:'Income', customers:'Customers',
+    finance:'Finance', about:'About', settings:'Settings', team:'Team', messages:'Messages'
+  };
+
+  /* ============================= GLOBAL SEARCH ============================= */
+  // One search box, present on every page (see the static "global-search-bar"
+  // container, rendered once below — not part of the normal render() cycle,
+  // so typing in it never gets wiped out by a Firestore update elsewhere).
+  // Built fresh from whatever's already loaded in `state` every time someone
+  // types — there's no separate search index to keep in sync, and farm-sized
+  // data (hundreds, not millions, of records) makes that cheap enough to not
+  // matter. Respects the same visibility rules as the rest of the app:
+  // Finance only searches if canSeeFinance() (and masks amounts the same way
+  // the Finance page itself does), Team only if isAdmin().
+  function gsMatch(hay, q){ return hay && hay.toLowerCase().indexOf(q) !== -1; }
+  function buildGlobalSearchIndex(){
+    var idx = [];
+    (state.flock||[]).forEach(function(b){
+      var label = genderLabel(b.gender);
+      idx.push({
+        cat:'Flock', title:b.count+' '+label+(b.count===1?'':'s'),
+        sub:(b.source?b.source+' — ':'')+'added '+fmtDate(parseISO(b.dateAdded)),
+        section:'flock', followup:null,
+        text:[label, b.source, b.dateAdded].join(' ')
+      });
+      (b.removals||[]).forEach(function(r){
+        var reasonLbl = removalReasonLabel(r.reason);
+        idx.push({
+          cat:'Flock activity',
+          title:(r.reason==='sold' ? 'Sold '+r.count+' '+label+(r.buyer?' to '+r.buyer:'') : reasonLbl+' — '+r.count+' '+label),
+          sub:fmtDate(parseISO(r.date))+(r.saleAmount?' — '+fmtMoney(r.saleAmount):''),
+          section:'flock', followup:'open-history:'+b.id,
+          text:[reasonLbl, r.buyer, r.note, label].join(' ')
+        });
+      });
+    });
+    (state.eggs||[]).forEach(function(e){
+      idx.push({
+        cat:'Eggs', title:e.total+' eggs collected', sub:fmtDate(parseISO(e.date))+(e.note?' — '+e.note:''),
+        section:'eggs', followup:'edit-egg:'+e.id, text:['collected', e.note, e.date].join(' ')
+      });
+    });
+    (state.eggLosses||[]).forEach(function(x){
+      var reasonLbl = eggLossReasonLabel(x.reason);
+      idx.push({
+        cat:'Eggs', title:(x.reason==='sold' ? 'Sold '+x.count+' eggs'+(x.buyer?' to '+x.buyer:'') : reasonLbl+' — '+x.count+' eggs'),
+        sub:fmtDate(parseISO(x.date))+(x.saleAmount?' — '+fmtMoney(x.saleAmount):''),
+        section:'eggs', followup:'edit-eggloss:'+x.id, text:[reasonLbl, x.buyer, x.note].join(' ')
+      });
+    });
+    (state.feedLogs||[]).forEach(function(f){
+      idx.push({
+        cat:'Feed', title:f.quantityKg+' kg — '+(f.feedType||'Other'), sub:fmtDate(parseISO(f.date))+(f.note?' — '+f.note:''),
+        section:'feed', followup:'edit-feed:'+f.id, text:[f.feedType, f.note].join(' ')
+      });
+    });
+    (state.healthRecords||[]).forEach(function(h){
+      idx.push({
+        cat:'Health', title:h.title, sub:healthTypeLabel(h.type)+' — '+healthBatchLabel(h.batchId)+' — '+fmtDate(parseISO(h.date)),
+        section:'health', followup:'edit-health:'+h.id, text:[h.title, h.note, healthTypeLabel(h.type)].join(' ')
+      });
+    });
+    (state.expenses||[]).forEach(function(x){
+      idx.push({
+        cat:'Expenses', title:(x.category||'Other')+' — '+fmtMoney(x.amount), sub:fmtDate(parseISO(x.date))+(x.note?' — '+x.note:''),
+        section:'expenses', followup:'edit-expense:'+x.id, text:[x.category, x.note].join(' ')
+      });
+    });
+    (state.incomes||[]).forEach(function(x){
+      idx.push({
+        cat:'Income', title:(x.category||'Other')+' — '+fmtMoney(x.amount), sub:fmtDate(parseISO(x.date))+(x.note?' — '+x.note:''),
+        section:'income', followup:'edit-income:'+x.id, text:[x.category, x.note].join(' ')
+      });
+    });
+    (state.customers||[]).forEach(function(c){
+      idx.push({
+        cat:'Customers', title:c.name, sub:(c.phone?c.phone+' — ':'')+'KSh '+customerStats(c.id).totalSpent+' spent',
+        section:'customers', followup:'edit-customer:'+c.id, text:[c.name, c.phone, c.note].join(' ')
+      });
+    });
+    if(canSeeFinance()){
+      var f = financeState();
+      (f.transactions||[]).forEach(function(t){
+        var amountText = financeRevealed ? fmtMoney(t.amount) : maskMoneyDisplay(t.amount);
+        idx.push({
+          cat:'Finance', title:(t.type==='deposit'?'Deposit':'Withdrawal')+' — '+amountText,
+          sub:fmtDate(parseISO(t.date))+(t.note?' — '+t.note:''),
+          section:'finance', followup:null, text:[t.note, t.source, t.status].join(' ')
+        });
+      });
+    }
+    if(isAdmin()){
+      teamUsers.forEach(function(u){
+        idx.push({
+          cat:'Team', title:u.name||u.email||'Unnamed', sub:roleLabel(u)+(u.email?' — '+u.email:''),
+          section:'team', followup:null, text:[u.name, u.email, roleLabel(u)].join(' ')
+        });
+      });
+    }
+    return idx;
+  }
+  function performGlobalSearch(query){
+    var q = String(query||'').trim().toLowerCase();
+    if(!q) return [];
+    var idx = buildGlobalSearchIndex();
+    var perCat = {};
+    var out = [];
+    for(var i=0;i<idx.length && out.length<40;i++){
+      var item = idx[i];
+      if(!gsMatch(item.title,q) && !gsMatch(item.sub,q) && !gsMatch(item.text,q)) continue;
+      perCat[item.cat] = (perCat[item.cat]||0)+1;
+      if(perCat[item.cat]>8) continue;
+      out.push(item);
+    }
+    return out;
+  }
+  function gsResultsHtml(results, query){
+    if(!query.trim()) return '<div class="gs-hint">Type to search flock, eggs, feed, health, money, and customers'+(isAdmin()?', plus Team':'')+'. Or tap the mic and just say it.</div>';
+    if(!results.length) return '<div class="gs-empty">No matches for "'+esc(query)+'".</div>';
+    var lastCat = null, html = '';
+    results.forEach(function(item, i){
+      if(item.cat!==lastCat){ html += '<div class="gs-group">'+esc(item.cat)+'</div>'; lastCat = item.cat; }
+      html += '<button type="button" class="gs-item" data-gs-index="'+i+'">'+esc(item.title)+'<span class="gs-sub">'+esc(item.sub||'')+'</span></button>';
+    });
+    return html;
+  }
+  var gsLastResults = [];
+  function renderGlobalSearchResults(query){
+    gsLastResults = performGlobalSearch(query);
+    var root = document.getElementById('global-search-results');
+    if(!root) return;
+    root.innerHTML = gsResultsHtml(gsLastResults, query);
+  }
+  function gsSelectResult(item){
+    var input = document.getElementById('global-search-input');
+    var root = document.getElementById('global-search-results');
+    if(input) input.value = '';
+    if(root){ root.hidden = true; root.innerHTML = ''; }
+    ui.section = item.section;
+    saveUIPref();
+    render();
+    if(item.followup) handleAction(item.followup);
+  }
+  function renderGlobalSearchBar(){
+    var bar = document.getElementById('global-search-bar');
+    if(!bar) return;
+    bar.innerHTML =
+      '<div class="global-search-box">'+
+        '<span class="gs-search-ico">'+ICONS.search+'</span>'+
+        '<input type="search" id="global-search-input" placeholder="Search everything, or tap the mic and say it…" autocomplete="off">'+
+        (voiceSupported() ? '<button type="button" class="icon-btn" id="global-search-mic" title="Voice command">'+ICONS.mic+'</button>' : '')+
+      '</div>'+
+      '<div class="global-search-results" id="global-search-results" hidden></div>';
+    var input = document.getElementById('global-search-input');
+    var results = document.getElementById('global-search-results');
+    input.addEventListener('focus', function(){ results.hidden = false; renderGlobalSearchResults(input.value); });
+    input.addEventListener('input', function(){ results.hidden = false; renderGlobalSearchResults(input.value); });
+    input.addEventListener('keydown', function(e){
+      if(e.key==='Escape'){ input.blur(); results.hidden = true; }
+      if(e.key==='Enter' && gsLastResults.length){ gsSelectResult(gsLastResults[0]); }
+    });
+    results.addEventListener('click', function(e){
+      var el = e.target.closest('.gs-item');
+      if(!el) return;
+      var item = gsLastResults[Number(el.dataset.gsIndex)];
+      if(item) gsSelectResult(item);
+    });
+    document.addEventListener('click', function(e){
+      if(!bar.contains(e.target)) results.hidden = true;
+    });
+    var micBtn = document.getElementById('global-search-mic');
+    if(micBtn) micBtn.addEventListener('click', function(){ toggleVoiceCommand(micBtn, input, results); });
+  }
+
+  /* ---- voice commands ("open eggs", "search john", or just say what you
+     want and it's used as a search) — a convenience layer only. It is
+     NEVER used to unlock anything or approve anything; see the separate,
+     clearly-optional voice tag in Settings for the one place voice touches
+     Finance at all, and even that is informational-only, never a lock. ---- */
+  var VOICE_SECTION_WORDS = {
+    overview:['overview','home','dashboard'], flock:['flock','birds','chicken','chickens'], eggs:['eggs','egg'],
+    feed:['feed','feeding'], health:['health'], expenses:['expenses','expense','spending'],
+    income:['income','sales','earnings'], customers:['customers','customer','buyers'], finance:['finance','bank','money'],
+    reports:['reports','report'], messages:['messages','message','inbox'], about:['about'], settings:['settings'], team:['team']
+  };
+  function voiceSupported(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+  var voiceRecognition = null;
+  function getVoiceRecognition(){
+    if(voiceRecognition) return voiceRecognition;
+    var Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!Ctor) return null;
+    voiceRecognition = new Ctor();
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = false;
+    voiceRecognition.maxAlternatives = 1;
+    try{ voiceRecognition.lang = (navigator.language || 'en-US'); }catch(e){}
+    return voiceRecognition;
+  }
+  function handleVoiceTranscript(transcript, input, results){
+    var text = String(transcript||'').trim();
+    if(!text) return;
+    var lower = text.toLowerCase();
+    var m = lower.match(/^(?:open|go to|show|switch to)\s+(.+)$/);
+    var target = m ? m[1].trim() : null;
+    if(target){
+      var hit = Object.keys(VOICE_SECTION_WORDS).find(function(key){
+        return VOICE_SECTION_WORDS[key].some(function(w){ return target.indexOf(w)!==-1; });
+      });
+      if(hit && sectionAllowed(hit)){
+        ui.section = hit; saveUIPref(); render();
+        toast('Opened '+esc(SECTION_LABELS[hit]||hit)+'.');
+        return;
+      }
+    }
+    var searchTerm = lower.replace(/^(?:search|find|look up|look for)\s+/,'');
+    if(input){ input.value = searchTerm; input.focus(); }
+    if(results){ results.hidden = false; renderGlobalSearchResults(searchTerm); }
+  }
+  function toggleVoiceCommand(micBtn, input, results){
+    var rec = getVoiceRecognition();
+    if(!rec){ toast('Voice commands need Chrome, Edge, or Safari.'); return; }
+    if(micBtn.classList.contains('listening')){ rec.stop(); return; }
+    micBtn.classList.add('listening');
+    var done = false;
+    var finish = function(){ if(done) return; done = true; micBtn.classList.remove('listening'); };
+    rec.onresult = function(e){
+      finish();
+      var transcript = e.results && e.results[0] && e.results[0][0] && e.results[0][0].transcript;
+      handleVoiceTranscript(transcript, input, results);
+    };
+    rec.onerror = function(e){
+      finish();
+      if(e.error==='no-speech'){ toast('Didn\'t catch that — try again.'); return; }
+      if(e.error==='not-allowed' || e.error==='service-not-allowed'){ toast('Microphone access is blocked for this site.'); return; }
+      toast('Voice command failed — try again.');
+    };
+    rec.onend = finish;
+    try{ rec.start(); }catch(e){ finish(); }
+  }
+
+  /* ============================= KEM AI ASSISTANT =============================
+     A free, scripted (no external AI service, nothing sent off-device)
+     assistant — pattern-matches the question against a fixed list of
+     things it knows how to answer, either a live number worked out from
+     `state` (same helper functions the real pages use, so it can never
+     disagree with what's on screen) or a canned how-to explanation.
+     Available to every signed-in account (not guests), each person seeing
+     only what their own role already allows — Finance numbers only if
+     canSeeFinance(), Team numbers only if isAdmin(), same as everywhere
+     else in the app. The conversation lives in memory only for this
+     browser tab — nothing is saved, and it's gone on reload or sign-out
+     (a shared farm computer should never show the next person's chat). */
+  var kemAiOpen = false;
+  var kemAiMessages = [];
+  var KEM_AI_SUGGESTIONS = ['How many eggs today?', "What's my flock total?", 'How do I log feed?', 'How do I unlock Finance with my fingerprint?'];
+  function kemAiSetVisible(show){
+    var root = document.getElementById('kem-ai-root');
+    if(!root) return;
+    root.hidden = !show;
+    if(!show){ kemAiOpen = false; kemAiMessages = []; var panel = document.getElementById('kemai-panel'); if(panel) panel.hidden = true; kemAiRenderMessages(); }
+  }
+  function kemAiScrollToBottom(){
+    var m = document.getElementById('kemai-messages');
+    if(m) m.scrollTop = m.scrollHeight;
+  }
+  function kemAiSuggestionsHtml(){
+    return '<div class="kemai-suggestions">'+KEM_AI_SUGGESTIONS.map(function(s){
+      return '<button type="button" class="kemai-chip" data-kemai-chip="'+esc(s)+'">'+esc(s)+'</button>';
+    }).join('')+'</div>';
+  }
+  function kemAiRenderMessages(){
+    var root = document.getElementById('kemai-messages');
+    if(!root) return;
+    var html;
+    if(!kemAiMessages.length){
+      html = '<div class="kemai-intro">Hi, I\'m Kem — ask me about your farm\'s numbers, or how to do something in the app.</div>'+kemAiSuggestionsHtml();
+    } else {
+      html = kemAiMessages.map(function(m){ return '<div class="kemai-msg '+(m.role==='user'?'user':'assistant')+'">'+esc(m.text)+'</div>'; }).join('');
+    }
+    root.innerHTML = html;
+    Array.prototype.forEach.call(root.querySelectorAll('[data-kemai-chip]'), function(btn){
+      btn.addEventListener('click', function(){ kemAiAsk(btn.getAttribute('data-kemai-chip')); });
+    });
+    kemAiScrollToBottom();
+  }
+  function kemAiAsk(question){
+    question = String(question||'').trim();
+    if(!question) return;
+    kemAiMessages.push({ role:'user', text:question });
+    kemAiRenderMessages();
+    var answer = kemAiAnswer(question);
+    setTimeout(function(){
+      kemAiMessages.push({ role:'assistant', text:answer });
+      kemAiRenderMessages();
+    }, 260);
+  }
+  function kemAiRenderShell(){
+    var root = document.getElementById('kem-ai-root');
+    if(!root) return;
+    root.innerHTML =
+      '<button type="button" class="kemai-bubble" id="kemai-bubble" title="Kem AI Assistant" aria-label="Open Kem AI Assistant">'+ICONS.kemai+'</button>'+
+      '<div class="kemai-panel" id="kemai-panel" hidden>'+
+        '<div class="kemai-head"><h3>'+ICONS.kemai+'Kem AI Assistant</h3><button type="button" class="icon-btn" id="kemai-close" title="Close">'+ICONS.close+'</button></div>'+
+        '<div class="kemai-messages" id="kemai-messages"></div>'+
+        '<div class="kemai-inputrow"><input type="text" id="kemai-input" placeholder="Ask about your farm, or how to do something…" autocomplete="off"><button type="button" class="kemai-send" id="kemai-send" title="Send">'+ICONS.send+'</button></div>'+
+      '</div>';
+    kemAiRenderMessages();
+    var bubble = document.getElementById('kemai-bubble');
+    var panel = document.getElementById('kemai-panel');
+    var input = document.getElementById('kemai-input');
+    bubble.addEventListener('click', function(){
+      kemAiOpen = !kemAiOpen;
+      panel.hidden = !kemAiOpen;
+      if(kemAiOpen){ input.focus(); kemAiScrollToBottom(); }
+    });
+    document.getElementById('kemai-close').addEventListener('click', function(){ kemAiOpen = false; panel.hidden = true; });
+    function submit(){ var v = input.value.trim(); if(!v) return; input.value = ''; kemAiAsk(v); }
+    document.getElementById('kemai-send').addEventListener('click', submit);
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
+  }
+  // A short, friendly stand-in for "you don't have access to that" — used
+  // for both Finance- and Team-gated questions so a restricted account
+  // never sees the real number, just a polite redirect.
+  function kemAiRestricted(what){ return "That's part of "+what+", which isn't available on your account. Ask the administrator if you need it."; }
+  function financeMoneyDisplay(amount){ return financeRevealed ? fmtMoney(amount) : maskMoneyDisplay(amount); }
+  function kemAiAnswer(raw){
+    var q = String(raw||'').trim().toLowerCase();
+    if(!q) return 'Ask me something like "how many eggs today" or "how do I log feed".';
+
+    if(/^(hi|hello|hey|jambo|habari)\b/.test(q)) return "Hi! I'm Kem, your farm assistant. Ask me about your numbers (eggs, flock, feed, money) or how to do something in the app.";
+    if(/\b(thank you|thanks|asante)\b/.test(q)) return "You're welcome — anytime.";
+    if(/\bwho are you\b|\bwhat are you\b|\byour name\b/.test(q)) return "I'm Kem, the Kenokip Farm assistant — a free, built-in helper, not a connection to any outside AI service. I can work out numbers from what's already in the app, and explain how to use any feature. I don't chat about anything outside the farm.";
+
+    /* ---- live numbers, worked out fresh from state every time ---- */
+    if(/\begg/.test(q)){
+      if(/\btoday\b/.test(q)){ var r=getRange('day'); return "You've logged "+sumEggs(r.startISO,r.endISO).toLocaleString()+" eggs today."; }
+      if(/\bthis week\b|\bweek\b/.test(q)){ var r=getRange('week'); return sumEggs(r.startISO,r.endISO).toLocaleString()+" eggs collected "+r.label.toLowerCase()+"."; }
+      if(/\bthis month\b|\bmonth\b/.test(q)){ var r=getRange('month'); return sumEggs(r.startISO,r.endISO).toLocaleString()+" eggs collected in "+r.label+"."; }
+      if(/\btotal\b|\ball.time\b|\bever\b|\bso far\b/.test(q)){ var total=state.eggs.reduce(function(a,x){return a+x.total;},0); return total.toLocaleString()+" eggs collected in total, across "+state.eggs.length+" logged day"+(state.eggs.length===1?'':'s')+"."; }
+      var rToday=getRange('day'); return "You've logged "+sumEggs(rToday.startISO,rToday.endISO).toLocaleString()+" eggs today. Ask \"this week\" or \"this month\" for a wider total.";
+    }
+    if(/\b(flock|birds?|hens?|roosters?|chickens?)\b/.test(q) && !/\bfeed\b/.test(q)){
+      var totalNow = birdsAsOf(todayISO());
+      var inv = buildInventory();
+      if(/\bhen/.test(q)) return (inv.chick.female+inv.grower.female+inv.layer.female)+" hens on the farm right now.";
+      if(/\brooster/.test(q)) return (inv.chick.male+inv.grower.male+inv.layer.male)+" roosters on the farm right now.";
+      return totalNow.toLocaleString()+" birds on the farm right now, across "+state.flock.length+" recorded batch"+(state.flock.length===1?'':'es')+".";
+    }
+    if(/\bfeed\b/.test(q)){
+      var r2 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : getRange('week');
+      var kg = totalFeedKg(r2.startISO, r2.endISO), cost = totalFeedCost(r2.startISO, r2.endISO);
+      return kg.toLocaleString()+" kg of feed logged "+r2.label.toLowerCase()+", costing "+fmtMoney(cost)+".";
+    }
+    if(/\bhealth\b|\bvaccin|\breminder/.test(q)){
+      var overdue = overdueHealthCount();
+      return overdue>0 ? overdue+" health reminder"+(overdue===1?'':'s')+" overdue — check the Health page for which." : "No overdue health reminders right now.";
+    }
+    if(/\bcustomer/.test(q)){
+      var list = (state.customers||[]).slice().map(function(c){ return Object.assign({}, c, customerStats(c.id)); }).sort(function(a,b){ return b.totalSpent-a.totalSpent; });
+      if(/\btop\b|\bbest\b|\bbiggest\b/.test(q)){
+        return list.length ? "Your top customer is "+list[0].name+", "+fmtMoney(list[0].totalSpent)+" spent so far." : "No customers recorded yet.";
+      }
+      return list.length+" customer"+(list.length===1?'':'s')+" recorded.";
+    }
+    if(/\bexpense/.test(q)){
+      if(canSeeFinance()===false && /\bfinance\b/.test(q)) return kemAiRestricted('Finance');
+      var r3 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : (/\btoday\b/.test(q) ? getRange('day') : getRange('week'));
+      return fmtMoney(sumMoney(state.expenses, r3.startISO, r3.endISO))+" in expenses "+r3.label.toLowerCase()+".";
+    }
+    if(/\bincome\b|\bsales\b|\bearn/.test(q)){
+      var r4 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : (/\btoday\b/.test(q) ? getRange('day') : getRange('week'));
+      return fmtMoney(sumMoney(state.incomes, r4.startISO, r4.endISO))+" in income "+r4.label.toLowerCase()+".";
+    }
+    if(/\bprofit\b|\bdeficit\b|\bbottom line\b/.test(q)){
+      if(!canSeeFinance()) return kemAiRestricted('the farm\'s profit figures');
+      var r5 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : getRange('week');
+      var p = sumMoney(state.incomes,r5.startISO,r5.endISO) - sumMoney(state.expenses,r5.startISO,r5.endISO);
+      return (p<0 ? "A deficit of "+fmtMoney(Math.abs(p)) : "A profit of "+fmtMoney(p))+" "+r5.label.toLowerCase()+".";
+    }
+    if(/\bbalance\b|\bhow much (money|cash)\b|\bfinance\b.*\bbalance\b/.test(q)){
+      if(!canSeeFinance()) return kemAiRestricted('Finance');
+      return "Your Finance balance is "+financeMoneyDisplay(financeBalance())+(financeRevealed?'':' (tap the eye icon on the Finance page to reveal the exact figure).');
+    }
+    if(/\bteam\b|\bstaff\b|\bemployee/.test(q) && /\bhow many\b|\bcount\b/.test(q)){
+      if(!isAdmin()) return kemAiRestricted('Team');
+      return teamUsers.length+" team account"+(teamUsers.length===1?'':'s')+" set up.";
+    }
+
+    /* ---- how-to, grouped by topic ---- */
+    if(/\badd\b.*\b(bird|flock|chick|hen|rooster)\b|\bnew batch\b/.test(q)) return 'Go to Flock, then tap "Add birds" (or the + on a Chicks/Growers/Layers card) — enter how many, their gender, and where they came from.';
+    if(/\b(sold|sell|lost|died|predator|cull)\b.*\b(bird|flock|hen)\b|\brecord loss\b/.test(q)) return 'On the Flock page, find the batch\'s row and tap "Record loss" (or "Record loss or sale" next to it) — pick the reason, how many, and for a sale, the buyer and amount.';
+    if(/\blog\b.*\begg|\badd\b.*\begg/.test(q)) return 'Go to Eggs and tap "Log eggs" — enter the date and how many were collected.';
+    if(/\blog\b.*\bfeed|\badd\b.*\bfeed/.test(q)) return 'Go to Feed and tap "Log feed" — enter the type, quantity in kg, and cost.';
+    if(/\badd\b.*\bhealth|\bvaccinat.*\bhow\b|\blog\b.*\btreatment/.test(q)) return 'Go to Health and tap "Add record" — pick vaccination, treatment, checkup, or illness, which batch it\'s for, and (optionally) a follow-up reminder date.';
+    if(/\badd\b.*\bexpense/.test(q)) return 'Go to Expenses and tap "Add expense" — pick a category, amount, date, and an optional note.';
+    if(/\badd\b.*\bincome/.test(q)) return 'Go to Income and tap "Add income" — pick a category, amount, date, and an optional note.';
+    if(/\badd\b.*\bcustomer/.test(q)) return 'Go to Customers and tap "Add customer" — their name is enough to start; phone and notes are optional. Sales linked to them (from Flock or Eggs) show up automatically.';
+    if(/\bdeposit\b|\badd.*money\b|\bstk\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Add via M-Pesa" and confirm the PIN prompt on your phone — Safaricom handles that step directly, this app never sees your M-Pesa PIN.'; }
+    if(/\bwithdraw\b|\bsend.*money\b|\bpay ?out\b|\bb2c\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Send via M-Pesa", enter the phone number and amount — it goes out as a normal M-Pesa payment.'; }
+    if(/\bfingerprint\b|\bface unlock\b|\bfinance pin\b/.test(q)) return 'From Settings → Your account: set a personal Finance PIN, then tap "Set up fingerprint / Face unlock" and follow your device\'s own prompt. After that, the Finance portal offers a Fingerprint + PIN tab as a faster alternative to password + code — either one alone still can\'t get in.';
+    if(/\bsearch box\b|\bhow.*search\b/.test(q)) return 'The search box above every page searches flock, eggs, feed, health, expenses, income, and customers as you type (plus Finance and Team if your account can see those) — tap a result to jump straight to it.';
+    if(/\bvoice\b/.test(q)) return 'Tap the mic in the search box and say something like "open eggs" to jump to a page, or just say what you\'re looking for and it searches for it. Needs Chrome, Edge, or Safari.';
+    if(/\bchange.*password\b|\breset.*password\b/.test(q)) return 'From Settings → Your account, tap "Change password". If you\'re signed out and can\'t remember it, use "Forgot password?" on the sign-in screen instead.';
+    if(/\badd\b.*\b(team member|staff|employee)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('Team'); return 'From Team, tap "Add team member" — set their name, email, a temporary password, and role (Supervisor, Vet, Financial Staff, or Farmhand), then share the login with them directly.'; }
+    if(/\bnotification\b|\bpush\b|\balert\b/.test(q)) return 'From Settings → Your account, tap "Enable background urgent alerts" — that lets an Urgent message pop up on this device even when the app is in the background.';
+    if(/\bcurrency\b/.test(q)) return 'From Settings, pick your display currency — everything already recorded converts automatically, nothing needs re-entering.';
+    if(/\bbackup\b|\bexport\b/.test(q)) return 'Settings has a backup/export option for your records. Ask an administrator if you\'re not sure where your farm\'s backups are kept.';
+    if(/\bsecurity log\b|\baccess log\b|\bwho.*(logged in|accessed)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('the security and access logs'); return 'Team → Access log shows every sign-in, and Team → Finance security shows every Finance unlock attempt with device and rough location.'; }
+    if(/\babout page\b/.test(q)) return 'The About page tells your farm\'s story — administrators can edit it with the pencil icon at the top of that page.';
+
+    return "I don't have an answer for that yet. Try asking about eggs, flock, feed, health, money, or customers — or \"how do I\" do something. You can also use the search box above to find a specific record.";
+  }
 
   /* ============================= MODAL / TOAST ============================= */
   function openModal(html){
@@ -2737,6 +3414,7 @@
               financePortalUnlocked = false;
               stopFinancePortalTimer();
               readOnly = guestMode;
+              kemAiSetVisible(false);
               render();
               return;
             }
@@ -2974,6 +3652,28 @@
           openModal(portalAuthAppSetupFormHtml(res.data));
           renderAuthAppQR(res.data.otpauthUri);
         }).catch(function(err){ toast((err&&err.message)||'Could not start setup.'); });
+        break;
+      case 'finance-unlock-tab':
+        financeUnlockTab = a1;
+        render();
+        break;
+      case 'unlock-finance-fingerprint':
+        unlockWithFinanceFingerprint();
+        break;
+      case 'enroll-finance-fingerprint':
+        enrollFinanceFingerprint();
+        break;
+      case 'remove-finance-fingerprint':
+        if(!confirm('Remove fingerprint/Face unlock for this device? You can set it up again any time.')) break;
+        removeFinanceFingerprintDevice(a1);
+        break;
+      case 'open-clear-finance-lock':
+        if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
+        openModal(clearFinanceLockFormHtml());
+        break;
+      case 'security-log-page':
+        securityEventPage = a1==='prev' ? securityEventPage-1 : securityEventPage+1;
+        render();
         break;
       case 'finance-reveal-prompt':
         if(!canSeeFinance()) break;
@@ -3578,8 +4278,34 @@
         render();
       }).catch(function(err){
         if(fpBtn){ fpBtn.disabled = false; fpBtn.textContent = 'Unlock Finance'; }
+        refreshFinanceGuardStatus();
         toast((err&&err.message)||'Could not unlock the Finance portal.');
+        render();
       });
+      return;
+    }
+    if(name==='set-finance-pin'){
+      if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      var newPin = (val('pin')||'').trim();
+      var newPin2 = (val('pin2')||'').trim();
+      if(!/^\d{4,8}$/.test(newPin)){ toast('Use a 4 to 8 digit PIN.'); return; }
+      if(newPin!==newPin2){ toast('Those two PINs don\'t match.'); return; }
+      firebase.functions().httpsCallable('setFinancePin')({ pin: newPin }).then(function(){
+        toast('Your personal Finance PIN is set.');
+        refreshFinanceGuardStatus();
+        try{ form.reset(); }catch(e){}
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that PIN.'); });
+      return;
+    }
+    if(name==='clear-finance-lock'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var clearCode = (val('code')||'').trim();
+      firebase.functions().httpsCallable('adminClearFinanceLock')({ code: clearCode }).then(function(){
+        closeModal();
+        toast('Finance portal lock cleared.');
+        refreshFinanceGuardStatus();
+        render();
+      }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
       return;
     }
     if(name==='set-finance-portal-password'){
@@ -3637,16 +4363,25 @@
   var financeSyncStarted = false;
   var directorySyncStarted = false;
   var logsSyncStarted = false;
+  var securityEventsSyncStarted = false;
   var messagesSyncStarted = false;
   var teamUsers = [];
   var accessLogs = [];
   var accessLogPage = 0;
+  var securityEvents = [];
+  var securityEventPage = 0;
   var messages = [];
   var messagesViewAll = false;
   var idleTimer = null;
   var SESSION_LIMIT_MS = 10*60*1000;
   var financePortalUnlocked = false; // in-memory only — re-locks on reload, and re-asks after 2 minutes idle
   var financePortalIdleTimer = null;
+  // Finance Guard: the fingerprint/Face + personal PIN unlock option, and
+  // the lockout it shares with the password + authenticator-code method.
+  // null until the first refreshFinanceGuardStatus() call comes back.
+  var financeGuardStatus = null;
+  var financeGuardStatusLoading = false;
+  var financeUnlockTab = 'password'; // 'password' | 'fingerprint' — which tab the gate shows
   var artifactApi = null;
   var saveTimer = null;
 
@@ -3681,6 +4416,8 @@
   }, 60000);
 
   render();
+  renderGlobalSearchBar();
+  kemAiRenderShell();
   initArtifact();
 })();
 </script>

@@ -24,8 +24,8 @@
 // badges for the Settings page, not the secrets).
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const crypto = require('crypto');
 const { randomBase32Secret, verifyTotp, otpauthUri } = require('./totp');
+const { hashPassword, verifyPassword } = require('./cryptoHelpers');
 
 function requireAuth(request) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -35,25 +35,18 @@ function canUseAuthApp(auth) {
   return auth.token.role === 'administrator' || (auth.token.role === 'employee' && auth.token.jobTitle === 'financial');
 }
 
-// Plain Node crypto password hashing (scrypt) — no new npm dependency, same
-// reasoning as totp.js: one less thing that can fail to install on a flaky
-// connection. Stored as "salt:hash", both hex.
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return salt + ':' + hash;
-}
-function verifyPassword(password, stored) {
-  if (!stored || typeof stored !== 'string' || stored.indexOf(':') === -1) return false;
-  const parts = stored.split(':');
-  const salt = parts[0], hashHex = parts[1];
-  const hash = crypto.scryptSync(password, salt, 64);
-  const storedBuf = Buffer.from(hashHex, 'hex');
-  if (storedBuf.length !== hash.length) return false;
-  return crypto.timingSafeEqual(hash, storedBuf);
-}
-
-module.exports = function (admin, db) {
+// `guard` (optional 3rd arg) is financeGuard.js's shared lockout/alerting
+// helpers — passed in from index.js so a wrong password/code here counts
+// toward the SAME "3 wrong tries locks the portal" streak as a wrong
+// fingerprint/PIN attempt over there. Kept optional (falls back to no-ops)
+// so this file still works standalone, e.g. in a unit test that doesn't
+// need the lockout behavior.
+module.exports = function (admin, db, guard) {
+  guard = guard || {
+    assertNotLocked: async () => {},
+    onFail: async () => {},
+    onSuccess: async () => {},
+  };
   const SECURITY_REF = (uid) => db.collection('security').doc(uid);
   const USERS_REF = (uid) => db.collection('users').doc(uid);
   const PORTAL_REF = () => db.collection('security').doc('financePortal');
@@ -234,28 +227,44 @@ module.exports = function (admin, db) {
   const unlockFinancePortal = onCall({ region: 'us-central1' }, async (request) => {
     const auth = requireAuth(request);
     if (!canUseAuthApp(auth)) throw new HttpsError('permission-denied', 'Not available for your account.');
+    await guard.assertNotLocked();
     const password = String((request.data && request.data.password) || '');
     const code = String((request.data && request.data.code) || '');
-    const snap = await PORTAL_REF().get();
-    const stored = snap.exists ? snap.data().passwordHash : null;
-    if (!stored) throw new HttpsError('failed-precondition', "The administrator hasn't set a Finance portal password yet.");
-    if (!verifyPassword(password, stored)) throw new HttpsError('invalid-argument', 'Incorrect Finance portal password.');
-    await verifyPortalTotpForUid(auth.uid, code);
+    try {
+      const snap = await PORTAL_REF().get();
+      const stored = snap.exists ? snap.data().passwordHash : null;
+      if (!stored) throw new HttpsError('failed-precondition', "The administrator hasn't set a Finance portal password yet.");
+      if (!verifyPassword(password, stored)) throw new HttpsError('invalid-argument', 'Incorrect Finance portal password.');
+      await verifyPortalTotpForUid(auth.uid, code);
+    } catch (err) {
+      // Nothing's been set up yet isn't a real "attempt" — don't count it
+      // toward the lockout, there was nothing correct to compare against.
+      if (err instanceof HttpsError && err.code === 'failed-precondition') throw err;
+      await guard.onFail(request, 'password-totp', (err && err.message) || 'unknown');
+      throw err;
+    }
+    await guard.onSuccess(request, 'password-totp');
     return { ok: true };
   });
 
-  return {
-    triggers: {
-      startTotpEnrollment,
-      confirmTotpEnrollment,
-      resetTotp,
-      verifyTotpCode,
-      startPortalTotpEnrollment,
-      confirmPortalTotpEnrollment,
-      resetPortalTotp,
-      setFinancePortalPassword,
-      unlockFinancePortal,
-    },
-    verifyTotpForUid,
+  const triggers = {
+    startTotpEnrollment,
+    confirmTotpEnrollment,
+    resetTotp,
+    verifyTotpCode,
+    startPortalTotpEnrollment,
+    confirmPortalTotpEnrollment,
+    resetPortalTotp,
+    setFinancePortalPassword,
+    unlockFinancePortal,
   };
+  // The administrator's "clear a Finance lock" callable needs this file's
+  // verifyTotpForUid (their main authenticator code) but lives conceptually
+  // with the lockout logic in financeGuard.js — built here, once both
+  // pieces exist, rather than duplicating the TOTP check over there.
+  if (guard.makeAdminClearLock) {
+    triggers.adminClearFinanceLock = guard.makeAdminClearLock(verifyTotpForUid);
+  }
+
+  return { triggers, verifyTotpForUid };
 };
