@@ -1,6 +1,70 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Each team member now only sees and can change the
+> **Update (latest):** Receipt co-signing — when a team member signs a
+> receipt that also needs your signature, it now waits for you instead of
+> finishing right away.
+>
+> **How it works now:**
+> - A receipt that names two signers (you, plus whoever recorded it — a
+>   Supervisor, Farmhand, Vet, or Financial Staff) still has both signature
+>   lines, but only YOUR line is compulsory. When a team member taps "Sign &
+>   download" and draws their signature, it no longer finishes the
+>   document on the spot — it sends their half to you and shows them
+>   "Pending — sent to the administrator."
+> - You see it under the new **Pending signatures** page (a badge on it
+>   shows how many are waiting). Open one, review it, draw your own
+>   signature, tap "Sign & approve" — that's the moment the document
+>   actually becomes final and downloadable. The team member's screen
+>   updates the instant you do this (no refresh needed), and they also get
+>   a message telling them it's ready.
+> - **"I'm away" toggle** (Settings → Your account): a simple switch you
+>   control yourself. While it's on, a team member waiting on a
+>   **non-withdrawal** document gets a "Skip and send anyway" button —
+>   using it finishes the document with just their own signature, and you
+>   get an urgent message immediately telling you it went out without your
+>   approval. Flip the switch back off the moment you're available again.
+> - **Withdrawals are the one exception, on purpose:** a Finance withdrawal
+>   receipt never shows the Skip button, no matter what — it always waits
+>   for your real signature. This is enforced on the server, not just
+>   hidden in the app, so it can't be bypassed by a stale copy of the app
+>   or a tampered request.
+> - If you ever miss the notification, the message itself now has an
+>   "Open document" button on it, so you (or the team member) can always
+>   get back to a pending or finished document from Messages.
+>
+> **What this needed, technically (for your own understanding, not
+> something you need to act on beyond deploying below):** a new Firestore
+> collection, `pendingSignoffs`, holds each in-flight request. Unlike the
+> job-restrictions rule from the update below this one, its Firestore rule
+> is deliberately simple — nobody but the three new Cloud Functions
+> (`requestReceiptSignoff`, `approveReceiptSignoff`, `skipReceiptSignoff`
+> in `functions/roles.js`) may ever write to it, so "only the administrator
+> can approve" and "a withdrawal can never be skipped" are enforced as
+> plain, ordinary server-side code rather than a Firestore rule expression
+> — which also means, unlike that job-restrictions change, I could test
+> this one properly: 23 scenarios (every function, every role, every
+> allowed and blocked transition, including "mandatory can never be
+> skipped even while you're marked away") pass against a full simulation of
+> the real functions' logic. `signReceipt`/`verifyReceipt` themselves
+> (the actual tamper-evident signing) are completely unchanged.
+>
+> **This needs a functions redeploy AND a Firestore rules redeploy** (new
+> Cloud Functions, new collection), plus the usual front-end files:
+> ```
+> firebase deploy --only functions
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Two-person receipt co-signing: team member signs, administrator approves, with a skip path for non-withdrawals when marked away"
+> git push
+> ```
+> After deploying, please test all three paths at least once: (1) a
+> Supervisor or Financial Staff member signs a two-signature receipt and
+> you approve it from Pending signatures, (2) with "I'm away" switched on,
+> the same person sees and successfully uses "Skip and send anyway" on a
+> non-withdrawal receipt, and (3) confirm a withdrawal receipt never shows
+> the Skip button even while you're marked away.
+
+> **Earlier update:** Each team member now only sees and can change the
 > pages that match their job title:
 > - **Supervisor:** Flock, Eggs, Feed, Health, Customers, Overview (everyday
 >   farm operations — not money).

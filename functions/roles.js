@@ -162,12 +162,27 @@ module.exports = function (admin, db) {
 
   // Any signed-in account (administrator or employee) sets their own
   // display name — used to identify them in messages, e.g. "Supervisor(John)".
+  //
+  // Also doubles as the administrator's "I'm away" toggle (see
+  // requestReceiptSignoff/skipReceiptSignoff below) — any signed-in account
+  // could technically flip its own `away` flag, but only the administrator's
+  // copy of it is ever read by anything, so that's harmless. Either field
+  // can be sent on its own (the app's "away" switch never sends a name).
   const updateOwnProfile = onCall({ region: 'us-central1' }, async (request) => {
     const auth = requireAuth(request);
-    const name = String((request.data && request.data.name) || '').trim().slice(0, 60);
-    if (!name) throw new HttpsError('invalid-argument', 'Enter a name.');
-    await db.collection('users').doc(auth.uid).set({ name }, { merge: true });
-    return { ok: true, name };
+    const d = request.data || {};
+    const patch = {};
+    if (typeof d.name === 'string') {
+      const name = d.name.trim().slice(0, 60);
+      if (!name) throw new HttpsError('invalid-argument', 'Enter a name.');
+      patch.name = name;
+    }
+    if (typeof d.away === 'boolean') {
+      patch.away = d.away;
+    }
+    if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
+    await db.collection('users').doc(auth.uid).set(patch, { merge: true });
+    return { ok: true, name: patch.name, away: patch.away };
   });
 
   // Administrator changes an employee's job title, or enables/disables
@@ -363,6 +378,245 @@ module.exports = function (admin, db) {
   });
 
   // ---------------------------------------------------------------------
+  // Receipt co-signing — a team member (Supervisor/Vet/Financial Staff/
+  // Farmhand) signs a receipt that also needs the administrator's
+  // signature. Their half is captured here as a "pending" request instead
+  // of a finished receipt; the administrator reviews it, adds their own
+  // signature, and only then does a fully-signed copy become available to
+  // download. Every write to pendingSignoffs goes through these three
+  // functions (never directly from the client — see firestore.rules), so
+  // "only the administrator can approve" and "a mandatory document can
+  // never be skipped" are real, server-enforced rules, not just UI
+  // decisions the app happens to make.
+  //
+  // The actual tamper-evident signing (signReceipt) is untouched by any of
+  // this — it's still just called with an ordered list of fields, same as
+  // always. What's new is WHO calls it and WHEN: a team member calls it
+  // once, alone, only if they end up skipping; the administrator calls it
+  // once, with both signers' fields combined, once they approve. The
+  // functions below just coordinate that handoff and enforce who's allowed
+  // to do what.
+  // ---------------------------------------------------------------------
+
+  const RECEIPT_FIELD_LIMITS = { rows: 40, label: 60, value: 800 };
+
+  function validateReceiptFieldTriple(fields, label) {
+    if (!Array.isArray(fields) || fields.length !== 3) {
+      throw new HttpsError('invalid-argument', 'Malformed ' + label + '.');
+    }
+    fields.forEach((f) => {
+      if (!Array.isArray(f) || f.length !== 2 || String(f[0]).length > RECEIPT_FIELD_LIMITS.label || String(f[1] == null ? '' : f[1]).length > RECEIPT_FIELD_LIMITS.value) {
+        throw new HttpsError('invalid-argument', 'Malformed ' + label + '.');
+      }
+    });
+  }
+
+  function validateReceiptOptsSnapshot(opts) {
+    if (!opts || typeof opts !== 'object') throw new HttpsError('invalid-argument', 'Missing receipt.');
+    if (!Array.isArray(opts.rows) || opts.rows.length > RECEIPT_FIELD_LIMITS.rows) {
+      throw new HttpsError('invalid-argument', 'Malformed receipt.');
+    }
+    opts.rows.forEach((r) => {
+      if (!r || String(r.label || '').length > RECEIPT_FIELD_LIMITS.label || String(r.value == null ? '' : r.value).length > RECEIPT_FIELD_LIMITS.value) {
+        throw new HttpsError('invalid-argument', 'Malformed receipt row.');
+      }
+    });
+    return {
+      title: String(opts.title || '').slice(0, 80),
+      receiptNo: String(opts.receiptNo || '').slice(0, 40),
+      date: String(opts.date || '').slice(0, 10),
+      rows: opts.rows.map((r) => ({ label: String(r.label).slice(0, 60), value: r.value == null ? '' : String(r.value).slice(0, 800) })),
+      amountLabel: String(opts.amountLabel || 'Amount').slice(0, 40),
+      amount: opts.amount == null ? '' : String(opts.amount).slice(0, 60),
+    };
+  }
+
+  async function findAdministratorDoc() {
+    const snap = await db.collection('users').where('role', '==', 'administrator').limit(1).get();
+    return snap.empty ? null : { uid: snap.docs[0].id, data: snap.docs[0].data() };
+  }
+
+  // A signature image is a base64 PNG data URL — generous but bounded, so
+  // nobody can wedge an arbitrarily large blob into Firestore this way.
+  function validateSignatureImg(img) {
+    const s = String(img || '');
+    if (!s || !s.length || s.length > 200000) throw new HttpsError('invalid-argument', 'Missing or invalid signature.');
+    return s;
+  }
+
+  // Team member: signs their half of a two-signature receipt. Blocked
+  // outright for the administrator's own account — they always sign
+  // directly (see signAndPreviewReceipt in index.html), there's nobody
+  // above them to route a request to.
+  const requestReceiptSignoff = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    if (auth.token.role === 'administrator') {
+      throw new HttpsError('invalid-argument', "The administrator signs directly — this is only for team members.");
+    }
+    const d = request.data || {};
+    const opts = validateReceiptOptsSnapshot(d.opts);
+    validateReceiptFieldTriple(d.firstSignerFields, 'signature block');
+    const signatureImg = validateSignatureImg(d.signatureImg);
+    const roleLabel = roleLabelFor(auth.token.role, auth.token.jobTitle);
+
+    const rawSignatures = Array.isArray(d.signatures) ? d.signatures : [];
+    if (!rawSignatures.length) throw new HttpsError('invalid-argument', 'Missing signature slots.');
+    const signatures = rawSignatures.map((s) => {
+      const role = String((s && s.role) || '').slice(0, 40);
+      return role === roleLabel ? { role, img: signatureImg } : { role };
+    });
+    if (!signatures.some((s) => s.role === roleLabel)) {
+      throw new HttpsError('invalid-argument', "Your role doesn't match this document's signer list.");
+    }
+
+    const adminDoc = await findAdministratorDoc();
+    if (!adminDoc) throw new HttpsError('failed-precondition', 'No administrator account exists yet.');
+
+    const fromSnap = await db.collection('users').doc(auth.uid).get();
+    const fromData = fromSnap.exists ? fromSnap.data() : {};
+    const createdByLabel = roleLabel + '(' + (fromData.name || (auth.token.email ? auth.token.email.split('@')[0] : 'Unnamed')) + ')';
+
+    const entry = {
+      id: genId('pso'),
+      createdBy: auth.uid,
+      createdByRole: roleLabel,
+      createdByLabel,
+      adminUid: adminDoc.uid,
+      opts,
+      signatures,
+      mandatory: !!d.mandatory,
+      firstSignerFields: d.firstSignerFields,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    await db.collection('pendingSignoffs').doc(entry.id).set(entry);
+
+    try {
+      await db.collection('messages').add({
+        fromUid: auth.uid,
+        fromLabel: createdByLabel,
+        toUid: adminDoc.uid,
+        toLabel: 'Administrator',
+        body: createdByLabel + ' signed "' + opts.title + '" (' + opts.receiptNo + ') and is waiting for your signature.',
+        urgency: 'urgent',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: [auth.uid],
+        pendingSignoffId: entry.id,
+      });
+      await sendUrgentPush(admin, db, [adminDoc.uid], 'Waiting for your signature', createdByLabel + ' signed a document — it needs your signature to finish.', { urgency: 'urgent', pendingSignoffId: entry.id });
+    } catch (e) {
+      logger.error('requestReceiptSignoff notify failed', e);
+    }
+
+    return { ok: true, id: entry.id };
+  });
+
+  // Administrator: adds their own signature to a pending request. The app
+  // calls signReceipt itself first (with both signers' fields combined) to
+  // get the verification code, then calls this to actually record the
+  // approval — kept as two calls rather than one so the well-tested
+  // signReceipt code path (secret handling, the receiptLog audit write)
+  // never has to be duplicated here.
+  const approveReceiptSignoff = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAdmin(request);
+    const d = request.data || {};
+    const id = String(d.id || '');
+    if (!id) throw new HttpsError('invalid-argument', 'Missing request.');
+    const signatureImg = validateSignatureImg(d.signatureImg);
+    validateReceiptFieldTriple(d.adminFields, 'signature block');
+    const code = String(d.code || '').trim().toUpperCase();
+    if (!code) throw new HttpsError('invalid-argument', 'Missing verification code.');
+
+    const ref = db.collection('pendingSignoffs').doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'That request no longer exists.');
+    const data = snap.data();
+    if (data.status !== 'pending') throw new HttpsError('failed-precondition', 'That request was already ' + data.status + '.');
+
+    const signatures = (data.signatures || []).map((s) => (s.role === 'Administrator' ? Object.assign({}, s, { img: signatureImg }) : s));
+    await ref.set({
+      status: 'approved',
+      adminFields: d.adminFields,
+      code,
+      signatures,
+      reviewedBy: auth.uid,
+      reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    try {
+      await db.collection('messages').add({
+        fromUid: auth.uid,
+        fromLabel: 'Administrator',
+        toUid: data.createdBy,
+        toLabel: data.createdByLabel || data.createdByRole,
+        body: 'Your document "' + data.opts.title + '" (' + data.opts.receiptNo + ') is signed — you can download it now.',
+        urgency: 'important',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: [auth.uid],
+        pendingSignoffId: id,
+      });
+      await sendUrgentPush(admin, db, [data.createdBy], 'Your document is signed', 'The administrator approved "' + data.opts.title + '" — you can download it now.', { pendingSignoffId: id });
+    } catch (e) {
+      logger.error('approveReceiptSignoff notify failed', e);
+    }
+
+    return { ok: true };
+  });
+
+  // Team member: gives up waiting and finalizes with just their own
+  // signature. Only allowed when the request itself isn't mandatory AND
+  // the administrator is currently marked away — both checked here, fresh,
+  // never trusted from the client, so a stale UI or a tampered call can
+  // never skip a withdrawal receipt or skip past an administrator who's
+  // actually available.
+  const skipReceiptSignoff = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const d = request.data || {};
+    const id = String(d.id || '');
+    if (!id) throw new HttpsError('invalid-argument', 'Missing request.');
+    // The app calls signReceipt itself first (with just this person's own
+    // fields) to get this code, the same way the ordinary single-signer
+    // flow always has — stored here so the finished, single-signature
+    // receipt can be reconstructed and shown again later (e.g. reopened
+    // from Messages), not just in the moment it was skipped.
+    const code = String(d.code || '').trim().toUpperCase();
+    if (!code) throw new HttpsError('invalid-argument', 'Missing verification code.');
+
+    const ref = db.collection('pendingSignoffs').doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'That request no longer exists.');
+    const data = snap.data();
+    if (data.createdBy !== auth.uid) throw new HttpsError('permission-denied', "That isn't your request.");
+    if (data.status !== 'pending') throw new HttpsError('failed-precondition', 'That request was already ' + data.status + '.');
+    if (data.mandatory) throw new HttpsError('permission-denied', "This document needs the administrator's signature — it can't be skipped.");
+
+    const adminSnap = await db.collection('users').doc(data.adminUid).get();
+    const away = !!(adminSnap.exists && adminSnap.data().away);
+    if (!away) throw new HttpsError('failed-precondition', "The administrator is available right now — wait for them to sign, or check again shortly.");
+
+    await ref.set({ status: 'skipped', code, skippedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+    try {
+      await db.collection('messages').add({
+        fromUid: auth.uid,
+        fromLabel: data.createdByLabel,
+        toUid: data.adminUid,
+        toLabel: 'Administrator',
+        body: data.createdByLabel + ' signed "' + data.opts.title + '" (' + data.opts.receiptNo + ') and sent it without your signature because you were marked away.',
+        urgency: 'urgent',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: [auth.uid],
+        pendingSignoffId: id,
+      });
+      await sendUrgentPush(admin, db, [data.adminUid], 'Signed without your approval', data.createdByLabel + ' skipped waiting for your signature — you were marked away.', { urgency: 'urgent', pendingSignoffId: id });
+    } catch (e) {
+      logger.error('skipReceiptSignoff notify failed', e);
+    }
+
+    return { ok: true };
+  });
+
+  // ---------------------------------------------------------------------
   // Team messaging — broadcast (administrator only) or one-to-one (anyone
   // signed in). Written only from here so the sender's name/role can't be
   // spoofed — the app never lets the client claim to be someone else.
@@ -487,6 +741,7 @@ module.exports = function (admin, db) {
     bootstrapFirstAdmin, createStaffAccount, updateStaffAccount, deleteStaffAccount, updateOwnProfile,
     logAccess,
     proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
+    requestReceiptSignoff, approveReceiptSignoff, skipReceiptSignoff,
     sendMessage, markMessageRead, registerPushToken,
   };
 };

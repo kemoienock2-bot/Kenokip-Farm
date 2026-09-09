@@ -1415,11 +1415,13 @@ var qrcode = (function(){
       ['finance','Finance',ICONS.finance],
       ['reports','Reports',ICONS.reports],
       ['messages','Messages',ICONS.bell],
+      ['signoffs','Pending signatures',ICONS.shield],
       ['about','About',ICONS.info],
       ['settings','Settings',ICONS.settings],
       ['team','Team',ICONS.team]
     ].filter(function(it){ return sectionAllowed(it[0]); });
     var unread = unreadMessageCount();
+    var pendingCount = pendingSignoffsForAdmin.length;
     rail.innerHTML =
       '<div class="brand">'+
         '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>'+
@@ -1427,7 +1429,8 @@ var qrcode = (function(){
       '</div>'+
       '<ul class="nav-list">'+
         items.map(function(it){
-          var badge = (it[0]==='messages' && unread>0) ? '<span class="nav-badge">'+(unread>99?'99+':unread)+'</span>' : '';
+          var badgeCount = it[0]==='messages' ? unread : (it[0]==='signoffs' ? pendingCount : 0);
+          var badge = badgeCount>0 ? '<span class="nav-badge">'+(badgeCount>99?'99+':badgeCount)+'</span>' : '';
           return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-action="nav:'+it[0]+'">'+it[2]+badge+'<span>'+it[1]+'</span></button></li>';
         }).join('')+
       '</ul>'+
@@ -2431,7 +2434,27 @@ var qrcode = (function(){
   function financeReceiptOpts(id){
     var f = financeState();
     var t = f.transactions.find(function(x){return x.id===id;});
-    if(!t || t.type!=='deposit' || (t.status||'approved')!=='approved') return null;
+    if(!t || (t.status||'approved')!=='approved') return null;
+    if(t.type==='withdrawal'){
+      var outMethodLabel = t.source==='mpesa-b2c' ? 'M-Pesa (sent from the app)' : 'Manual entry';
+      return {
+        title: 'WITHDRAWAL RECEIPT',
+        receiptNo: receiptNoFrom(t.id),
+        date: t.date,
+        rows: [
+          {label:'Paid via', value: outMethodLabel},
+          {label:'Description', value: t.note || '—'}
+        ],
+        amountLabel: 'Amount paid out',
+        amount: fmtMoney(t.amount),
+        signatures: [{role:'Administrator'}, {role:'Financial Staff'}],
+        // Withdrawals move money OUT of the farm — the administrator's live
+        // sign-off is never optional for these, unlike every other receipt
+        // type, so the co-signing flow must never offer a "skip" option here.
+        mandatory: true
+      };
+    }
+    if(t.type!=='deposit') return null;
     var methodLabel = t.source==='mpesa-stk' ? 'M-Pesa (sent from the app)'
       : t.source==='mpesa-c2b' ? 'M-Pesa (paid directly to the Till)'
       : 'Manual entry';
@@ -2445,7 +2468,8 @@ var qrcode = (function(){
       ],
       amountLabel: 'Amount received',
       amount: fmtMoney(t.amount),
-      signatures: [{role:'Administrator'}, {role:'Financial Staff'}]
+      signatures: [{role:'Administrator'}, {role:'Financial Staff'}],
+      mandatory: false
     };
   }
   function flockReceiptOpts(batchId, remId){
@@ -2466,7 +2490,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount',
       amount: r.saleAmount>0 ? fmtMoney(r.saleAmount) : 'Not recorded',
-      signatures: receiptSignaturesFor(r.recordedByRole)
+      signatures: receiptSignaturesFor(r.recordedByRole),
+      mandatory: false
     };
   }
   function eggReceiptOpts(id){
@@ -2484,7 +2509,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount',
       amount: x.saleAmount>0 ? fmtMoney(x.saleAmount) : 'Not recorded',
-      signatures: receiptSignaturesFor(x.recordedByRole)
+      signatures: receiptSignaturesFor(x.recordedByRole),
+      mandatory: false
     };
   }
   function expenseReceiptOpts(id){
@@ -2499,7 +2525,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount paid',
       amount: fmtMoney(x.amount),
-      signatures: [{role:'Administrator'}]
+      signatures: [{role:'Administrator'}],
+      mandatory: false
     };
   }
   function incomeReceiptOpts(id){
@@ -2514,7 +2541,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount received',
       amount: fmtMoney(x.amount),
-      signatures: [{role:'Administrator'}]
+      signatures: [{role:'Administrator'}],
+      mandatory: false
     };
   }
   function feedReceiptOpts(id){
@@ -2532,7 +2560,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Cost',
       amount: x.cost>0 ? fmtMoney(x.cost) : 'Not recorded',
-      signatures: [{role:'Administrator'}]
+      signatures: [{role:'Administrator'}],
+      mandatory: false
     };
   }
   function healthReceiptOpts(id){
@@ -2552,7 +2581,8 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Status',
       amount: 'Recorded',
-      signatures: [{role:'Administrator'}]
+      signatures: [{role:'Administrator'}],
+      mandatory: false
     };
   }
   // Step 1 of downloading any receipt: show an unsigned preview of exactly
@@ -2607,6 +2637,46 @@ var qrcode = (function(){
   // printable document with the signature image, verification code, and QR
   // code embedded. If signing fails (e.g. not set up yet), the document is
   // still shown — just clearly marked unsigned rather than blocked outright.
+  // Builds the {code, qrDataUrl, blob} verify payload from a finished set
+  // of fields + the code signReceipt returned — shared by every path that
+  // ends in a finished, downloadable receipt (signing solo, an
+  // administrator's approval, or a skip), so the QR/blob logic only lives
+  // in one place.
+  function buildVerifyPayload(fields, code){
+    if(!code) return null;
+    var blobStr = JSON.stringify({fields: fields, code: code});
+    var blobB64 = utf8ToBase64Url(blobStr);
+    var verifyUrl = window.location.origin + window.location.pathname + '?verify=' + blobB64;
+    var qrDataUrl = null;
+    try{
+      var qr = qrcode(0, 'M');
+      qr.addData(verifyUrl);
+      qr.make();
+      qrDataUrl = qr.createDataURL(4, 8);
+    }catch(e){ /* falls back to no QR image, code still shown */ }
+    return {code: code, qrDataUrl: qrDataUrl, blob: blobB64};
+  }
+  // The final step for every signing path: show the finished, printable
+  // document with whichever signature(s), verification code and QR code it
+  // ended up with.
+  function showSignedReceiptModal(finalOpts, renderFn, docLabel){
+    renderFn = renderFn || pendingReceiptRenderFn || buildReceiptHTML;
+    pendingReceiptHtml = renderFn(finalOpts);
+    pendingVerifyLink = (finalOpts.verify && finalOpts.verify.blob) ? (window.location.origin + window.location.pathname + '?verify=' + finalOpts.verify.blob) : null;
+    openModal(
+      '<div class="modal-head"><h3>'+esc(docLabel||finalOpts.title||'Receipt')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+      '<div style="max-height:60vh; overflow:auto; margin-bottom:14px">'+pendingReceiptHtml+'</div>'+
+      (pendingVerifyLink ? '<p class="hint" style="margin-top:-6px">Checking this on a different device (like a laptop)? Tap "Copy verify link" and paste it into "Verify a receipt" there — no scanning needed.</p>' : '')+
+      '<div class="modal-foot">'+
+        (pendingVerifyLink ? '<button type="button" class="btn" data-action="copy-verify-link">Copy verify link</button>' : '')+
+        '<button type="button" class="btn" data-action="close-modal">Close</button><button type="button" class="btn primary" data-action="print-pending-receipt">Print / Save as PDF</button></div>'
+    );
+  }
+  // Step 2: capture a drawn signature, bind it (and who/when) into the
+  // canonical fields, then either finish immediately (the administrator
+  // signing, or a document that only ever needed one signature) or hand
+  // off to the co-signing flow below (a team member signing a document
+  // that also needs the administrator's signature).
   function signAndPreviewReceipt(opts, renderFn, docLabel){
     if(!opts){ toast('That record is no longer available.'); return; }
     renderFn = renderFn || pendingReceiptRenderFn || buildReceiptHTML;
@@ -2626,31 +2696,34 @@ var qrcode = (function(){
       toast('Only '+expectedRoles+' can sign this document — you\'re signed in as '+roleText+'.');
       return;
     }
+    // The administrator always signs directly — there's nobody above them
+    // to route a request to. Same for a document that only ever needed one
+    // signature (e.g. this one was recorded by the administrator
+    // themselves — see receiptSignaturesFor). Everyone else, on a document
+    // that also needs the administrator's signature, goes through
+    // requestCoSignoff below instead.
+    var needsCoSign = roleText!=='Administrator' && expectedSignatures.length>1;
     openSignaturePad(opts.title, function(sigDataUrl, sigHash){
       var signedAt = new Date().toISOString();
-      var fields = receiptCanonicalFields(opts).concat([
-        ['Signed by', who+' ('+roleText+')'],
-        ['Signed at', signedAt],
-        ['Signature hash', sigHash]
-      ]);
+      var myFields = [
+        ['Signed by ('+roleText+')', who+' ('+roleText+')'],
+        ['Signed at ('+roleText+')', signedAt],
+        ['Signature hash ('+roleText+')', sigHash]
+      ];
       var signatures = expectedSignatures.map(function(s){
         return s.role===roleText ? Object.assign({}, s, {img: sigDataUrl}) : Object.assign({}, s);
       });
+
+      if(needsCoSign){
+        requestCoSignoff(opts, expectedSignatures, myFields, sigDataUrl);
+        return;
+      }
 
       openModal('<div class="modal-head"><h3>Signing…</h3></div><p class="hint" style="margin:0">Getting a verification code for this document.</p>');
 
       function finish(verify, unsigned, reason){
         var finalOpts = Object.assign({}, opts, {signatures: signatures, verify: verify, unsigned: unsigned, unsignedReason: reason});
-        pendingReceiptHtml = renderFn(finalOpts);
-        pendingVerifyLink = (verify && verify.blob) ? (window.location.origin + window.location.pathname + '?verify=' + verify.blob) : null;
-        openModal(
-          '<div class="modal-head"><h3>'+esc(docLabel||'Receipt')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-          '<div style="max-height:60vh; overflow:auto; margin-bottom:14px">'+pendingReceiptHtml+'</div>'+
-          (pendingVerifyLink ? '<p class="hint" style="margin-top:-6px">Checking this on a different device (like a laptop)? Tap "Copy verify link" and paste it into "Verify a receipt" there — no scanning needed.</p>' : '')+
-          '<div class="modal-foot">'+
-            (pendingVerifyLink ? '<button type="button" class="btn" data-action="copy-verify-link">Copy verify link</button>' : '')+
-            '<button type="button" class="btn" data-action="close-modal">Close</button><button type="button" class="btn primary" data-action="print-pending-receipt">Print / Save as PDF</button></div>'
-        );
+        showSignedReceiptModal(finalOpts, renderFn, docLabel);
       }
 
       if(!cloudMode){
@@ -2659,19 +2732,9 @@ var qrcode = (function(){
         finish(null, true, offlineReason);
         return;
       }
+      var fields = receiptCanonicalFields(opts).concat(myFields);
       callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
-        var code = res.data && res.data.code;
-        var blobStr = JSON.stringify({fields: fields, code: code});
-        var blobB64 = utf8ToBase64Url(blobStr);
-        var verifyUrl = window.location.origin + window.location.pathname + '?verify=' + blobB64;
-        var qrDataUrl = null;
-        try{
-          var qr = qrcode(0, 'M');
-          qr.addData(verifyUrl);
-          qr.make();
-          qrDataUrl = qr.createDataURL(4, 8);
-        }catch(e){ /* falls back to no QR image, code still shown */ }
-        finish({code: code, qrDataUrl: qrDataUrl, blob: blobB64}, false);
+        finish(buildVerifyPayload(fields, res.data && res.data.code), false);
       }).catch(function(err){
         // Show the ACTUAL reason on the receipt itself (not just a toast
         // that can be missed) — makes it possible to tell "secret not set
@@ -2682,6 +2745,202 @@ var qrcode = (function(){
         finish(null, true, reasonMsg);
       });
     });
+  }
+  // Sends a team member's own half of a two-signature document to the
+  // administrator instead of finishing it — see requestReceiptSignoff in
+  // roles.js. On success, opens the live "pending" view (showPendingSignoffModal)
+  // that watches the request until the administrator approves it (or it
+  // gets skipped).
+  function requestCoSignoff(opts, expectedSignatures, myFields, sigDataUrl){
+    if(!cloudMode){ toast('Sending this to the administrator needs an internet connection.'); return; }
+    openModal('<div class="modal-head"><h3>Sending…</h3></div><p class="hint" style="margin:0">Sending your signature to the administrator.</p>');
+    var payload = {
+      opts: { title: opts.title, receiptNo: opts.receiptNo, date: opts.date, rows: opts.rows, amountLabel: opts.amountLabel, amount: opts.amount },
+      signatures: expectedSignatures,
+      firstSignerFields: myFields,
+      signatureImg: sigDataUrl,
+      mandatory: !!opts.mandatory
+    };
+    callFunctionResilient('requestReceiptSignoff', payload).then(function(res){
+      toast('Sent — the administrator will get a signature for this shortly.');
+      showPendingSignoffModal(res.data && res.data.id);
+    }).catch(function(err){
+      toast((err && err.message) || 'Could not send this to the administrator — please try again.');
+    });
+  }
+  // The exact fields that were (or would be) signed for a pendingSignoffs
+  // document — reconstructed the same way whether we're watching it live
+  // right after signing, or reopening it later from a Messages notification.
+  function finalizedSignoffFields(doc){
+    var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields || []);
+    if(doc.status==='approved' && doc.adminFields) fields = fields.concat(doc.adminFields);
+    return fields;
+  }
+  function stopPendingSignoffWatch(){
+    if(pendingSignoffUnsubDoc){ pendingSignoffUnsubDoc(); pendingSignoffUnsubDoc = null; }
+    if(pendingSignoffUnsubAdmin){ pendingSignoffUnsubAdmin(); pendingSignoffUnsubAdmin = null; }
+  }
+  // Live "waiting for the administrator" view — used right after a team
+  // member signs their half, and again any time the same request is
+  // reopened later (from Messages, or from Team → Pending signatures).
+  // Watches the request itself (to flip to the finished receipt the moment
+  // it's approved or skipped) AND the administrator's own account (so an
+  // "I'm away" toggle shows or hides the Skip button here instantly,
+  // without needing to refresh or re-open anything).
+  function showPendingSignoffModal(id){
+    if(!id){ toast('That request is missing.'); return; }
+    if(!db){ toast('Needs an internet connection.'); return; }
+    stopPendingSignoffWatch();
+    var adminAway = false;
+    var lastDoc = null;
+    function draw(){
+      if(!lastDoc) return;
+      if(lastDoc.status==='approved' || lastDoc.status==='skipped'){
+        stopPendingSignoffWatch();
+        var fields = finalizedSignoffFields(lastDoc);
+        var verify = buildVerifyPayload(fields, lastDoc.code);
+        var finalOpts = Object.assign({}, lastDoc.opts, {
+          signatures: lastDoc.signatures, verify: verify,
+          unsigned: !verify, unsignedReason: verify ? null : 'this document\'s verification code could not be found'
+        });
+        showSignedReceiptModal(finalOpts, pendingReceiptRenderFn || buildReceiptHTML, lastDoc.opts.title);
+        return;
+      }
+      var canSkip = !lastDoc.mandatory && adminAway;
+      var draftOpts = Object.assign({}, lastDoc.opts, {signatures: lastDoc.signatures, unsigned:true, unsignedReason:"waiting for the administrator's signature"});
+      var draftHtml = (pendingReceiptRenderFn || buildReceiptHTML)(draftOpts);
+      openModal(
+        '<div class="modal-head"><h3>'+esc(lastDoc.opts.title||'Receipt')+' — pending</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+        '<div style="max-height:50vh; overflow:auto; margin-bottom:14px">'+draftHtml+'</div>'+
+        '<p class="hint" style="margin-top:-6px">Sent to the administrator — this usually takes a few minutes. You\'ll be notified the moment it\'s approved; you can safely close this and reopen it from Messages later.</p>'+
+        (canSkip ? '<p class="hint" style="margin-top:4px">The administrator is currently marked away.</p>' : '')+
+        '<div class="modal-foot">'+
+          '<button type="button" class="btn" data-action="close-modal">Close</button>'+
+          (canSkip ? '<button type="button" class="btn" data-action="skip-pending-signoff:'+esc(id)+'">Skip and send anyway</button>' : '')+
+        '</div>'
+      );
+    }
+    pendingSignoffUnsubDoc = db.collection('pendingSignoffs').doc(id).onSnapshot(function(snap){
+      if(!snap.exists){ stopPendingSignoffWatch(); toast('That request no longer exists.'); closeModal(); return; }
+      lastDoc = Object.assign({id:id}, snap.data());
+      if(!pendingSignoffUnsubAdmin && lastDoc.adminUid){
+        pendingSignoffUnsubAdmin = db.collection('users').doc(lastDoc.adminUid).onSnapshot(function(asnap){
+          adminAway = !!(asnap.exists && asnap.data().away);
+          draw();
+        }, function(){});
+      }
+      draw();
+    }, function(){ toast('Could not load this document right now.'); });
+  }
+  // Team member gives up waiting and finishes with just their own
+  // signature — only reachable from the button showPendingSignoffModal
+  // shows, which only appears when this request isn't mandatory and the
+  // administrator is currently marked away (skipReceiptSignoff re-checks
+  // both, fresh, on the server, regardless).
+  function skipPendingSignoff(id){
+    confirmModal("Send this without the administrator's signature? They'll be notified immediately that you signed alone.", function(){
+      if(!cloudMode){ toast('Needs an internet connection to finish this.'); return; }
+      openModal('<div class="modal-head"><h3>Sending…</h3></div><p class="hint" style="margin:0">Finishing this document with just your signature.</p>');
+      db.collection('pendingSignoffs').doc(id).get().then(function(snap){
+        if(!snap.exists) throw Object.assign(new Error('That request no longer exists.'), {code:'client/gone'});
+        var doc = snap.data();
+        var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields);
+        return callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
+          var code = res.data && res.data.code;
+          return callFunctionResilient('skipReceiptSignoff', {id: id, code: code}).then(function(){
+            var finalOpts = Object.assign({}, doc.opts, {signatures: doc.signatures, verify: buildVerifyPayload(fields, code), unsigned:false});
+            showSignedReceiptModal(finalOpts, pendingReceiptRenderFn || buildReceiptHTML, doc.opts.title);
+          });
+        });
+      }).catch(function(err){
+        toast((err && err.message) || 'Could not finish this — please try again.');
+        showPendingSignoffModal(id);
+      });
+    });
+  }
+  // Reopens a request from its Messages notification — whichever role is
+  // looking at it: the administrator gets the review-and-sign modal if it's
+  // still pending, everyone else (and anyone looking at an already-resolved
+  // request) gets the live/finished view above.
+  function openPendingSignoffFromMessage(id){
+    if(!db){ toast('Needs an internet connection.'); return; }
+    if(isAdmin()){
+      db.collection('pendingSignoffs').doc(id).get().then(function(snap){
+        if(!snap.exists){ toast('That request no longer exists.'); return; }
+        var doc = snap.data();
+        if(doc.status==='pending') openAdminReviewModal(id); else showPendingSignoffModal(id);
+      }).catch(function(){ toast('Could not fetch that document right now.'); });
+      return;
+    }
+    showPendingSignoffModal(id);
+  }
+  // Administrator's side: review a team member's half, add their own
+  // signature, and call signReceipt with BOTH signers' fields combined —
+  // this is the one and only moment the document actually becomes final.
+  function openAdminReviewModal(id){
+    if(!db){ toast('Needs an internet connection.'); return; }
+    openModal('<div class="modal-head"><h3>Opening…</h3></div><p class="hint" style="margin:0">Fetching this document.</p>');
+    db.collection('pendingSignoffs').doc(id).get().then(function(snap){
+      if(!snap.exists){ toast('That request no longer exists.'); closeModal(); return; }
+      var doc = snap.data();
+      if(doc.status!=='pending'){ showPendingSignoffModal(id); return; }
+      var draftOpts = Object.assign({}, doc.opts, {signatures: doc.signatures, unsigned:true, unsignedReason:'waiting for your signature'});
+      var draftHtml = (pendingReceiptRenderFn || buildReceiptHTML)(draftOpts);
+      openModal(
+        '<div class="modal-head"><h3>Review &amp; sign</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+        '<p class="hint">From '+esc(doc.createdByLabel||doc.createdByRole)+'. Adding your signature finishes this document — it becomes downloadable to them right away.</p>'+
+        '<div style="max-height:50vh; overflow:auto; margin-bottom:14px">'+draftHtml+'</div>'+
+        '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Close</button><button type="button" class="btn primary" data-action="approve-pending-signoff:'+esc(id)+'">Sign &amp; approve</button></div>'
+      );
+    }).catch(function(){ toast('Could not fetch that document right now.'); closeModal(); });
+  }
+  function approvePendingSignoff(id){
+    if(!db){ toast('Needs an internet connection.'); return; }
+    db.collection('pendingSignoffs').doc(id).get().then(function(snap){
+      if(!snap.exists){ toast('That request no longer exists.'); closeModal(); return; }
+      var doc = snap.data();
+      if(doc.status!=='pending'){ toast('That request was already '+doc.status+'.'); showPendingSignoffModal(id); return; }
+      var who = currentUser ? (currentUser.name || currentUser.email || 'Unknown') : 'Administrator';
+      openSignaturePad(doc.opts.title, function(sigDataUrl, sigHash){
+        var adminFields = [
+          ['Signed by (Administrator)', who+' (Administrator)'],
+          ['Signed at (Administrator)', new Date().toISOString()],
+          ['Signature hash (Administrator)', sigHash]
+        ];
+        var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields).concat(adminFields);
+        openModal('<div class="modal-head"><h3>Signing…</h3></div><p class="hint" style="margin:0">Getting a verification code for this document.</p>');
+        if(!cloudMode){ toast('Approving needs an internet connection.'); showPendingSignoffModal(id); return; }
+        callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
+          var code = res.data && res.data.code;
+          return callFunctionResilient('approveReceiptSignoff', {id: id, signatureImg: sigDataUrl, adminFields: adminFields, code: code}).then(function(){
+            var signatures = (doc.signatures||[]).map(function(s){ return s.role==='Administrator' ? Object.assign({}, s, {img: sigDataUrl}) : s; });
+            var finalOpts = Object.assign({}, doc.opts, {signatures: signatures, verify: buildVerifyPayload(fields, code), unsigned:false});
+            toast('Signed and approved.');
+            showSignedReceiptModal(finalOpts, pendingReceiptRenderFn || buildReceiptHTML, doc.opts.title);
+          });
+        }).catch(function(err){
+          toast((err && err.message) || 'Could not approve this — please try again.');
+          openAdminReviewModal(id);
+        });
+      });
+    }).catch(function(){ toast('Could not fetch that document right now.'); });
+  }
+  function signoffsPanel(){
+    if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator sees this.</div></div>';
+    if(!pendingSignoffsForAdmin.length) return '<div class="empty">'+ICONS.empty+'<div>Nothing waiting on your signature right now.</div></div>';
+    var rows = pendingSignoffsForAdmin.map(function(doc){
+      var when = (doc.createdAt && doc.createdAt.toDate) ? fmtDate(doc.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Just now';
+      return '<div class="card" style="margin-bottom:10px">'+
+        '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">'+
+          '<div>'+
+            '<strong>'+esc(doc.opts.title||'Receipt')+'</strong> — '+esc(doc.opts.receiptNo||'')+
+            '<div class="hint">From '+esc(doc.createdByLabel||doc.createdByRole)+' · '+when+(doc.mandatory?' · <strong>Withdrawal — cannot be skipped</strong>':'')+'</div>'+
+          '</div>'+
+          '<button class="btn primary" data-action="review-pending-signoff:'+esc(doc.id)+'">Review &amp; sign</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+    return '<p class="hint" style="margin-bottom:10px">These are waiting on your signature before the team member can download them.</p>'+rows;
   }
   function printReceiptNow(html){
     if(!html){ toast('That record is no longer available.'); return; }
@@ -3118,6 +3377,7 @@ var qrcode = (function(){
       case 'customers':
         return isSupervisorUser();
       case 'team':
+      case 'signoffs':
         return false;
       default:
         return sectionAllowedUngated(key);
@@ -3131,6 +3391,7 @@ var qrcode = (function(){
     if(key==='finance') return canSeeFinance();
     if(key==='reports') return canSeeFinance();
     if(key==='team') return isAdmin();
+    if(key==='signoffs') return isAdmin();
     if(key==='messages') return !!currentUser;
     return true;
   }
@@ -3160,10 +3421,29 @@ var qrcode = (function(){
         '<p class="hint" style="margin-top:6px">This lets an <strong>Urgent</strong> message pop up as a notification on this device while the app or browser is running in the background (another tab, minimized, or your phone locked with it still open) — not while it\'s fully closed. Needs to be turned on once per device.</p>'+
       '</div>'+
       (canSeeFinance() ? authAppSectionHTML() : '')+
+      (isAdmin() ? awayToggleHTML() : '')+
       '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
         '<button class="btn" data-action="open-change-password">Change password</button>'+
         '<button class="btn ghost" data-action="signout">Sign out</button>'+
       '</div>'+
+    '</div>';
+  }
+  // Administrator-only "I'm away" switch — the whole point of the
+  // co-signing skip path (see signAndPreviewReceipt / the "Pending
+  // signatures" panel) is that a team member instantly knows whether
+  // waiting for a real-time approval makes sense right now, without
+  // guessing or having to ask. It's a manual switch you control yourself,
+  // not automatic detection — flip it off again as soon as you're back.
+  function awayToggleHTML(){
+    var away = !!(currentUser && currentUser.away);
+    return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">'+
+      '<div>'+
+        '<strong>'+(away?"You're marked away":"You're marked available")+'</strong>'+
+        '<p class="hint" style="margin:2px 0 0">'+(away
+          ? 'Team members signing a document that also needs your signature will see a "Skip and send" option (except withdrawals — those always wait for you).'
+          : 'Team members signing a document that also needs your signature will wait for you to review and approve it before they can download it.')+'</p>'+
+      '</div>'+
+      '<button type="button" class="btn '+(away?'primary':'')+'" data-action="toggle-away">'+(away?"I'm back — mark available":"Mark myself away")+'</button>'+
     '</div>';
   }
   function authAppSectionHTML(){
@@ -3409,7 +3689,7 @@ var qrcode = (function(){
 
   /* ---- sign-in flow (bootstrap-first-admin, then normal role resolution) ---- */
   function finishSignIn(user, claims){
-    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null, totpEnrolled:false, portalTotpEnrolled:false };
+    currentUser = { uid:user.uid, email:user.email, role:claims.role, jobTitle:claims.jobTitle||null, name:null, totpEnrolled:false, portalTotpEnrolled:false, away:false };
     financeRevealed = false;
     financePortalUnlocked = false;
     stopFinancePortalTimer();
@@ -3422,7 +3702,7 @@ var qrcode = (function(){
     initDirectorySync();
     initMessagesSync();
     initOwnProfileSync();
-    if(isAdmin()){ initAdminLogsSync(); initSecurityEventsSync(); }
+    if(isAdmin()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); }
     if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
     captureAccessLog();
     startIdleTimer();
@@ -3480,6 +3760,24 @@ var qrcode = (function(){
       snap.forEach(function(doc){ securityEvents.push(Object.assign({id:doc.id}, doc.data())); });
       if(ui.section==='team') render();
     }, function(){});
+  }
+  // Every receipt currently waiting on the administrator's signature (see
+  // the "Pending signatures" section and signAndPreviewReceipt) — a single
+  // equality filter, sorted client-side, so this never needs a Firestore
+  // composite index set up separately.
+  function initPendingSignoffsAdminSync(){
+    if(pendingSignoffsAdminSyncStarted || !db || !isAdmin()) return;
+    pendingSignoffsAdminSyncStarted = true;
+    db.collection('pendingSignoffs').where('status','==','pending').onSnapshot(function(snap){
+      pendingSignoffsForAdmin = [];
+      snap.forEach(function(doc){ pendingSignoffsForAdmin.push(Object.assign({id:doc.id}, doc.data())); });
+      pendingSignoffsForAdmin.sort(function(a,b){
+        var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      render();
+    }, function(){ /* a failure here just leaves the list showing its last-known data */ });
   }
   // Locked state, and whether THIS person has fingerprint/PIN unlock set
   // up — fetched once per sign-in (see finishSignIn) and again right after
@@ -3751,6 +4049,7 @@ var qrcode = (function(){
         currentUser.name = d.name || null;
         currentUser.totpEnrolled = !!d.totpEnrolled;
         currentUser.portalTotpEnrolled = !!d.portalTotpEnrolled;
+        currentUser.away = !!d.away;
         render();
       }
     }, function(){});
@@ -3829,7 +4128,10 @@ var qrcode = (function(){
         quoteBlock+
         '<div style="margin-top:2px">'+esc(m.body||'')+'</div>'+
         '<div class="message-meta">'+when+(unread?' · tap to mark read':'')+'</div>'+
-        (canReply ? '<div style="margin-top:6px"><button class="btn sm" data-action="reply-message:'+esc(m.id)+'">Reply</button></div>' : '')+
+        (canReply || m.pendingSignoffId ? '<div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap">'+
+          (m.pendingSignoffId ? '<button class="btn sm primary" data-action="open-pending-signoff:'+esc(m.pendingSignoffId)+'">Open document</button>' : '')+
+          (canReply ? '<button class="btn sm" data-action="reply-message:'+esc(m.id)+'">Reply</button>' : '')+
+        '</div>' : '')+
       '</div>'+
     '</div>';
   }
@@ -3911,7 +4213,7 @@ var qrcode = (function(){
         '<td class="num">'+amountText+'</td>'+
         '<td>'+noteText+'</td>'+
         '<td><div class="row-actions">'+
-          (revealed && good && status==='approved' ? '<button class="icon-btn" data-action="view-finance-receipt:'+t.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
+          (revealed && status==='approved' ? '<button class="icon-btn" data-action="view-finance-receipt:'+t.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
           (isAdmin() ? '<button class="icon-btn" data-action="edit-finance:'+t.id+'">'+ICONS.edit+'</button><button class="icon-btn" data-action="delete-finance:'+t.id+'">'+ICONS.trash+'</button>' : '')+
         '</div></td></tr>';
     }).join('');
@@ -4202,7 +4504,8 @@ var qrcode = (function(){
     about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : ''); }, panel:aboutPanel },
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
     team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
-    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel }
+    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel },
+    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', ''); }, panel:signoffsPanel }
   };
   // Plain display names for each section key — used by voice control's
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
@@ -4210,7 +4513,7 @@ var qrcode = (function(){
   var SECTION_LABELS = {
     overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', health:'Health',
     reports:'Reports', expenses:'Expenses', income:'Income', customers:'Customers',
-    finance:'Finance', about:'About', settings:'Settings', team:'Team', messages:'Messages'
+    finance:'Finance', about:'About', settings:'Settings', team:'Team', messages:'Messages', signoffs:'Pending signatures'
   };
 
   /* ============================= GLOBAL SEARCH ============================= */
@@ -4392,7 +4695,8 @@ var qrcode = (function(){
     overview:['overview','home','dashboard'], flock:['flock','birds','chicken','chickens'], eggs:['eggs','egg'],
     feed:['feed','feeding'], health:['health'], expenses:['expenses','expense','spending'],
     income:['income','sales','earnings'], customers:['customers','customer','buyers'], finance:['finance','bank','money'],
-    reports:['reports','report'], messages:['messages','message','inbox'], about:['about'], settings:['settings'], team:['team']
+    reports:['reports','report'], messages:['messages','message','inbox'], about:['about'], settings:['settings'], team:['team'],
+    signoffs:['pending signatures','pending signature','signatures','approvals']
   };
   function voiceSupported(){ return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
   var voiceRecognition = null;
@@ -4829,6 +5133,10 @@ var qrcode = (function(){
         break;
       case 'sigpad-clear': clearSignaturePad(); break;
       case 'sigpad-undo': undoLastSignatureStroke(); break;
+      case 'open-pending-signoff': openPendingSignoffFromMessage(a1); break;
+      case 'review-pending-signoff': openAdminReviewModal(a1); break;
+      case 'approve-pending-signoff': approvePendingSignoff(a1); break;
+      case 'skip-pending-signoff': skipPendingSignoff(a1); break;
       case 'sigpad-confirm': confirmSignaturePad(); break;
       case 'open-verify-receipt': openVerifyChecker(); break;
       case 'run-verify-receipt': runVerifyReceipt(); break;
@@ -4936,6 +5244,14 @@ var qrcode = (function(){
       case 'export-report-csv': exportReportCSV(getRange(ui.periods.reports)); break;
       case 'print-report': window.print(); break;
       case 'signout': firebase.auth().signOut(); toast('Signed out.'); break;
+      case 'toggle-away': {
+        if(!isAdmin()) break;
+        var nextAway = !(currentUser && currentUser.away);
+        firebase.functions().httpsCallable('updateOwnProfile')({away: nextAway}).then(function(){
+          toast(nextAway ? "You're marked away — team members can skip a document that needs your signature." : "You're marked available again.");
+        }).catch(function(){ toast('Could not update this — please try again.'); });
+        break;
+      }
       case 'guest-signin': guestMode = false; readOnly = false; authGateMode = 'welcome'; authGateError=''; render(); break;
       case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-forgot': authGateMode = 'forgot'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
@@ -5715,6 +6031,17 @@ var qrcode = (function(){
   var securityEventsSyncStarted = false;
   var messagesSyncStarted = false;
   var teamUsers = [];
+  // Two-person receipt co-signing (see signAndPreviewReceipt) — the
+  // administrator's live list of requests waiting on their signature, and
+  // the two listeners kept open while a "pending" modal is on screen (one
+  // on the request itself, one on the administrator's own account so an
+  // "I'm away" toggle flip shows up in there instantly — see
+  // showPendingSignoffModal). Both are torn down as soon as that modal
+  // reaches a final state or the admin list is no longer needed.
+  var pendingSignoffsAdminSyncStarted = false;
+  var pendingSignoffsForAdmin = [];
+  var pendingSignoffUnsubDoc = null;
+  var pendingSignoffUnsubAdmin = null;
   var accessLogs = [];
   var accessLogPage = 0;
   var securityEvents = [];
