@@ -1,6 +1,26 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Receipt co-signing — when a team member signs a
+> **Update (latest):** Feed, Health, Expense, and Income receipts now
+> follow the same two-signature rule as Flock/Egg sales and Finance
+> (see the update just below this one) — whoever logged the entry signs
+> their own line, and your signature is still required to finish it. Before
+> this, those four were always administrator-only, which is why a
+> Supervisor who logged feed couldn't sign it even after co-signing shipped
+> for sales and Finance. No front-end change needed beyond the file swap
+> below — no new Cloud Function, no rules change.
+>
+> One thing worth knowing: this only applies to entries logged **from now
+> on** — a Feed/Health/Expense/Income entry someone already recorded before
+> this update doesn't retroactively know who logged it, so it stays
+> administrator-only. Log a fresh one to see the new two-signature line.
+>
+> ```
+> git add .
+> git commit -m "Extend two-person receipt co-signing to Feed, Health, Expense, and Income"
+> git push
+> ```
+
+> **Earlier update:** Receipt co-signing — when a team member signs a
 > receipt that also needs your signature, it now waits for you instead of
 > finishing right away.
 >

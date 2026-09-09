@@ -2525,7 +2525,7 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount paid',
       amount: fmtMoney(x.amount),
-      signatures: [{role:'Administrator'}],
+      signatures: receiptSignaturesFor(x.recordedByRole),
       mandatory: false
     };
   }
@@ -2541,7 +2541,7 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Amount received',
       amount: fmtMoney(x.amount),
-      signatures: [{role:'Administrator'}],
+      signatures: receiptSignaturesFor(x.recordedByRole),
       mandatory: false
     };
   }
@@ -2560,7 +2560,7 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Cost',
       amount: x.cost>0 ? fmtMoney(x.cost) : 'Not recorded',
-      signatures: [{role:'Administrator'}],
+      signatures: receiptSignaturesFor(x.recordedByRole),
       mandatory: false
     };
   }
@@ -2581,7 +2581,7 @@ var qrcode = (function(){
       rows: rows,
       amountLabel: 'Status',
       amount: 'Recorded',
-      signatures: [{role:'Administrator'}],
+      signatures: receiptSignaturesFor(x.recordedByRole),
       mandatory: false
     };
   }
@@ -5495,7 +5495,7 @@ var qrcode = (function(){
           x.saleAmount = elSaleAmount>0 ? fromCurrency(elSaleAmount, elSaleCurrency) : 0;
           x.recordedByRole = x.recordedByRole || roleLabel(currentUser);
           if(elSaleAmount>0){
-            var incRec = {id:uid('inc'), date:elDate, category:'Egg Sales', amount: x.saleAmount, note: elNote || ('Sale of '+elCount+' egg(s)')};
+            var incRec = {id:uid('inc'), date:elDate, category:'Egg Sales', amount: x.saleAmount, note: elNote || ('Sale of '+elCount+' egg(s)'), recordedByRole: roleLabel(currentUser)};
             s.incomes.push(incRec);
             x.linkedIncomeId = incRec.id;
           }
@@ -5551,7 +5551,7 @@ var qrcode = (function(){
           rem.saleAmount = saleAmount>0 ? fromCurrency(saleAmount, saleCurrency) : 0;
           rem.recordedByRole = rem.recordedByRole || roleLabel(currentUser);
           if(saleAmount>0){
-            var incRec = {id:uid('inc'), date:rdate, category:'Bird Sales', amount: rem.saleAmount, note: rnote || ('Sale of '+rcount+' bird(s)')};
+            var incRec = {id:uid('inc'), date:rdate, category:'Bird Sales', amount: rem.saleAmount, note: rnote || ('Sale of '+rcount+' bird(s)'), recordedByRole: roleLabel(currentUser)};
             s.incomes.push(incRec);
             rem.linkedIncomeId = incRec.id;
           }
@@ -5655,7 +5655,7 @@ var qrcode = (function(){
         var entry;
         if(fid){ entry = s.feedLogs.find(function(x){return x.id===fid;}); }
         if(!entry){
-          entry = {id:uid('feed'), feedType:feedType, date:fdate, quantityKg:qtyKg, cost:fcost, note:fnote};
+          entry = {id:uid('feed'), feedType:feedType, date:fdate, quantityKg:qtyKg, cost:fcost, note:fnote, recordedByRole: roleLabel(currentUser)};
           s.feedLogs.push(entry);
         } else {
           entry.feedType = feedType; entry.date = fdate; entry.quantityKg = qtyKg; entry.cost = fcost; entry.note = fnote;
@@ -5689,7 +5689,7 @@ var qrcode = (function(){
           var hx = s.healthRecords.find(function(x){return x.id===hid;});
           if(hx){ hx.date=hdate; hx.type=htype; hx.title=htitle; hx.batchId=hbatchId||null; hx.nextDueDate=hnextDue||null; hx.note=hnote; }
         } else {
-          s.healthRecords.push({id:uid('health'), date:hdate, type:htype, title:htitle, batchId:hbatchId||null, nextDueDate:hnextDue||null, note:hnote});
+          s.healthRecords.push({id:uid('health'), date:hdate, type:htype, title:htitle, batchId:hbatchId||null, nextDueDate:hnextDue||null, note:hnote, recordedByRole: roleLabel(currentUser)});
         }
       });
       closeModal(); toast(hid ? 'Health record updated.' : 'Health record added.');
@@ -5702,7 +5702,7 @@ var qrcode = (function(){
         var amount = fromCurrency(amountRaw, currency);
         var list = name==='expense' ? s.expenses : s.incomes;
         if(mid){ var x = list.find(function(i){return i.id===mid;}); if(x){ x.date=mdate; x.category=category; x.amount=amount; x.note=mnote; } }
-        else list.push({id:uid(name==='expense'?'exp':'inc'), date:mdate, category:category, amount:amount, note:mnote});
+        else list.push({id:uid(name==='expense'?'exp':'inc'), date:mdate, category:category, amount:amount, note:mnote, recordedByRole: roleLabel(currentUser)});
       });
       closeModal(); toast('Saved.');
       return;
