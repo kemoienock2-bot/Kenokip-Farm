@@ -1,6 +1,83 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Added a "Copy verify link" button to a signed
+> **Update (latest):** Each team member now only sees and can change the
+> pages that match their job title:
+> - **Supervisor:** Flock, Eggs, Feed, Health, Customers, Overview (everyday
+>   farm operations — not money).
+> - **Vet / Doctor:** Health, Overview.
+> - **Farmhand:** Flock, Eggs, Feed, Overview.
+> - **Financial Staff:** unchanged — Finance, Income, Expenses, Reports,
+>   Overview.
+> - **Administrator (you):** everything, unchanged.
+>
+> This is enforced two ways: the app hides pages someone's role can't use
+> (so it's not confusing — no dead-end buttons), **and** the Firestore
+> database itself now refuses to save a change to a restricted area, even
+> if it somehow came from outside the app. That second part is the real
+> security boundary; the first is just so the app makes sense to use.
+>
+> ⚠️ **Important — this needs both a Firestore rules deploy AND is the
+> most consequential change made to this app so far**, because the new
+> database rule affects every single save the whole team makes (flock,
+> eggs, feed, health, expenses, income, customers, settings) — not just
+> receipts. I tested the underlying logic thoroughly against realistic
+> before/after data for every role (each role's legitimate changes, and
+> each role's blocked ones), but I could not run it against the actual
+> Firestore engine before sending this — the sandbox this runs in couldn't
+> reach the emulator download server. **Please verify it before trusting it
+> completely:**
+> 1. Deploy: `firebase deploy --only firestore:rules`
+> 2. Right after deploying, sign in as **each** team member (or ask them
+>    to) and have them do one normal, everyday thing on their own page —
+>    log an egg, add a feed log, record health, add flock, whatever fits
+>    their role — and confirm it shows "Saved" / "Synced across devices"
+>    like always, not "saved on this device only" or an error.
+> 3. If anything that should work suddenly doesn't, tell me immediately —
+>    don't wait — and in the meantime you can instantly undo this specific
+>    change by deploying the previous rule:
+>    `allow write: if request.auth != null;` in place of the new
+>    `allow write: if request.auth != null && farmWriteAllowed();` line for
+>    `match /farms/kenokip` in firestore.rules, then
+>    `firebase deploy --only firestore:rules` again.
+> 4. Optional extra safety net **before** deploying at all: paste
+>    firestore.rules into Firebase Console → Firestore Database → Rules →
+>    the editor there flags any syntax problem immediately, and its
+>    "Rules Playground" simulator lets you test a specific write (pick a
+>    fake auth token, add `role`/`jobTitle` claims, pick `farms/kenokip`)
+>    without deploying anything or touching real data.
+>
+> ```
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Restrict each employee to the pages their job needs, enforced in the app and in Firestore rules"
+> git push
+> ```
+
+> **Earlier update:** Three receipt-signing improvements:
+> 1. **Fixed a real gap: signing no longer falls back to "Administrator."**
+>    Every receipt names exactly who's expected to sign it (e.g. you, or
+>    you + Financial Staff for money receipts). Before, if whoever was
+>    signed in didn't match any expected signer, their signature silently
+>    landed in the first line anyway — usually "Administrator." Now, only
+>    someone whose real role matches a line on that specific receipt can
+>    sign it at all; anyone else gets a clear message saying who's allowed
+>    to sign it instead.
+> 2. **Receipts print at an actual receipt size now**, not a full page —
+>    narrow, like a real till receipt. The Activity Statement (the
+>    multi-section report) is unaffected and still prints as a full
+>    document, since it genuinely has that much content.
+> 3. **Signing a receipt now has "Undo last"**, separate from "Clear all"
+>    — a mis-drawn stroke can be removed on its own without losing the rest
+>    of the signature.
+>
+> Front-end only:
+> ```
+> git add .
+> git commit -m "Restrict who can sign a receipt to their own named line; compact receipt size; undo-last-stroke on the signature pad"
+> git push
+> ```
+
+> **Earlier update:** Added a "Copy verify link" button to a signed
 > receipt — checking it from a different device (e.g. you signed on your
 > phone but want to verify on a laptop) no longer means scanning a QR code
 > and retyping what it says. Copy the link (WhatsApp, email, notes — however

@@ -394,6 +394,34 @@
   .receipt-verify-blob{ word-break:break-all; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:9px; color:#999; margin-top:6px; }
   .receipt-unsigned-note{ margin-top:22px; padding:10px 12px; border:1px dashed #c99; border-radius:6px; font-size:11px; color:#a33; }
 
+  /* "receipt-slip" = a single sale/payment/etc. receipt, sized like an
+     actual small receipt rather than a full A4 page — everything below
+     just shrinks the same shared markup (.receipt-head, .receipt-row, etc.)
+     down. The Activity Statement doesn't use this class, so it's unaffected
+     and stays full document width. */
+  .receipt-slip{ max-width:300px; padding:14px 12px; }
+  .receipt-slip .receipt-head{ flex-direction:column; text-align:center; gap:4px; padding-bottom:8px; margin-bottom:8px; border-bottom-width:1px; }
+  .receipt-slip .receipt-logo{ width:38px; height:38px; }
+  .receipt-slip .receipt-head-text h2{ font-size:14px; }
+  .receipt-slip .receipt-head-text .hint{ font-size:10px; }
+  .receipt-slip .receipt-meta{ text-align:center; font-size:10px; white-space:normal; line-height:1.5; }
+  .receipt-slip .receipt-title{ font-size:11px; margin:2px 0 10px; }
+  .receipt-slip .receipt-rows{ margin-bottom:10px; }
+  .receipt-slip .receipt-row{ font-size:11px; padding:4px 0; gap:6px; }
+  .receipt-slip .receipt-total{ font-size:13px; padding:8px 10px; margin-bottom:4px; }
+  .receipt-slip .receipt-sigs{ gap:10px; margin-top:22px; }
+  .receipt-slip .receipt-sig{ min-width:88px; }
+  .receipt-slip .receipt-sig-line{ height:26px; }
+  .receipt-slip .receipt-sig-role{ font-size:9px; margin-top:3px; }
+  .receipt-slip .receipt-sig-img{ height:34px; margin-bottom:-6px; }
+  .receipt-slip .receipt-stamp{ width:64px; height:48px; font-size:8px; }
+  .receipt-slip .receipt-verify{ margin-top:12px; padding-top:10px; gap:8px; }
+  .receipt-slip .receipt-verify-qr img{ width:64px; height:64px; }
+  .receipt-slip .receipt-verify-text{ font-size:8.5px; line-height:1.4; }
+  .receipt-slip .receipt-verify-code{ font-size:10px; }
+  .receipt-slip .receipt-unsigned-note{ margin-top:12px; padding:6px 8px; font-size:9px; }
+  .receipt-slip .receipt-foot{ font-size:8.5px; margin-top:14px; padding-top:8px; }
+
   /* Statement (the combined "everything that happened" document) reuses
      the receipt look but as a longer, multi-section report. */
   .statement-section{ margin:20px 0 10px; }
@@ -1371,6 +1399,10 @@ var qrcode = (function(){
   }
   function renderNav(){
     var rail = document.getElementById('rail');
+    // Filtered through sectionAllowed() so the nav never shows a link to a
+    // page this account's role can't actually open — matches whatever
+    // render() would bounce them out of anyway if they got there some
+    // other way (a stale link, browser back button, etc.).
     var items = [
       ['overview','Overview',ICONS.overview],
       ['flock','Flock',ICONS.flock],
@@ -1379,14 +1411,14 @@ var qrcode = (function(){
       ['health','Health',ICONS.health],
       ['expenses','Expenses',ICONS.expenses],
       ['income','Income',ICONS.income],
-      ['customers','Customers',ICONS.customers]
-    ];
-    if(canSeeFinance()) items.push(['finance','Finance',ICONS.finance]);
-    if(canSeeFinance()) items.push(['reports','Reports',ICONS.reports]);
-    if(currentUser) items.push(['messages','Messages',ICONS.bell]);
-    items.push(['about','About',ICONS.info]);
-    items.push(['settings','Settings',ICONS.settings]);
-    if(isAdmin()) items.push(['team','Team',ICONS.team]);
+      ['customers','Customers',ICONS.customers],
+      ['finance','Finance',ICONS.finance],
+      ['reports','Reports',ICONS.reports],
+      ['messages','Messages',ICONS.bell],
+      ['about','About',ICONS.info],
+      ['settings','Settings',ICONS.settings],
+      ['team','Team',ICONS.team]
+    ].filter(function(it){ return sectionAllowed(it[0]); });
     var unread = unreadMessageCount();
     rail.innerHTML =
       '<div class="brand">'+
@@ -2338,7 +2370,10 @@ var qrcode = (function(){
     var rowsHtml = (opts.rows||[]).map(function(r){
       return '<div class="receipt-row"><span>'+esc(r.label)+'</span><span>'+esc(r.value)+'</span></div>';
     }).join('');
-    return '<div class="receipt">'+
+    // "receipt-slip" is the compact, actual-receipt-sized look (a single
+    // sale/payment/etc.) — the Activity Statement below stays full document
+    // width since it's a multi-section report, not a single slip.
+    return '<div class="receipt receipt-slip">'+
       receiptHeadHtml(opts.receiptNo, fmtDate(parseISO(opts.date)))+
       '<div class="receipt-title">'+esc(opts.title)+'</div>'+
       '<div class="receipt-rows">'+rowsHtml+'</div>'+
@@ -2577,6 +2612,20 @@ var qrcode = (function(){
     renderFn = renderFn || pendingReceiptRenderFn || buildReceiptHTML;
     var who = currentUser ? (currentUser.name || currentUser.email || 'Unknown') : 'Guest';
     var roleText = currentUser ? roleLabel(currentUser) : 'Guest';
+    // Each document names exactly who is expected to sign it (e.g. an
+    // Administrator line, and — for money-related receipts — a Financial
+    // Staff line too). Whoever is signed in must match ONE of those lines
+    // by their real role — there's no fallback slot any more. Without this
+    // check, anyone who could open the receipt could end up signing into
+    // whichever line came first (often "Administrator"), which defeats the
+    // whole point of a named signature.
+    var expectedSignatures = (opts.signatures && opts.signatures.length ? opts.signatures : [{role:'Administrator'}]);
+    var mayISign = expectedSignatures.some(function(s){ return s.role===roleText; });
+    if(!mayISign){
+      var expectedRoles = expectedSignatures.map(function(s){ return s.role; }).join(' or ');
+      toast('Only '+expectedRoles+' can sign this document — you\'re signed in as '+roleText+'.');
+      return;
+    }
     openSignaturePad(opts.title, function(sigDataUrl, sigHash){
       var signedAt = new Date().toISOString();
       var fields = receiptCanonicalFields(opts).concat([
@@ -2584,13 +2633,9 @@ var qrcode = (function(){
         ['Signed at', signedAt],
         ['Signature hash', sigHash]
       ]);
-      var signatures = (opts.signatures && opts.signatures.length ? opts.signatures : [{role:'Administrator'}]).map(function(s){ return Object.assign({}, s); });
-      var matched = false;
-      signatures = signatures.map(function(s){
-        if(!matched && s.role===roleText){ matched = true; return Object.assign({}, s, {img: sigDataUrl}); }
-        return s;
+      var signatures = expectedSignatures.map(function(s){
+        return s.role===roleText ? Object.assign({}, s, {img: sigDataUrl}) : Object.assign({}, s);
       });
-      if(!matched) signatures[0] = Object.assign({}, signatures[0], {img: sigDataUrl});
 
       openModal('<div class="modal-head"><h3>Signing…</h3></div><p class="hint" style="margin:0">Getting a verification code for this document.</p>');
 
@@ -2655,7 +2700,13 @@ var qrcode = (function(){
   }
 
   /* ============================= SIGNATURE PAD ============================= */
-  var sigPadCanvas = null, sigPadCtx = null, sigPadDrawing = false, sigPadHasStroke = false, sigPadLastPt = null, sigPadOnConfirm = null, sigPadEndHandler = null;
+  var sigPadCanvas = null, sigPadCtx = null, sigPadDrawing = false, sigPadLastPt = null, sigPadOnConfirm = null, sigPadEndHandler = null;
+  // Each completed pen stroke is kept as its own list of points (not just
+  // pixels on the canvas) specifically so a single wrong stroke can be
+  // undone on its own — "Clear all" wipes everything, "Undo last" only
+  // removes the most recent stroke and redraws the rest from scratch.
+  var sigPadStrokes = [];
+  var sigPadCurrentStroke = null;
   function signaturePadModalHtml(personLabel){
     return '<div class="modal-head"><h3>Sign electronically</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
       '<p class="hint" style="margin-top:-4px">Draw your signature below to confirm you generated this '+esc(personLabel||'document')+'. It gets embedded in the receipt and locked into its verification code — if the receipt is edited afterward, the code stops matching.</p>'+
@@ -2663,7 +2714,8 @@ var qrcode = (function(){
       '<div class="sigpad-hint">Use your mouse or finger to sign above.</div>'+
       '<div class="modal-foot">'+
         '<button type="button" class="btn" data-action="close-modal">Cancel</button>'+
-        '<button type="button" class="btn" data-action="sigpad-clear">Clear</button>'+
+        '<button type="button" class="btn" id="sigpad-undo-btn" disabled data-action="sigpad-undo">Undo last</button>'+
+        '<button type="button" class="btn" data-action="sigpad-clear">Clear all</button>'+
         '<button type="button" class="btn primary" id="sigpad-confirm-btn" disabled data-action="sigpad-confirm">Confirm signature</button>'+
       '</div>';
   }
@@ -2680,7 +2732,8 @@ var qrcode = (function(){
     sigPadCtx.lineCap = 'round';
     sigPadCtx.lineJoin = 'round';
     sigPadCtx.strokeStyle = '#000000';
-    sigPadHasStroke = false; sigPadDrawing = false; sigPadLastPt = null;
+    sigPadStrokes = []; sigPadCurrentStroke = null; sigPadDrawing = false; sigPadLastPt = null;
+    updateSigPadButtons();
     function ptFromEvent(e){
       var rect = sigPadCanvas.getBoundingClientRect();
       var cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
@@ -2688,7 +2741,12 @@ var qrcode = (function(){
       var scaleX = sigPadCanvas.width / rect.width, scaleY = sigPadCanvas.height / rect.height;
       return {x: (cx-rect.left)*scaleX, y: (cy-rect.top)*scaleY};
     }
-    function start(e){ e.preventDefault(); sigPadDrawing = true; sigPadLastPt = ptFromEvent(e); }
+    function start(e){
+      e.preventDefault();
+      sigPadDrawing = true;
+      sigPadLastPt = ptFromEvent(e);
+      sigPadCurrentStroke = [sigPadLastPt];
+    }
     function move(e){
       if(!sigPadDrawing) return;
       e.preventDefault();
@@ -2698,9 +2756,15 @@ var qrcode = (function(){
       sigPadCtx.lineTo(p.x, p.y);
       sigPadCtx.stroke();
       sigPadLastPt = p;
-      if(!sigPadHasStroke){ sigPadHasStroke = true; var btn=document.getElementById('sigpad-confirm-btn'); if(btn) btn.disabled=false; }
+      if(sigPadCurrentStroke) sigPadCurrentStroke.push(p);
     }
-    function end(){ sigPadDrawing = false; sigPadLastPt = null; }
+    function end(){
+      // Only a stroke with an actual line in it (2+ points) leaves a mark —
+      // a plain tap with no drag draws nothing, so there's nothing to keep.
+      if(sigPadCurrentStroke && sigPadCurrentStroke.length > 1) sigPadStrokes.push(sigPadCurrentStroke);
+      sigPadDrawing = false; sigPadLastPt = null; sigPadCurrentStroke = null;
+      updateSigPadButtons();
+    }
     sigPadCanvas.addEventListener('mousedown', start);
     sigPadCanvas.addEventListener('mousemove', move);
     sigPadCanvas.addEventListener('touchstart', start, {passive:false});
@@ -2710,14 +2774,40 @@ var qrcode = (function(){
     sigPadEndHandler = end;
     window.addEventListener('mouseup', sigPadEndHandler);
   }
+  function updateSigPadButtons(){
+    var confirmBtn = document.getElementById('sigpad-confirm-btn');
+    var undoBtn = document.getElementById('sigpad-undo-btn');
+    var hasInk = sigPadStrokes.length > 0;
+    if(confirmBtn) confirmBtn.disabled = !hasInk;
+    if(undoBtn) undoBtn.disabled = !hasInk;
+  }
+  function redrawSigPadStrokes(){
+    if(!sigPadCtx || !sigPadCanvas) return;
+    sigPadCtx.clearRect(0, 0, sigPadCanvas.width, sigPadCanvas.height);
+    sigPadStrokes.forEach(function(stroke){
+      sigPadCtx.beginPath();
+      sigPadCtx.moveTo(stroke[0].x, stroke[0].y);
+      for(var i=1; i<stroke.length; i++) sigPadCtx.lineTo(stroke[i].x, stroke[i].y);
+      sigPadCtx.stroke();
+    });
+  }
+  // Removes just the most recent pen stroke — for the common "one part of
+  // the signature came out wrong" case, without losing everything else
+  // already drawn correctly.
+  function undoLastSignatureStroke(){
+    if(!sigPadStrokes.length) return;
+    sigPadStrokes.pop();
+    redrawSigPadStrokes();
+    updateSigPadButtons();
+  }
   function clearSignaturePad(){
     if(!sigPadCtx || !sigPadCanvas) return;
     sigPadCtx.clearRect(0, 0, sigPadCanvas.width, sigPadCanvas.height);
-    sigPadHasStroke = false;
-    var btn = document.getElementById('sigpad-confirm-btn'); if(btn) btn.disabled = true;
+    sigPadStrokes = [];
+    updateSigPadButtons();
   }
   function confirmSignaturePad(){
-    if(!sigPadCanvas || !sigPadHasStroke) return;
+    if(!sigPadCanvas || !sigPadStrokes.length) return;
     var dataUrl = sigPadCanvas.toDataURL('image/png');
     var cb = sigPadOnConfirm;
     sha256Hex(dataUrl).then(function(hash){
@@ -3000,9 +3090,44 @@ var qrcode = (function(){
   }
   function isAdmin(){ return !!currentUser && currentUser.role==='administrator'; }
   function isFinancialStaffUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='financial'; }
+  function isSupervisorUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='supervisor'; }
+  function isVetUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='vet'; }
+  function isFarmhandUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='farmhand'; }
   function canSeeFinance(){ return isAdmin() || isFinancialStaffUser(); }
   function canProposeFinance(){ return canSeeFinance(); }
+  // Each employee only sees the pages that match their job — matches what
+  // roles.js sets as custom claims and what firestore.rules enforces on the
+  // server, so this is a convenience (hide what you can't use) on top of a
+  // real restriction, not the restriction itself. The administrator and
+  // anyone not signed in (guest/demo mode) are unaffected — this only
+  // narrows things down for a signed-in *employee* account.
   function sectionAllowed(key){
+    if(isAdmin() || !currentUser) return sectionAllowedUngated(key);
+    switch(key){
+      case 'finance':
+      case 'reports':
+      case 'expenses':
+      case 'income':
+        return isFinancialStaffUser();
+      case 'flock':
+      case 'eggs':
+      case 'feed':
+        return isSupervisorUser() || isFarmhandUser();
+      case 'health':
+        return isSupervisorUser() || isVetUser();
+      case 'customers':
+        return isSupervisorUser();
+      case 'team':
+        return false;
+      default:
+        return sectionAllowedUngated(key);
+    }
+  }
+  // The pre-role-restrictions rule set — still applies as-is to the
+  // administrator and to guest/demo mode (no employee jobTitle to restrict
+  // by), and as the fallback for sections switch() above doesn't mention
+  // (overview, about, settings, messages).
+  function sectionAllowedUngated(key){
     if(key==='finance') return canSeeFinance();
     if(key==='reports') return canSeeFinance();
     if(key==='team') return isAdmin();
@@ -4703,6 +4828,7 @@ var qrcode = (function(){
         });
         break;
       case 'sigpad-clear': clearSignaturePad(); break;
+      case 'sigpad-undo': undoLastSignatureStroke(); break;
       case 'sigpad-confirm': confirmSignaturePad(); break;
       case 'open-verify-receipt': openVerifyChecker(); break;
       case 'run-verify-receipt': runVerifyReceipt(); break;

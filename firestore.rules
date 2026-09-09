@@ -2,15 +2,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Which top-level fields of farms/kenokip each employee jobTitle may
+    // change — mirrors the app's client-side sectionAllowed() exactly (see
+    // index.html), just enforced here too so a restricted employee
+    // genuinely cannot write that data, not just that the app hides the
+    // button. This whole document is written as one piece every time
+    // anything in it changes (see FARM_COLLECTION/.set(state) in
+    // index.html) — that's fine: diff().affectedKeys() below still
+    // correctly reports only the fields that actually changed VALUE,
+    // regardless of how much of the document got resent in the same write.
+    function jobAllowedFarmKeys(jobTitle) {
+      return jobTitle == 'financial' ? ['expenses', 'incomes'] :
+             jobTitle == 'supervisor' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'healthRecords', 'customers'] :
+             jobTitle == 'vet' ? ['healthRecords'] :
+             jobTitle == 'farmhand' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs'] :
+             [];
+    }
+    // 'settings' (currencies/categories/the About text) and 'version' (a
+    // schema-migration counter) aren't restricted by job — every signed-in
+    // account could already change these before roles existed, and nothing
+    // about them is specific to one job.
+    function farmWriteAllowed() {
+      return request.auth.token.role == 'administrator' ||
+        resource == null ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(jobAllowedFarmKeys(request.auth.token.jobTitle).concat(['settings', 'version']));
+    }
+
     // Flock / Eggs / Expenses / Income / Settings — the general farm record.
-    // Anyone can read it (including guests, with no account at all), but
-    // writing now requires SOME signed-in account (administrator or any
-    // employee). This is the one deliberate tightening from before: it used
-    // to be `allow write: if true` (fully public), which is what let anyone
-    // edit it with no account. Guests can no longer write here at all.
+    // Anyone can read it (including guests, with no account at all).
+    // Writing requires a signed-in account, AND — for an employee — that
+    // the fields actually being changed match their job (see
+    // farmWriteAllowed() above; the administrator can change anything).
+    // Before job-based restrictions existed, this was just
+    // `allow write: if request.auth != null` — any signed-in account could
+    // change any field. That's still exactly what happens for the
+    // administrator, and for the 'settings'/'version' fields for everyone.
     match /farms/kenokip {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && farmWriteAllowed();
     }
 
     // Finance — money. Only the administrator and Financial Staff can even
