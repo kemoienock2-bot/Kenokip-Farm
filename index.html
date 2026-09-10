@@ -184,14 +184,19 @@
   .nav-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
   .nav-item{ position:relative; display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); border:none; background:none; width:100%; text-align:left; color:var(--ink-2); font-weight:500; font-size:14px; }
   .nav-badge{ position:absolute; top:2px; left:28px; background:var(--bad); color:#fff; font-size:10px; font-weight:700; line-height:1.4; padding:1px 5px; border-radius:999px; min-width:8px; text-align:center; z-index:1; }
-  /* Each item's icon sits in its own small color chip (see the
-     .nav-item[data-nav-section] color overrides) — this is what makes the
-     sidebar read as a little color-coded key to the app's sections. */
-  .nav-ico{ display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; background:var(--accent-tint); color:var(--accent-strong); flex:none; transition:background .12s ease, color .12s ease; }
-  .nav-ico svg{ width:15px; height:15px; flex:none; }
+  /* Each item's icon is now full-color illustrated art (see PICS in the
+     script), which already carries its own natural coloring — so the chip
+     behind it stays a neutral surface with a thin ring in the section's
+     accent color, rather than the flat tinted-background chip used for the
+     old single-color stroke icons (that would have visually clashed with
+     art like the reddish-brown Hen icon). The ring brightens on hover/active
+     so the sidebar still reads as a color-coded key to the app's sections. */
+  .nav-ico{ display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:9px; background:var(--surface); box-shadow:0 0 0 1.5px var(--accent-tint); flex:none; transition:box-shadow .12s ease, background .12s ease; }
+  .nav-ico svg{ width:20px; height:20px; flex:none; }
   .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
+  .nav-item:hover .nav-ico{ box-shadow:0 0 0 1.5px var(--accent); }
   .nav-item.active{ background:var(--accent-tint); color:var(--accent-ink); font-weight:600; }
-  .nav-item.active .nav-ico{ background:var(--accent); color:var(--accent-ink); }
+  .nav-item.active .nav-ico{ background:var(--surface); box-shadow:0 0 0 2px var(--accent); }
   .rail-foot{ margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 6px; }
   .sync-chip{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-3); }
   .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-3); flex:none; }
@@ -201,6 +206,18 @@
   @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
 
   .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  /* A soft per-section background wash — a gentle tint fading into the
+     ordinary page background within the first few hundred pixels, using
+     each section's own --accent-tint (already scoped per data-section
+     above) so every page picks up a faint wash of its own color without
+     touching card contrast (cards keep their own solid --surface). Falls
+     back gracefully to a flat --bg in browsers without color-mix(). */
+  .main[data-section]{ background:var(--bg); }
+  @supports (background: color-mix(in srgb, red, blue)){
+    .main[data-section]{
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-tint) 60%, var(--bg)) 0%, var(--bg) 460px);
+    }
+  }
   .topbar{
     display:flex; align-items:center; justify-content:space-between; gap:16px;
     padding:20px 32px; border-bottom:1px solid var(--border-soft);
@@ -281,12 +298,26 @@
   .card-title{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .card-title h3{ font-size:15.5px; }
   .card-title .hint{ margin:0; }
+  .card-title-lead{ display:flex; align-items:center; gap:10px; min-width:0; }
   .grid{ display:grid; gap:16px; }
   .grid.stats{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
   .grid.two{ grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
   .grid.four{ grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
 
+  /* Small full-color illustrated-art badges (see PICS in the script) used
+     next to card titles and inside stat tiles — a neutral rounded chip so
+     the art's own baked-in coloring stays true rather than sitting on a
+     tinted background. */
+  .pic-badge{ display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:11px; background:var(--surface-2); flex:none; }
+  .pic-badge svg{ width:27px; height:27px; flex:none; }
+  .pic-badge.sm{ width:28px; height:28px; border-radius:9px; }
+  .pic-badge.sm svg{ width:20px; height:20px; }
+  .pic-badge.lg{ width:64px; height:64px; border-radius:16px; }
+  .pic-badge.lg svg{ width:48px; height:48px; }
+
   .stat-tile{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px; }
+  .stat-tile.with-pic{ flex-direction:row; align-items:center; gap:12px; }
+  .stat-tile.with-pic .stat-tile-text{ display:flex; flex-direction:column; gap:6px; min-width:0; }
   .stat-label{ font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:600; }
   .stat-value{ font-size:27px; font-weight:700; line-height:1.1; }
   .stat-delta{ font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:4px; width:fit-content; padding:2px 8px; border-radius:999px; }
@@ -423,7 +454,11 @@
     .rail{ width:100%; flex-direction:row; align-items:center; padding:12px 14px; gap:14px; border-right:none; border-bottom:1px solid var(--border-soft); }
     .brand-text span{ display:none; }
     .nav-list{ flex-direction:row; overflow-x:auto; gap:2px; }
-    .nav-item span{ display:none; }
+    /* Only the text label hides on mobile (icon-only nav row) — this used
+       to be a bare "span" selector, which also matched .nav-ico (the
+       colored icon chip added for the per-section theme) and hid every
+       icon on phones, leaving blank nav buttons. */
+    .nav-item .nav-label{ display:none; }
     .nav-item{ padding:9px; }
     .rail-foot{ display:none; }
     .topbar, .panel{ padding-left:18px; padding-right:18px; }
@@ -1138,6 +1173,37 @@ var qrcode = (function(){
     camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>'
   };
 
+  /* ---- PICS: colorful illustrated icon set --------------------------------
+     Hand-drawn multi-color flat-style artwork (fixed hex fills, not
+     currentColor/stroke like ICONS above) used for the nav rail and a few
+     in-page spots (Flock's Chicks/Growers/Hens/Cocks tiles, the Brooding
+     panel, the Eggs page). Kept as a separate object from ICONS because
+     these carry their own baked-in coloring rather than inheriting a
+     section's accent color. */
+  var PICS = {
+    chick:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="32" rx="12" ry="10" fill="#F5C94D"/><ellipse cx="18" cy="33" rx="4.5" ry="6" fill="#E8B93D"/><circle cx="25" cy="18" r="8.5" fill="#FBE07A"/><path d="M32 17 L39 19 L32 21 Z" fill="#F2994A"/><circle cx="27.5" cy="16" r="1.3" fill="#3A2705"/><path d="M21 10 Q23 6 26 10" stroke="#E8B93D" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M18 41 l0 3 M24 42 l0 3 M30 41 l0 3" stroke="#E8973D" stroke-width="2" stroke-linecap="round"/></svg>',
+    grower:'<svg viewBox="0 0 48 48"><ellipse cx="23" cy="33" rx="13" ry="10.5" fill="#C9A06B"/><ellipse cx="16" cy="34" rx="5" ry="6.5" fill="#B3875A"/><circle cx="9" cy="34" r="1.1" fill="#fff" opacity=".7"/><circle cx="14" cy="30" r="1.1" fill="#fff" opacity=".7"/><circle cx="19" cy="37" r="1.1" fill="#fff" opacity=".7"/><circle cx="27" cy="19" r="8" fill="#D8B583"/><path d="M27 12 q1.5 -3 3 0 q1.5 -2.6 2.6 .3" fill="#D6273C"/><path d="M34 18 L41 20 L34 22.5 Z" fill="#F2994A"/><circle cx="29.5" cy="17.5" r="1.2" fill="#3A2705"/><path d="M12 42 l0 4 M20 43 l0 4 M28 43 l0 4" stroke="#D98A3D" stroke-width="2.2" stroke-linecap="round"/><path d="M10 30 q-6 2 -4 9 q5 -1 6 -6 Z" fill="#8A6A44"/></svg>',
+    hen:'<svg viewBox="0 0 48 48"><path d="M8 40 Q6 24 20 20 Q34 16 38 26 Q41 32 34 36 L34 41 Z" fill="#A6431F"/><ellipse cx="19" cy="33" rx="7" ry="8" fill="#EDD9B8"/><path d="M34 20 Q40 16 44 20 Q41 24 36 25 Z" fill="#1B1B1B"/><path d="M32 18 Q38 12 43 15 Q39 20 34 21 Z" fill="#2E2A26"/><circle cx="21" cy="16" r="6.5" fill="#B5502A"/><path d="M21 9 q1.3 -4 2.6 0 q1.3 -3.4 2.6 .4 q1 -2.6 2 .6" fill="#D6273C"/><path d="M17 17 q-2 1.6 -0.3 3.3" stroke="#D6273C" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M26 15 L33 16.5 L26 19 Z" fill="#F2A93D"/><circle cx="24.5" cy="15" r="1.2" fill="#241a12"/><path d="M14 41 l-1 4 M14 41 l3 3.5 M23 42 l-1 4 M23 42 l3 3.5" stroke="#E8973D" stroke-width="2" stroke-linecap="round"/></svg>',
+    cock:'<svg viewBox="0 0 48 48"><path d="M30 22 Q44 8 46 22 Q40 20 36 26 Z" fill="#173226"/><path d="M28 20 Q40 4 44 16 Q37 16 33 23 Z" fill="#2F6B5E"/><path d="M26 20 Q34 2 40 12 Q32 14 30 21 Z" fill="#173226"/><path d="M9 40 Q6 22 21 19 Q36 15 38 27 Q39 33 32 36 L31 41 Z" fill="#C0451B"/><path d="M13 24 Q9 26 12 33 Q17 30 17 26 Z" fill="#E8B93D"/><ellipse cx="20" cy="33" rx="6" ry="7.5" fill="#E8A93D"/><circle cx="22" cy="15.5" r="6.7" fill="#C0451B"/><path d="M22 8 q1.3 -4.4 2.7 0 q1.3 -3.6 2.6 .4 q1 -2.8 2 .6" fill="#D6273C"/><path d="M18 16.5 q-2.2 1.7 -0.3 3.5" stroke="#D6273C" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M27 14.5 L35 16 L27 18.7 Z" fill="#F2A93D"/><circle cx="25" cy="14.6" r="1.2" fill="#241a12"/><path d="M14 41 l-1 4 M14 41 l3 3.5 M24 42 l-1 4 M24 42 l3 3.5" stroke="#4a3a2a" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    brooding:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="38" rx="18" ry="6" fill="#8B5E34"/><path d="M8 38 Q9 33 14 33 Q13 37 16 39" stroke="#6B4726" stroke-width="1.6" fill="none"/><path d="M40 38 Q39 33 34 33 Q35 37 32 39" stroke="#6B4726" stroke-width="1.6" fill="none"/><ellipse cx="15" cy="37" rx="3.2" ry="2.4" fill="#FBF6EA"/><ellipse cx="33" cy="37" rx="3.2" ry="2.4" fill="#EFD9AE"/><ellipse cx="24" cy="37.5" rx="3.2" ry="2.4" fill="#FBF6EA"/><path d="M10 33 Q8 20 24 18 Q40 16 40 29 Q40 36 30 37 Q18 38 10 33 Z" fill="#A6431F"/><path d="M11 26 Q7 27 9 33" stroke="#8A3618" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M37 24 Q41 25 39 31" stroke="#8A3618" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="18" cy="21" r="5.6" fill="#B5502A"/><path d="M17 15.5 q1.1 -3.4 2.2 0 q1.1 -2.8 2.2 .4" fill="#D6273C"/><path d="M22 20 L28 21.3 L22 23.6 Z" fill="#F2A93D"/><circle cx="20.3" cy="20.2" r="1" fill="#241a12"/></svg>',
+    eggs:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="41" rx="17" ry="3.4" fill="#D9C6A3" opacity=".6"/><path d="M15 40 Q6 40 8 27 Q10 13 17 13 Q24 13 24 27 Q24 40 15 40 Z" fill="#C08347"/><circle cx="12" cy="24" r="1.1" fill="#8A5A2E"/><circle cx="18" cy="20" r="1" fill="#8A5A2E"/><circle cx="14" cy="31" r="1.1" fill="#8A5A2E"/><circle cx="19" cy="28" r="0.9" fill="#8A5A2E"/><path d="M32 40 Q23 40 25 28 Q27 16 33 16 Q39 16 39 28 Q39 40 32 40 Z" fill="#FBF6EA"/><path d="M29 22 Q32 20 35 22" stroke="#EFE4CC" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>',
+    feed:'<svg viewBox="0 0 48 48"><path d="M14 12 h20 l2 8 q2 10 -2 18 q-4 6 -10 6 q-6 0 -10 -6 q-4 -8 -2 -18 Z" fill="#C9A06B"/><path d="M14 12 q10 4 20 0" stroke="#8B5E34" stroke-width="2" fill="none"/><path d="M17 9 q7 4 14 0" stroke="#6B4726" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="20" cy="24" r="2.6" fill="#E8B93D"/><circle cx="27" cy="27" r="2.2" fill="#D6A02E"/><circle cx="22" cy="31" r="2" fill="#E8B93D"/><path d="M31 30 q3 -4 7 -2 q-2 4 -7 2 Z" fill="#5C8F3E"/></svg>',
+    health:'<svg viewBox="0 0 48 48"><path d="M24 6 L40 12 V22 Q40 36 24 43 Q8 36 8 22 V12 Z" fill="#2F8F73"/><path d="M24 10 L36 14.5 V22 Q36 33 24 39 Q12 33 12 22 V14.5 Z" fill="#3EA987"/><path d="M24 18 v14 M17 25 h14" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg>',
+    expenses:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="34" rx="13" ry="5" fill="#8A3A22"/><ellipse cx="24" cy="29" rx="13" ry="5" fill="#BD5B38"/><ellipse cx="24" cy="24" rx="13" ry="5" fill="#D97A50"/><ellipse cx="24" cy="24" rx="13" ry="5" fill="none" stroke="#8A3A22" stroke-width="1.4" opacity=".4"/><path d="M35 12 l4 4 M39 12 l-4 4" stroke="#A63A2E" stroke-width="2.6" stroke-linecap="round"/></svg>',
+    income:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="34" rx="13" ry="5" fill="#215E3B"/><ellipse cx="24" cy="29" rx="13" ry="5" fill="#3E8E5A"/><ellipse cx="24" cy="24" rx="13" ry="5" fill="#6DBB86"/><path d="M37 8 v11 M32 13 l5 -5 l5 5" stroke="#215E3B" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    customers:'<svg viewBox="0 0 48 48"><circle cx="18" cy="17" r="7" fill="#C4667A"/><path d="M6 39 q0 -13 12 -13 q12 0 12 13 Z" fill="#C4667A"/><circle cx="32" cy="20" r="5.6" fill="#E8B93D"/><path d="M22 39 q0 -10.5 10 -10.5 q10 0 10 10.5 Z" fill="#E8B93D" opacity=".9"/></svg>',
+    finance:'<svg viewBox="0 0 48 48"><path d="M24 6 L42 16 H6 Z" fill="#43508C"/><rect x="9" y="18" width="5" height="16" fill="#5A6BAE"/><rect x="17.5" y="18" width="5" height="16" fill="#5A6BAE"/><rect x="26" y="18" width="5" height="16" fill="#5A6BAE"/><rect x="34.5" y="18" width="5" height="16" fill="#5A6BAE"/><rect x="6" y="35" width="36" height="4" rx="1" fill="#323C6B"/><circle cx="24" cy="11" r="2.4" fill="#E8B93D"/></svg>',
+    reports:'<svg viewBox="0 0 48 48"><path d="M11 5 h18 l8 8 v30 h-26 Z" fill="#FBF8F1"/><path d="M29 5 v8 h8 Z" fill="#C9BEDD"/><rect x="16" y="26" width="4" height="9" fill="#3E8E5A"/><rect x="22" y="21" width="4" height="14" fill="#E8B93D"/><rect x="28" y="17" width="4" height="18" fill="#7A4F86"/></svg>',
+    messages:'<svg viewBox="0 0 48 48"><path d="M6 10 h36 a3 3 0 0 1 3 3 v16 a3 3 0 0 1 -3 3 h-20 l-9 8 v-8 h-7 a3 3 0 0 1 -3 -3 v-16 a3 3 0 0 1 3 -3 Z" fill="#2E7DAF"/><circle cx="16" cy="21" r="2.2" fill="#fff"/><circle cx="24" cy="21" r="2.2" fill="#fff"/><circle cx="32" cy="21" r="2.2" fill="#fff"/></svg>',
+    signoffs:'<svg viewBox="0 0 48 48"><path d="M10 38 Q18 30 30 12 L36 18 Q20 32 10 38 Z" fill="#C97B2E"/><path d="M30 12 L34 8 L40 14 L36 18 Z" fill="#E8B93D"/><path d="M8 40 l4 -8 l4 4 Z" fill="#8A5218"/><circle cx="37" cy="34" r="7" fill="#D6273C"/><path d="M34 34 l2 2.4 l4.5 -5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    directory:'<svg viewBox="0 0 48 48"><rect x="6" y="10" width="36" height="28" rx="4" fill="#9C4F9E"/><circle cx="16" cy="21" r="5" fill="#EFD9AE"/><path d="M8 33 q0 -8 8 -8 q8 0 8 8 Z" fill="#EFD9AE"/><rect x="27" y="17" width="11" height="2.6" rx="1.3" fill="#D9AEDA"/><rect x="27" y="23" width="11" height="2.6" rx="1.3" fill="#D9AEDA"/><rect x="27" y="29" width="7" height="2.6" rx="1.3" fill="#D9AEDA"/></svg>',
+    about:'<svg viewBox="0 0 48 48"><circle cx="37" cy="10" r="4" fill="#E8B93D"/><path d="M6 40 V22 L24 10 L42 22 V40 Z" fill="#8B4A34"/><path d="M6 22 L24 10 L42 22" stroke="#6B3624" stroke-width="2.4" fill="none" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#5C3420"/><rect x="11" y="26" width="6" height="6" fill="#D9C6A3"/><rect x="31" y="26" width="6" height="6" fill="#D9C6A3"/></svg>',
+    settings:'<svg viewBox="0 0 48 48"><path d="M24 6 l3 5 6 -2 1 6 6 1 -2 6 5 3 -5 3 2 6 -6 1 -1 6 -6 -2 -3 5 -3 -5 -6 2 -1 -6 -6 -1 2 -6 -5 -3 5 -3 -2 -6 6 -1 1 -6 6 2 Z" fill="#5B6B78" opacity=".92"/><circle cx="24" cy="24" r="8" fill="#EFF3F5"/><circle cx="24" cy="24" r="4.4" fill="#5B6B78"/></svg>',
+    team:'<svg viewBox="0 0 48 48"><circle cx="24" cy="10" r="5.5" fill="#5B4B96"/><path d="M15 24 q0 -9 9 -9 q9 0 9 9 Z" fill="#5B4B96"/><circle cx="10" cy="28" r="4.4" fill="#8D7BC4"/><path d="M3 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="38" cy="28" r="4.4" fill="#8D7BC4"/><path d="M31 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="24" cy="26" r="5.6" fill="#402F72"/><path d="M15 40 q0 -9.4 9 -9.4 q9 0 9 9.4 Z" fill="#402F72"/></svg>',
+    overview:'<svg viewBox="0 0 48 48"><circle cx="37" cy="9" r="4.4" fill="#E8B93D"/><path d="M6 40 V24 L16 16 L26 24 V40 Z" fill="#B9740E"/><path d="M6 24 L16 16 L26 24" stroke="#8F590A" stroke-width="2.2" fill="none" stroke-linejoin="round"/><rect x="12" y="30" width="6" height="10" fill="#F0DBA0"/><rect x="30" y="20" width="4" height="7" fill="#3E8E5A"/><rect x="36" y="16" width="4" height="11" fill="#E8B93D"/><rect x="42" y="23" width="4" height="4" fill="#7A4F86"/></svg>',
+    flockNav:'<svg viewBox="0 0 48 48"><path d="M18 38 Q16 24 28 21 Q40 18 43 27 Q45 32 39 35 L39 40 Z" fill="#A6431F"/><ellipse cx="27" cy="32" rx="6" ry="7" fill="#EDD9B8"/><path d="M39 22 Q44 19 47 22 Q45 25 41 26 Z" fill="#1B1B1B"/><circle cx="29" cy="17" r="5.6" fill="#B5502A"/><path d="M28 12 q1 -3 2 0 q1 -2.6 2 .4" fill="#D6273C"/><path d="M33 16 L39 17.3 L33 19.6 Z" fill="#F2A93D"/><circle cx="31" cy="16.2" r="1" fill="#241a12"/><path d="M20 40 l-1 3 M20 40 l2.4 2.6 M28 41 l-1 3 M28 41 l2.4 2.6" stroke="#E8973D" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10" cy="35" rx="7.5" ry="6.2" fill="#F5C94D"/><ellipse cx="6" cy="35.5" rx="2.6" ry="3.6" fill="#E8B93D"/><circle cx="12" cy="26" r="5.4" fill="#FBE07A"/><path d="M17 25 L22 26.6 L17 28.6 Z" fill="#F2994A"/><circle cx="14.3" cy="25" r="0.9" fill="#3A2705"/><path d="M4 41 l0 2 M10 41.5 l0 2" stroke="#E8973D" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+
   /* ============================= UTILS ============================= */
   function uid(p){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -1498,22 +1564,22 @@ var qrcode = (function(){
     // render() would bounce them out of anyway if they got there some
     // other way (a stale link, browser back button, etc.).
     var items = [
-      ['overview','Overview',ICONS.overview],
-      ['flock','Flock',ICONS.flock],
-      ['eggs','Eggs',ICONS.eggs],
-      ['feed','Feed',ICONS.feed],
-      ['health','Health',ICONS.health],
-      ['expenses','Expenses',ICONS.expenses],
-      ['income','Income',ICONS.income],
-      ['customers','Customers',ICONS.customers],
-      ['finance','Finance',ICONS.finance],
-      ['reports','Reports',ICONS.reports],
-      ['messages','Messages',ICONS.bell],
-      ['signoffs','Pending signatures',ICONS.shield],
-      ['directory','Team Directory',ICONS.directory],
-      ['about','About',ICONS.info],
-      ['settings','Settings',ICONS.settings],
-      ['team','Team',ICONS.team]
+      ['overview','Overview',PICS.overview],
+      ['flock','Flock',PICS.flockNav],
+      ['eggs','Eggs',PICS.eggs],
+      ['feed','Feed',PICS.feed],
+      ['health','Health',PICS.health],
+      ['expenses','Expenses',PICS.expenses],
+      ['income','Income',PICS.income],
+      ['customers','Customers',PICS.customers],
+      ['finance','Finance',PICS.finance],
+      ['reports','Reports',PICS.reports],
+      ['messages','Messages',PICS.messages],
+      ['signoffs','Pending signatures',PICS.signoffs],
+      ['directory','Team Directory',PICS.directory],
+      ['about','About',PICS.about],
+      ['settings','Settings',PICS.settings],
+      ['team','Team',PICS.team]
     ].filter(function(it){ return sectionAllowed(it[0]); });
     var unread = unreadMessageCount();
     var pendingCount = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; }).length;
@@ -1529,7 +1595,7 @@ var qrcode = (function(){
           // data-nav-section carries this item's own bold color (see the
           // .nav-item[data-nav-section] CSS) — independent of which page is
           // currently open, so the whole rail reads as a little color key.
-          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-nav-section="'+it[0]+'" data-action="nav:'+it[0]+'"><span class="nav-ico">'+it[2]+'</span>'+badge+'<span>'+it[1]+'</span></button></li>';
+          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-nav-section="'+it[0]+'" data-action="nav:'+it[0]+'"><span class="nav-ico">'+it[2]+'</span>'+badge+'<span class="nav-label">'+it[1]+'</span></button></li>';
         }).join('')+
       '</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
@@ -1546,8 +1612,8 @@ var qrcode = (function(){
     }
     return '';
   }
-  function topbarHTML(title,sub,right){
-    return '<div><h2>'+title+'</h2><div class="topbar-sub">'+(sub||'')+'</div></div><div class="topbar-actions">'+(right||'')+'</div>';
+  function topbarHTML(title,sub,right,icon){
+    return '<div style="display:flex; align-items:center; gap:14px">'+(icon?'<div class="pic-badge lg">'+icon+'</div>':'')+'<div><h2>'+title+'</h2><div class="topbar-sub">'+(sub||'')+'</div></div></div><div class="topbar-actions">'+(right||'')+'</div>';
   }
   function periodSegment(sectionKey){
     var cur = ui.periods[sectionKey];
@@ -1697,20 +1763,28 @@ var qrcode = (function(){
   }
 
   /* ============================= FLOCK ============================= */
-  function genderTile(label,count){
-    return '<div class="stat-tile" style="padding:14px 16px"><div class="stat-label">'+label+'</div><div class="stat-value num" style="font-size:22px">'+count+'</div></div>';
+  function genderTile(label,count,icon){
+    return '<div class="stat-tile'+(icon?' with-pic':'')+'" style="padding:14px 16px">'+
+      (icon?'<div class="pic-badge sm">'+icon+'</div>':'')+
+      '<div class="stat-tile-text"><div class="stat-label">'+label+'</div><div class="stat-value num" style="font-size:22px">'+count+'</div></div>'+
+    '</div>';
   }
   function flockPanel(){
     var inv = buildInventory();
     var totalNow = birdsAsOf(todayISO());
-    var groupDefs = [['chick','Chicks','0–8 weeks'],['grower','Growers','9–20 weeks'],['layer','Layers','21+ weeks']];
+    // Each age group gets its own illustrated badge in the card title — and
+    // the Layers card's Hens/Roosters tiles additionally get the Hen/Cock
+    // artwork, since that's where sexed adult birds actually live.
+    var groupDefs = [['chick','Chicks','0–8 weeks',PICS.chick],['grower','Growers','9–20 weeks',PICS.grower],['layer','Layers','21+ weeks',null]];
     var groupsHTML = groupDefs.map(function(gd){
-      var key=gd[0], label=gd[1], sub=gd[2];
+      var key=gd[0], label=gd[1], sub=gd[2], icon=gd[3];
       var g = inv[key]; var subtotal = g.female+g.male+g.unsexed;
-      return '<div class="card"><div class="card-title"><h3>'+label+'</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+sub+' · '+subtotal+' birds</span>'+
+      var henIcon = key==='layer' ? PICS.hen : null;
+      var cockIcon = key==='layer' ? PICS.cock : null;
+      return '<div class="card"><div class="card-title"><div class="card-title-lead">'+(icon?'<div class="pic-badge">'+icon+'</div>':'')+'<h3>'+label+'</h3></div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+sub+' · '+subtotal+' birds</span>'+
         '<button class="icon-btn" data-action="open-add-flock:'+key+'" title="Add '+label.toLowerCase()+'" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
         '<div class="grid" style="grid-template-columns:repeat(3,1fr)">'+
-          genderTile('Hens',g.female)+genderTile('Roosters',g.male)+genderTile('Unsexed',g.unsexed)+
+          genderTile('Hens',g.female,henIcon)+genderTile('Roosters',g.male,cockIcon)+genderTile('Unsexed',g.unsexed)+
         '</div></div>';
     }).join('');
 
@@ -1820,7 +1894,7 @@ var qrcode = (function(){
           '<button class="icon-btn" data-action="delete-brooding:'+b.id+'" title="Delete" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
         '</div></td></tr>';
     }).join('');
-    return '<div class="card"><div class="card-title"><h3>Brooding</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+list.length+' recorded</span>'+
+    return '<div class="card"><div class="card-title"><div class="card-title-lead"><div class="pic-badge">'+PICS.brooding+'</div><h3>Brooding</h3></div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+list.length+' recorded</span>'+
         '<button class="icon-btn" data-action="open-add-brooding" title="Start brooding" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
       '<p class="hint" style="margin-top:-6px">When a hen starts sitting on eggs, log how many she\'s given here — the app works out the expected hatch date on its own (21 days). Once it\'s time, come back and record how many didn\'t hatch; the rest are added to the flock as new chicks automatically.</p>'+
       '<div class="table-wrap">'+
@@ -4822,22 +4896,22 @@ var qrcode = (function(){
   }
 
   var SECTIONS = {
-    overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML()); }, panel:overviewPanel },
-    flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds')); }, panel:flockPanel },
-    eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs')); }, panel:eggsPanel },
-    feed:{ topbar:function(){ return topbarHTML('Feed','Consumption, cost, and feed-per-egg', addBtn('open-add-feed','Log feed')); }, panel:feedPanel },
-    health:{ topbar:function(){ return topbarHTML('Health','Vaccinations, treatments &amp; reminders', addBtn('open-add-health','Add record')); }, panel:healthPanel },
-    reports:{ topbar:function(){ return topbarHTML('Reports','Print or export a period summary', ''); }, panel:reportsPanel },
-    expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense')); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
-    income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income')); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
-    customers:{ topbar:function(){ return topbarHTML('Customers','Buyers, repeat and one-off', addBtn('open-add-customer','Add customer')); }, panel:customersPanel },
-    finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions()); }, panel:financePanel },
-    about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : ''); }, panel:aboutPanel },
-    settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
-    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
-    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel },
-    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', ''); }, panel:signoffsPanel },
-    directory:{ topbar:function(){ return topbarHTML('Team Directory','Everyone on the farm, in one place', ''); }, panel:directoryPanel }
+    overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML(), PICS.overview); }, panel:overviewPanel },
+    flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), PICS.flockNav); }, panel:flockPanel },
+    eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs'), PICS.eggs); }, panel:eggsPanel },
+    feed:{ topbar:function(){ return topbarHTML('Feed','Consumption, cost, and feed-per-egg', addBtn('open-add-feed','Log feed'), PICS.feed); }, panel:feedPanel },
+    health:{ topbar:function(){ return topbarHTML('Health','Vaccinations, treatments &amp; reminders', addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
+    reports:{ topbar:function(){ return topbarHTML('Reports','Print or export a period summary', '', PICS.reports); }, panel:reportsPanel },
+    expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense'), PICS.expenses); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
+    income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income'), PICS.income); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
+    customers:{ topbar:function(){ return topbarHTML('Customers','Buyers, repeat and one-off', addBtn('open-add-customer','Add customer'), PICS.customers); }, panel:customersPanel },
+    finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions(), PICS.finance); }, panel:financePanel },
+    about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : '', PICS.about); }, panel:aboutPanel },
+    settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge(), PICS.settings); }, panel:settingsPanel },
+    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', '', PICS.team); }, panel:teamPanel },
+    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', '', PICS.messages); }, panel:messagesPanel },
+    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', '', PICS.signoffs); }, panel:signoffsPanel },
+    directory:{ topbar:function(){ return topbarHTML('Team Directory','Everyone on the farm, in one place', '', PICS.directory); }, panel:directoryPanel }
   };
   // Plain display names for each section key — used by voice control's
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds

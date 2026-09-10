@@ -1,6 +1,48 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Soft animal alert sounds, prettier notifications, a
+> **Update (latest):** Fixed the phone bug where the section icons showed
+> nothing, replaced every icon in the app with colorful illustrated artwork,
+> and gave every page a soft background tint of its own color.
+>
+> **Phone nav icons were invisible — fixed, a real bug.** On a phone (icon-only
+> sidebar), a leftover style rule meant to hide the text label next to each
+> icon was accidentally hiding the icon itself too — and the little unread
+> message/signature-count badges along with it. Laptops were never affected;
+> this only ever hit phones. Reload the app after this update and the icons
+> (and badges) will be back.
+>
+> **All new colorful icons, everywhere.** Every single icon in the app — the
+> sidebar, every page's header, Flock's Chicks/Growers/Layers cards, Brooding,
+> Eggs — has been redrawn as hand-illustrated, full-color artwork instead of
+> the old thin single-color line icons. Flock's Chicks card gets a yellow
+> chick, Growers gets a speckled young bird, and inside Layers the Hens tile
+> gets a reddish-brown hen and the Roosters tile gets a bold cock with a
+> dramatic tail. Brooding gets a hen sitting on a nest of eggs. Eggs gets one
+> brown speckled egg and one white egg side by side. Every other section
+> (Feed, Health, Expenses, Income, Customers, Finance, Reports, Messages,
+> Pending signatures, Team Directory, About, Settings, Team, Overview) gets
+> its own distinct colorful illustration too. (There's no real-photo
+> generation available in this tool, so these are custom-drawn illustrations
+> rather than actual photographs — happy to revisit if that ever changes.)
+>
+> **A soft background tint on every page.** Building on last update's
+> per-section colors, each page now fades from a gentle tint of its own color
+> at the top into the normal background further down — subtle, not
+> distracting, and it doesn't touch any card's readability.
+>
+> **This is front-end only** — no Cloud Functions, Firestore rules, or
+> Storage changes, so there's just the one deploy step:
+> ```
+> git add .
+> git commit -m "Fix mobile nav icons; colorful illustrated icon set everywhere; per-section background tint"
+> git push
+> ```
+> After deploying, please try: open the app on your phone and confirm the
+> sidebar icons (and any unread-count badges) are visible again; and take a
+> look through a few sections — Flock, Eggs, Brooding especially — to see the
+> new artwork and colors.
+
+> **Earlier update:** Soft animal alert sounds, prettier notifications, a
 > bold color for every section, and profile photos + About for the whole
 > team.
 >
