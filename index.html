@@ -2871,7 +2871,7 @@ var qrcode = (function(){
         toast((err && err.message) || 'Could not finish this — please try again.');
         showPendingSignoffModal(id);
       });
-    });
+    }, {confirmLabel:'Skip and send', danger:false});
   }
   // Reopens a request from its Messages notification — whichever role is
   // looking at it: the administrator gets the review-and-sign modal if it's
@@ -4973,10 +4973,14 @@ var qrcode = (function(){
   function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
   function confirmModal(message, onYes, opts){
     opts = opts || {};
+    // Defaults to a red "Delete" button since most callers are destructive
+    // deletes — pass opts.danger:false (and usually a opts.confirmLabel) for
+    // a non-destructive confirmation like "skip and send anyway".
+    var confirmClass = opts.danger===false ? 'btn' : 'btn danger';
     openModal(
       '<div class="modal-head"><h3>'+(opts.title||'Are you sure?')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
       '<p style="font-size:14px; margin:0">'+esc(message)+'</p>'+
-      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="button" class="btn danger" id="confirm-yes-btn">'+(opts.confirmLabel||'Delete')+'</button></div>'
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="button" class="'+confirmClass+'" id="confirm-yes-btn">'+(opts.confirmLabel||'Delete')+'</button></div>'
     );
     var btn = document.getElementById('confirm-yes-btn');
     if(btn) btn.addEventListener('click', function(){ closeModal(); onYes(); });

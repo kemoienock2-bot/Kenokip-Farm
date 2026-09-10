@@ -1,6 +1,61 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed a real bug, plus a behavior change you asked
+> **Update (latest):** Fixed the real Feed bug you found, plus a small
+> "Skip" button mislabel — and a note on what's most likely going on with
+> the "malformed field" report.
+>
+> **Feed entries with a price disappearing after "Add" — fixed, a real
+> bug.** Whenever a Supervisor or Farmhand logged feed with a cost, the app
+> tries to also record that cost as a linked Expense in the same save — but
+> the database rules only let those two roles change Feed records, not
+> Expense records, so that combined save was being rejected outright. The
+> entry would flash on screen for a moment (from your own device showing it
+> before the save finished) and then vanish once the rejection came back.
+> Feed logged **without** a price never touched Expenses at all, which is
+> why that always worked. Fixed by allowing Supervisor and Farmhand to
+> also save that one linked Expense record — they still can't see or open
+> the Expenses page itself (that's unchanged, still Financial Staff only),
+> this only lets their own feed-cost entry actually save. **This needs a
+> Firestore rules redeploy** (see the command below).
+>
+> **The "Skip and send" button was labeled "Delete" — fixed, cosmetic.**
+> The confirmation popup for skipping ahead without your signature was
+> using the app's generic "are you sure" popup, which defaults to a red
+> "Delete" button since most of its uses are actual deletes. It's now
+> labeled "Skip and send" with normal (non-red) styling — no behavior
+> change, just the wrong word on the button.
+>
+> **About "malformed field" and "still can't skip without marking away":**
+> the confirmation text in the screenshot you sent ("They'll be notified
+> immediately that you signed alone") is the *old* wording from before the
+> previous update — the current code says "will still see it under Pending
+> signatures" instead. That strongly suggests the device you tested on was
+> still running the version from before last update, not the one after it.
+> Please double check on that device: that `firebase deploy --only
+> functions` finished with no errors last time, that `git push` completed,
+> that Netlify shows a fresh deploy for this push, and then fully close the
+> app and reopen it (or clear the site's cache/storage) so it can't be
+> serving an old cached copy — the app is set up to auto-update, but a tab
+> left open from before the update can sometimes hang onto the old code
+> until it's closed and reopened. If it still happens after all of that on
+> a confirmed-fresh copy, let me know exactly which device/role hit it and
+> I'll dig further — but this pattern (old dialog text but new-shaped bug)
+> points squarely at a stale copy rather than a new defect.
+>
+> This needs a Firestore rules redeploy plus the front-end files — no
+> Cloud Functions change this time.
+> ```
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Allow Supervisor/Farmhand to save the linked Expense entry when logging feed cost; fix Skip confirmation button label"
+> git push
+> ```
+> After deploying — and after confirming the device is on a fresh copy per
+> the note above — please retest: log a feed entry with a price as a
+> Supervisor or Farmhand and confirm it stays after Add, and retry "Skip
+> and send" on a non-withdrawal document without touching the away toggle.
+
+> **Earlier update:** Fixed a real bug, plus a behavior change you asked
 > for, plus a small display fix.
 >
 > **The bug — this is why signing was getting stuck on "Sending…" with an

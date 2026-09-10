@@ -12,10 +12,18 @@ service cloud.firestore {
     // correctly reports only the fields that actually changed VALUE,
     // regardless of how much of the document got resent in the same write.
     function jobAllowedFarmKeys(jobTitle) {
+      // Supervisor and Farmhand both include 'expenses' here even though
+      // neither can see the Expenses page (see sectionAllowed() in
+      // index.html — that stays Financial-Staff-only) — logging a feed
+      // entry with a cost auto-creates/updates a linked Expense record in
+      // the SAME write as feedLogs (see the 'feed' branch of handleForm in
+      // index.html), so without 'expenses' allowed here that combined
+      // write was rejected outright and the feed entry never actually
+      // saved whenever a price was included.
       return jobTitle == 'financial' ? ['expenses', 'incomes'] :
-             jobTitle == 'supervisor' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'healthRecords', 'customers'] :
+             jobTitle == 'supervisor' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'healthRecords', 'customers', 'expenses'] :
              jobTitle == 'vet' ? ['healthRecords'] :
-             jobTitle == 'farmhand' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs'] :
+             jobTitle == 'farmhand' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'expenses'] :
              [];
     }
     // 'settings' (currencies/categories/the About text) and 'version' (a
