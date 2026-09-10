@@ -22,6 +22,10 @@ const { sendUrgentPush } = require('./push');
 
 const JOB_TITLES = ['supervisor', 'vet', 'financial', 'farmhand'];
 const JOB_TITLE_LABELS = { supervisor: 'Supervisor', vet: 'Vet / Doctor', financial: 'Financial Staff', farmhand: 'Farmhand' };
+// Purely cosmetic — picks which default illustrated avatar shows before
+// someone uploads a real photo (see avatarHTML in index.html). Defaults to
+// 'unspecified' everywhere below so this is always optional, never required.
+const GENDERS = ['female', 'male', 'unspecified'];
 // Matches storageBucket in the app's Firebase config (index.html/sw.js) —
 // used only to check a submitted photoURL actually points at this app's own
 // bucket, under this exact caller's own folder (see updateOwnProfile).
@@ -139,6 +143,11 @@ module.exports = function (admin, db) {
     const password = String((request.data && request.data.password) || '');
     const jobTitle = String((request.data && request.data.jobTitle) || '');
     const name = String((request.data && request.data.name) || '').trim().slice(0, 60) || null;
+    // The administrator picks this when adding someone, since they're the
+    // one adding the team — but it's just a starting point, never locked:
+    // the person can change their own from Team Directory afterward too.
+    const genderInput = String((request.data && request.data.gender) || 'unspecified');
+    const gender = GENDERS.includes(genderInput) ? genderInput : 'unspecified';
     if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
     if (password.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
     if (!JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
@@ -157,6 +166,7 @@ module.exports = function (admin, db) {
       name,
       role: 'employee',
       jobTitle,
+      gender,
       disabled: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: auth.uid,
@@ -187,6 +197,10 @@ module.exports = function (admin, db) {
     if (typeof d.about === 'string') {
       patch.about = d.about.trim().slice(0, 500);
     }
+    if (typeof d.gender === 'string') {
+      if (!GENDERS.includes(d.gender)) throw new HttpsError('invalid-argument', 'Choose a valid option.');
+      patch.gender = d.gender;
+    }
     if (typeof d.photoURL === 'string') {
       const url = d.photoURL.trim();
       if (!url) {
@@ -205,7 +219,7 @@ module.exports = function (admin, db) {
     }
     if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
     await db.collection('users').doc(auth.uid).set(patch, { merge: true });
-    return { ok: true, name: patch.name, away: patch.away, about: patch.about };
+    return { ok: true, name: patch.name, away: patch.away, about: patch.about, gender: patch.gender };
   });
 
   // Administrator changes an employee's job title, or enables/disables
@@ -231,6 +245,14 @@ module.exports = function (admin, db) {
     // got around to setting their own from Settings.
     if (request.data && typeof request.data.name === 'string') {
       patch.name = request.data.name.trim().slice(0, 60) || null;
+    }
+    // Administrator sets (or fixes) a team member's gender too — used only
+    // to pick a default illustrated avatar before they upload a real photo
+    // (see avatarHTML in index.html). The person can still change their own
+    // from Team Directory afterward if they'd rather.
+    if (request.data && typeof request.data.gender === 'string') {
+      if (!GENDERS.includes(request.data.gender)) throw new HttpsError('invalid-argument', 'Choose a valid option.');
+      patch.gender = request.data.gender;
     }
     // Resets the account's password outright (there is no way to look up
     // the existing one — Firebase never stores or exposes plaintext
@@ -821,4 +843,5 @@ module.exports = function (admin, db) {
 };
 
 module.exports.JOB_TITLES = JOB_TITLES;
+module.exports.GENDERS = GENDERS;
 module.exports.JOB_TITLE_LABELS = JOB_TITLE_LABELS;

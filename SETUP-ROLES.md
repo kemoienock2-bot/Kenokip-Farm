@@ -1,6 +1,51 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed a real bug where a Supervisor or Farmhand
+> **Update (latest):** Every team member now gets a starter "About" they can
+> just edit instead of a blank box, plus a Gender field (Female/Male/
+> Unspecified) that picks their default profile icon before they upload a
+> real photo.
+>
+> **Every About now starts pre-filled with the obvious version.** Team
+> Directory used to show "Hasn't added an About yet." for anyone who hadn't
+> written their own — now it shows a sensible one-line description of what
+> that role obviously does (e.g. Supervisor: "Oversees daily farm operations
+> — keeping the flock, feed, and records on track."), for every role
+> including yours. It's just a starting draft, not saved anywhere until
+> someone actually edits and saves it from their own "Your profile" card on
+> Team Directory — at that point it becomes their real About and replaces
+> the draft everywhere, for them specifically. Nobody but the person
+> themselves can ever set their own About — same as before.
+>
+> **New: Gender — Female / Male / Unspecified.** This is purely cosmetic: it
+> picks which default illustrated profile icon shows before someone uploads
+> a real photo (a small illustrated lady or man icon instead of plain
+> initials) — set it to "Unspecified" (the default) and nothing changes
+> from before. Unlike About, this one you (the administrator) DO set on
+> behalf of everyone, since you're the one adding the team:
+> - **Adding a new team member** (Team page → "Add team member") now has a
+>   Gender field right there, alongside their role.
+> - **Your existing team** — since they're already added, open Team →
+>   "Edit name & gender" next to each person's row to set theirs now.
+> - **Each person can also change their own** anytime, from their own
+>   "Your profile" card on Team Directory — whatever you picked for them is
+>   just a starting point, not locked in.
+>
+> **This needs a Cloud Functions update, not just the front-end files** —
+> the Gender field is validated and saved server-side:
+> ```
+> firebase deploy --only functions
+> git add .
+> git commit -m "Starter About drafts per role; add Gender (Female/Male/Unspecified) with default profile icons"
+> git push
+> ```
+> After deploying, please try: open Team Directory and confirm everyone
+> without a custom About now shows a sensible one-liner instead of "Hasn't
+> added an About yet."; set a Gender for one or two existing team members
+> from Team → "Edit name & gender" and confirm their Directory card picture
+> changes to the matching icon; and check that a team member can still
+> change their own from their profile card.
+
+> **Earlier update:** Fixed a real bug where a Supervisor or Farmhand
 > recording an egg or bird sale never actually got it counted as income, and
 > the urgent-alert popup now also greets you with anything still waiting the
 > moment you open the app — not only while you happen to be in it already.

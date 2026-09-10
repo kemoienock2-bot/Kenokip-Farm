@@ -314,6 +314,11 @@
   .pic-badge.sm svg{ width:20px; height:20px; }
   .pic-badge.lg{ width:64px; height:64px; border-radius:16px; }
   .pic-badge.lg svg{ width:48px; height:48px; }
+  /* Default gendered avatar placeholder (see avatarHTML/PICS.lady/PICS.man) —
+     the svg has no fixed size of its own, so it fills whatever box the
+     avatar's own size (56px, 84px, ...) asked for. */
+  .avatar-pic{ display:inline-flex; flex:none; }
+  .avatar-pic svg{ width:100%; height:100%; display:block; }
 
   .stat-tile{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px 18px 16px; display:flex; flex-direction:column; gap:6px; }
   .stat-tile.with-pic{ flex-direction:row; align-items:center; gap:12px; }
@@ -1201,7 +1206,14 @@ var qrcode = (function(){
     settings:'<svg viewBox="0 0 48 48"><path d="M24 6 l3 5 6 -2 1 6 6 1 -2 6 5 3 -5 3 2 6 -6 1 -1 6 -6 -2 -3 5 -3 -5 -6 2 -1 -6 -6 -1 2 -6 -5 -3 5 -3 -2 -6 6 -1 1 -6 6 2 Z" fill="#5B6B78" opacity=".92"/><circle cx="24" cy="24" r="8" fill="#EFF3F5"/><circle cx="24" cy="24" r="4.4" fill="#5B6B78"/></svg>',
     team:'<svg viewBox="0 0 48 48"><circle cx="24" cy="10" r="5.5" fill="#5B4B96"/><path d="M15 24 q0 -9 9 -9 q9 0 9 9 Z" fill="#5B4B96"/><circle cx="10" cy="28" r="4.4" fill="#8D7BC4"/><path d="M3 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="38" cy="28" r="4.4" fill="#8D7BC4"/><path d="M31 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="24" cy="26" r="5.6" fill="#402F72"/><path d="M15 40 q0 -9.4 9 -9.4 q9 0 9 9.4 Z" fill="#402F72"/></svg>',
     overview:'<svg viewBox="0 0 48 48"><circle cx="37" cy="9" r="4.4" fill="#E8B93D"/><path d="M6 40 V24 L16 16 L26 24 V40 Z" fill="#B9740E"/><path d="M6 24 L16 16 L26 24" stroke="#8F590A" stroke-width="2.2" fill="none" stroke-linejoin="round"/><rect x="12" y="30" width="6" height="10" fill="#F0DBA0"/><rect x="30" y="20" width="4" height="7" fill="#3E8E5A"/><rect x="36" y="16" width="4" height="11" fill="#E8B93D"/><rect x="42" y="23" width="4" height="4" fill="#7A4F86"/></svg>',
-    flockNav:'<svg viewBox="0 0 48 48"><path d="M18 38 Q16 24 28 21 Q40 18 43 27 Q45 32 39 35 L39 40 Z" fill="#A6431F"/><ellipse cx="27" cy="32" rx="6" ry="7" fill="#EDD9B8"/><path d="M39 22 Q44 19 47 22 Q45 25 41 26 Z" fill="#1B1B1B"/><circle cx="29" cy="17" r="5.6" fill="#B5502A"/><path d="M28 12 q1 -3 2 0 q1 -2.6 2 .4" fill="#D6273C"/><path d="M33 16 L39 17.3 L33 19.6 Z" fill="#F2A93D"/><circle cx="31" cy="16.2" r="1" fill="#241a12"/><path d="M20 40 l-1 3 M20 40 l2.4 2.6 M28 41 l-1 3 M28 41 l2.4 2.6" stroke="#E8973D" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10" cy="35" rx="7.5" ry="6.2" fill="#F5C94D"/><ellipse cx="6" cy="35.5" rx="2.6" ry="3.6" fill="#E8B93D"/><circle cx="12" cy="26" r="5.4" fill="#FBE07A"/><path d="M17 25 L22 26.6 L17 28.6 Z" fill="#F2994A"/><circle cx="14.3" cy="25" r="0.9" fill="#3A2705"/><path d="M4 41 l0 2 M10 41.5 l0 2" stroke="#E8973D" stroke-width="1.6" stroke-linecap="round"/></svg>'
+    flockNav:'<svg viewBox="0 0 48 48"><path d="M18 38 Q16 24 28 21 Q40 18 43 27 Q45 32 39 35 L39 40 Z" fill="#A6431F"/><ellipse cx="27" cy="32" rx="6" ry="7" fill="#EDD9B8"/><path d="M39 22 Q44 19 47 22 Q45 25 41 26 Z" fill="#1B1B1B"/><circle cx="29" cy="17" r="5.6" fill="#B5502A"/><path d="M28 12 q1 -3 2 0 q1 -2.6 2 .4" fill="#D6273C"/><path d="M33 16 L39 17.3 L33 19.6 Z" fill="#F2A93D"/><circle cx="31" cy="16.2" r="1" fill="#241a12"/><path d="M20 40 l-1 3 M20 40 l2.4 2.6 M28 41 l-1 3 M28 41 l2.4 2.6" stroke="#E8973D" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10" cy="35" rx="7.5" ry="6.2" fill="#F5C94D"/><ellipse cx="6" cy="35.5" rx="2.6" ry="3.6" fill="#E8B93D"/><circle cx="12" cy="26" r="5.4" fill="#FBE07A"/><path d="M17 25 L22 26.6 L17 28.6 Z" fill="#F2994A"/><circle cx="14.3" cy="25" r="0.9" fill="#3A2705"/><path d="M4 41 l0 2 M10 41.5 l0 2" stroke="#E8973D" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    // Default profile-avatar placeholders, shown before someone uploads a
+    // real photo (see avatarHTML) — deliberately abstract color-block
+    // silhouettes rather than any skin-toned rendering, the same approach
+    // already used for the Customers icon above. The hair silhouette behind
+    // the head is what tells the two apart.
+    lady:'<svg viewBox="0 0 48 48"><path d="M24 6 C32.5 6 37 13.5 37 21 C37 26.5 34.5 30.5 31 32.5 L31 24 C31 16.5 28 11.5 24 11.5 C20 11.5 17 16.5 17 24 L17 32.5 C13.5 30.5 11 26.5 11 21 C11 13.5 15.5 6 24 6 Z" fill="#8A3F63"/><circle cx="24" cy="19" r="8" fill="#C4667A"/><path d="M8 41 Q8 24 24 24 Q40 24 40 41 Z" fill="#C4667A"/></svg>',
+    man:'<svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="9" fill="#4E6FA3"/><path d="M8 41 Q8 24 24 24 Q40 24 40 41 Z" fill="#4E6FA3"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -3554,6 +3566,23 @@ var qrcode = (function(){
     if(!u) return 'Guest';
     return u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
   }
+  // A sensible starting draft for "About" — the obvious, generic version of
+  // what each role does — so nobody's Team Directory card ever sits blank.
+  // Only ever used when the person hasn't written their own yet (see
+  // directoryPanel/profileEditFormHTML below); the moment they save
+  // anything of their own, that replaces this everywhere, including here.
+  var DEFAULT_ABOUT_BY_ROLE = {
+    administrator: 'Runs Kenokip Farm day to day — the final word on the flock, the money, and the team.',
+    supervisor: 'Oversees daily farm operations — keeping the flock, feed, and records on track.',
+    vet: 'Looks after the health of the flock — vaccinations, treatments, and checkups.',
+    financial: "Manages the farm's money — recording expenses, income, and receipts.",
+    farmhand: 'Handles the day-to-day farm work — feeding, egg collection, and general upkeep.'
+  };
+  function defaultAboutForRole(u){
+    if(!u) return '';
+    var key = u.role==='administrator' ? 'administrator' : u.jobTitle;
+    return DEFAULT_ABOUT_BY_ROLE[key] || 'Part of the Kenokip Farm team.';
+  }
   function isAdmin(){ return !!currentUser && currentUser.role==='administrator'; }
   function isFinancialStaffUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='financial'; }
   function isSupervisorUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='supervisor'; }
@@ -4018,6 +4047,11 @@ var qrcode = (function(){
         '<option value="financial">Financial Staff</option>'+
         '<option value="farmhand">Farmhand</option>'+
       '</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Gender</label><select class="field" name="gender">'+
+        '<option value="unspecified" selected>Unspecified</option>'+
+        '<option value="female">Female</option>'+
+        '<option value="male">Male</option>'+
+      '</select><span class="hint">Just picks their default profile icon before they upload a real photo — they can change this themselves later too.</span></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create account</button></div>'+
     '</form>';
   }
@@ -4030,12 +4064,17 @@ var qrcode = (function(){
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
-  function editStaffNameFormHtml(uid, currentName){
-    return '<div class="modal-head"><h3>Edit name</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    '<p class="hint">For team members added before names existed, or if theirs still needs fixing.</p>'+
+  function editStaffNameFormHtml(uid, currentName, currentGender){
+    return '<div class="modal-head"><h3>Edit name &amp; gender</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">For team members added before these existed, or if theirs still needs fixing — gender only picks their default profile icon before a real photo, and they can change it themselves too.</p>'+
     '<form data-form="edit-staff-name">'+
       '<input type="hidden" name="uid" value="'+esc(uid)+'">'+
       '<div class="field-row"><label>Name</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentName||'')+'" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Gender</label><select class="field" name="gender">'+
+        '<option value="unspecified" '+((!currentGender||currentGender==='unspecified')?'selected':'')+'>Unspecified</option>'+
+        '<option value="female" '+(currentGender==='female'?'selected':'')+'>Female</option>'+
+        '<option value="male" '+(currentGender==='male'?'selected':'')+'>Male</option>'+
+      '</select></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
@@ -4105,7 +4144,7 @@ var qrcode = (function(){
         '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
         '<td><div class="row-actions">'+
           (u.role==='administrator' || isSelf ? '<span class="hint">—</span>' :
-            '<button class="btn sm" data-action="open-edit-name:'+u.uid+'">Edit name</button>'+
+            '<button class="btn sm" data-action="open-edit-name:'+u.uid+'">Edit name &amp; gender</button>'+
             '<button class="btn sm" data-action="open-reset-password:'+u.uid+'">Reset password</button>'+
             '<button class="btn sm" data-action="toggle-staff:'+u.uid+'">'+(u.disabled?'Enable':'Disable')+'</button>'+
             '<button class="icon-btn" data-action="delete-staff:'+u.uid+'">'+ICONS.trash+'</button>')+
@@ -4179,6 +4218,16 @@ var qrcode = (function(){
     if(u.photoURL){
       return '<img src="'+esc(u.photoURL)+'" alt="" style="width:'+size+'px; height:'+size+'px; border-radius:50%; object-fit:cover; flex:none; background:var(--surface-2)">';
     }
+    // Before a real photo exists, someone marked Female/Male gets a small
+    // illustrated placeholder (see PICS.lady/PICS.man) instead of plain
+    // initials — purely a nicer-looking stand-in, never shown once they
+    // upload a real photo. Left unset ("Unspecified"/not chosen yet) keeps
+    // the original initials-on-a-tinted-circle, which already tells people
+    // apart just fine without guessing at anyone's gender.
+    if(u.gender==='female' || u.gender==='male'){
+      var picIcon = u.gender==='female' ? PICS.lady : PICS.man;
+      return '<div style="width:'+size+'px; height:'+size+'px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; flex:none; overflow:hidden"><span class="avatar-pic" style="width:'+Math.round(size*0.72)+'px; height:'+Math.round(size*0.72)+'px">'+picIcon+'</span></div>';
+    }
     return '<div style="width:'+size+'px; height:'+size+'px; border-radius:50%; background:var(--accent-tint); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:'+Math.round(size*0.38)+'px; flex:none">'+esc(initials)+'</div>';
   }
   // The "edit yourself" card shown at the top of the Team Directory — photo
@@ -4197,9 +4246,16 @@ var qrcode = (function(){
         '</div>'+
         '<div class="hint" style="margin-top:6px; max-width:120px">Tap the camera to change your photo</div>'+
       '</div>'+
-      '<form data-form="update-own-about" style="flex:1; min-width:220px">'+
-        '<div class="field-row"><label>About you</label><textarea class="field" name="about" rows="3" maxlength="500" placeholder="Your role, what you look after on the farm, anything the team should know">'+esc(mine.about||'')+'</textarea></div>'+
-        '<button class="btn primary" type="submit" style="margin-top:8px">Save About</button>'+
+      '<form data-form="update-own-profile" style="flex:1; min-width:220px">'+
+        '<div class="field-row"><label>Gender</label><select class="field" name="gender">'+
+          '<option value="unspecified" '+((!mine.gender||mine.gender==='unspecified')?'selected':'')+'>Unspecified</option>'+
+          '<option value="female" '+(mine.gender==='female'?'selected':'')+'>Female</option>'+
+          '<option value="male" '+(mine.gender==='male'?'selected':'')+'>Male</option>'+
+        '</select><span class="hint">Just picks your default profile icon before you upload a real photo.</span></div>'+
+        '<div class="field-row" style="margin-top:12px"><label>About you</label><textarea class="field" name="about" rows="3" maxlength="500" placeholder="Your role, what you look after on the farm, anything the team should know">'+esc(mine.about||defaultAboutForRole(mine))+'</textarea>'+
+          (mine.about ? '' : '<span class="hint">We started you off with the obvious version — edit it to make it yours.</span>')+
+        '</div>'+
+        '<button class="btn primary" type="submit" style="margin-top:8px">Save</button>'+
       '</form>'+
     '</div>';
   }
@@ -4265,7 +4321,7 @@ var qrcode = (function(){
             '<span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(roleTxt)+'</span>'+
             (isSelf ? '<span class="hint">(you)</span>' : '')+
           '</div>'+
-          (u.about ? '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(u.about)+'</p>' : '<p class="hint" style="margin:6px 0 0; font-style:italic">Hasn\'t added an About yet.</p>')+
+          (u.about ? '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(u.about)+'</p>' : '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(defaultAboutForRole(u))+'</p>')+
         '</div>'+
       '</div>';
     }).join('');
@@ -5811,7 +5867,7 @@ var qrcode = (function(){
         if(!isAdmin()) break;
         var editNameUser = teamUsers.find(function(x){ return x.uid===a1; });
         if(!editNameUser) break;
-        openModal(editStaffNameFormHtml(a1, editNameUser.name));
+        openModal(editStaffNameFormHtml(a1, editNameUser.name, editNameUser.gender));
         break;
       }
       case 'enable-notifications':
@@ -6271,8 +6327,8 @@ var qrcode = (function(){
     }
     if(name==='add-staff'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
-      var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle');
-      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle}).then(function(){
+      var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle'), sGender = val('gender')||'unspecified';
+      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle, gender:sGender}).then(function(){
         closeModal(); toast('Account created — share the email and password with them.');
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
       return;
@@ -6286,11 +6342,12 @@ var qrcode = (function(){
       }).catch(function(err){ toast((err&&err.message)||'Could not save your name.'); });
       return;
     }
-    if(name==='update-own-about'){
+    if(name==='update-own-profile'){
       if(!currentUser){ toast('Sign in first.'); return; }
       var ownAbout = (val('about')||'').trim();
-      firebase.functions().httpsCallable('updateOwnProfile')({about:ownAbout}).then(function(){
-        toast('About saved.');
+      var ownGender = val('gender')||'unspecified';
+      firebase.functions().httpsCallable('updateOwnProfile')({about:ownAbout, gender:ownGender}).then(function(){
+        toast('Saved.');
       }).catch(function(err){ toast((err&&err.message)||'Could not save this.'); });
       return;
     }
@@ -6310,11 +6367,11 @@ var qrcode = (function(){
     }
     if(name==='edit-staff-name'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
-      var enUid = val('uid'), enName = (val('name')||'').trim();
+      var enUid = val('uid'), enName = (val('name')||'').trim(), enGender = val('gender')||'unspecified';
       if(!enName){ toast('Enter a name.'); return; }
-      firebase.functions().httpsCallable('updateStaffAccount')({uid:enUid, name:enName}).then(function(){
-        closeModal(); toast('Name saved.');
-      }).catch(function(err){ toast((err&&err.message)||'Could not save that name.'); });
+      firebase.functions().httpsCallable('updateStaffAccount')({uid:enUid, name:enName, gender:enGender}).then(function(){
+        closeModal(); toast('Saved.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that.'); });
       return;
     }
     if(name==='change-password'){
