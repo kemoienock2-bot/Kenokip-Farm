@@ -2,7 +2,7 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v40';
+var CACHE_NAME = 'kenokip-farm-v41';
 var APP_SHELL = [
   './',
   './index.html',
@@ -19,7 +19,8 @@ var APP_SHELL = [
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js',
   'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js'
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js',
+  'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js'
 ];
 
 // Real push notifications (Firebase Cloud Messaging) — this is what lets a

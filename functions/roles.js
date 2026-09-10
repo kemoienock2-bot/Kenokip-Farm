@@ -22,6 +22,10 @@ const { sendUrgentPush } = require('./push');
 
 const JOB_TITLES = ['supervisor', 'vet', 'financial', 'farmhand'];
 const JOB_TITLE_LABELS = { supervisor: 'Supervisor', vet: 'Vet / Doctor', financial: 'Financial Staff', farmhand: 'Farmhand' };
+// Matches storageBucket in the app's Firebase config (index.html/sw.js) —
+// used only to check a submitted photoURL actually points at this app's own
+// bucket, under this exact caller's own folder (see updateOwnProfile).
+const STORAGE_BUCKET = 'kenokip-farm.firebasestorage.app';
 
 function genId(prefix) {
   return prefix + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-5);
@@ -180,9 +184,28 @@ module.exports = function (admin, db) {
     if (typeof d.away === 'boolean') {
       patch.away = d.away;
     }
+    if (typeof d.about === 'string') {
+      patch.about = d.about.trim().slice(0, 500);
+    }
+    if (typeof d.photoURL === 'string') {
+      const url = d.photoURL.trim();
+      if (!url) {
+        patch.photoURL = admin.firestore.FieldValue.delete();
+      } else {
+        // Only ever a download URL this same account just got back from
+        // Storage, for a file under that account's own folder — not an
+        // arbitrary link, since this renders as an <img src> everywhere
+        // (Team Directory, message sender rows, ...).
+        const expectedPrefix = 'https://firebasestorage.googleapis.com/v0/b/' + STORAGE_BUCKET + '/o/profilePhotos%2F' + auth.uid + '%2F';
+        if (url.length > 500 || !url.startsWith(expectedPrefix)) {
+          throw new HttpsError('invalid-argument', 'That photo link is not valid.');
+        }
+        patch.photoURL = url;
+      }
+    }
     if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
     await db.collection('users').doc(auth.uid).set(patch, { merge: true });
-    return { ok: true, name: patch.name, away: patch.away };
+    return { ok: true, name: patch.name, away: patch.away, about: patch.about };
   });
 
   // Administrator changes an employee's job title, or enables/disables
@@ -512,6 +535,7 @@ module.exports = function (admin, db) {
         toLabel: 'Administrator',
         body: createdByLabel + ' signed "' + opts.title + '" (' + opts.receiptNo + ') and is waiting for your signature.',
         urgency: 'urgent',
+        kind: 'signoff-request', // picks the soft "chick" alert sound client-side, see triggerUrgentAlert
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         readBy: [auth.uid],
         pendingSignoffId: entry.id,
@@ -616,7 +640,7 @@ module.exports = function (admin, db) {
         readBy: [auth.uid],
         pendingSignoffId: id,
       });
-      await sendUrgentPush(admin, db, [data.adminUid], 'Signed without your approval', data.createdByLabel + ' skipped waiting for your signature — you were marked away.', { urgency: 'urgent', pendingSignoffId: id });
+      await sendUrgentPush(admin, db, [data.adminUid], 'Signed without your approval', data.createdByLabel + ' sent "' + data.opts.title + '" on without waiting for your signature.', { urgency: 'urgent', pendingSignoffId: id });
     } catch (e) {
       logger.error('skipReceiptSignoff notify failed', e);
     }
@@ -728,6 +752,48 @@ module.exports = function (admin, db) {
     return { ok: true };
   });
 
+  // Best-effort FYI to the administrator whenever a team member logs or
+  // loses eggs — nothing here needs the administrator to do anything, so
+  // it's deliberately its own "kind" (not the generic Urgent message path):
+  // the client shows it as a soft, self-dismissing toast with the hen sound
+  // instead of the full "needs a decision" popup. The administrator's own
+  // egg entries don't call this at all (see index.html) — there's no point
+  // notifying yourself of your own action.
+  const notifyEggActivity = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const d = request.data || {};
+    const action = d.action === 'lost' ? 'lost' : 'logged';
+    const detail = String(d.detail || '').trim().slice(0, 200);
+    if (!detail) throw new HttpsError('invalid-argument', 'Missing detail.');
+
+    const adminDoc = await findAdministratorDoc();
+    if (!adminDoc) return { ok: true }; // nobody to tell yet — not an error
+
+    const fromSnap = await db.collection('users').doc(auth.uid).get();
+    const fromData = fromSnap.exists ? fromSnap.data() : {};
+    const fromLabel = roleLabelFor(auth.token.role, auth.token.jobTitle) + '(' + (fromData.name || (auth.token.email ? auth.token.email.split('@')[0] : 'Unnamed')) + ')';
+    const verb = action === 'lost' ? 'Recorded a loss:' : 'Logged eggs:';
+
+    try {
+      await db.collection('messages').add({
+        fromUid: auth.uid,
+        fromLabel,
+        toUid: adminDoc.uid,
+        toLabel: 'Administrator',
+        body: verb + ' ' + detail,
+        urgency: 'normal',
+        kind: 'egg-activity', // picks the soft "hen" toast client-side, see triggerEggToast
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: [auth.uid],
+      });
+    } catch (e) {
+      logger.error('notifyEggActivity failed', e);
+      // Best-effort — the egg entry itself already saved fine either way,
+      // so a failure here must never surface as an error to the caller.
+    }
+    return { ok: true };
+  });
+
   // Marks one message as read by the caller — only the actual recipient (or
   // a broadcast's recipients) can mark it, and the administrator, who can
   // see everything.
@@ -750,7 +816,7 @@ module.exports = function (admin, db) {
     logAccess,
     proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
     requestReceiptSignoff, approveReceiptSignoff, skipReceiptSignoff,
-    sendMessage, markMessageRead, registerPushToken,
+    sendMessage, markMessageRead, registerPushToken, notifyEggActivity,
   };
 };
 

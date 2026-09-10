@@ -83,6 +83,63 @@
     --focus:#E7A93D;
   }
 
+  /* Bold per-section color theme -- each page (and its sidebar icon)
+     gets its own accent instead of the single farmhouse amber
+     everywhere. Every component already draws from var(--accent) /
+     --accent-strong / --accent-tint / --accent-ink, so scoping fresh
+     values to .main[data-section] (set by render(), see JS) and to
+     each sidebar .nav-item[data-nav-section] recolors buttons, charts,
+     pills and banners on that page for free -- nothing else needed to
+     change. Overview keeps the original amber (the app's "home"
+     identity), so it has no override here. */
+.main[data-section="flock"], .nav-item[data-nav-section="flock"]{ --accent:hsl(24, 50%, 40%); --accent-strong:hsl(24, 55%, 32%); --accent-tint:hsl(24, 55%, 90%); --accent-ink:hsl(24, 60%, 20%); }
+.main[data-section="eggs"], .nav-item[data-nav-section="eggs"]{ --accent:hsl(44, 72%, 46%); --accent-strong:hsl(44, 77%, 38%); --accent-tint:hsl(44, 77%, 90%); --accent-ink:hsl(44, 82%, 20%); }
+.main[data-section="feed"], .nav-item[data-nav-section="feed"]{ --accent:hsl(98, 38%, 36%); --accent-strong:hsl(98, 43%, 28%); --accent-tint:hsl(98, 43%, 90%); --accent-ink:hsl(98, 48%, 20%); }
+.main[data-section="health"], .nav-item[data-nav-section="health"]{ --accent:hsl(172, 48%, 34%); --accent-strong:hsl(172, 53%, 26%); --accent-tint:hsl(172, 53%, 90%); --accent-ink:hsl(172, 58%, 20%); }
+.main[data-section="expenses"], .nav-item[data-nav-section="expenses"]{ --accent:hsl(12, 62%, 47%); --accent-strong:hsl(12, 67%, 39%); --accent-tint:hsl(12, 67%, 90%); --accent-ink:hsl(12, 72%, 20%); }
+.main[data-section="income"], .nav-item[data-nav-section="income"]{ --accent:hsl(145, 45%, 35%); --accent-strong:hsl(145, 50%, 27%); --accent-tint:hsl(145, 50%, 90%); --accent-ink:hsl(145, 55%, 20%); }
+.main[data-section="customers"], .nav-item[data-nav-section="customers"]{ --accent:hsl(322, 50%, 50%); --accent-strong:hsl(322, 55%, 42%); --accent-tint:hsl(322, 55%, 90%); --accent-ink:hsl(322, 60%, 20%); }
+.main[data-section="finance"], .nav-item[data-nav-section="finance"]{ --accent:hsl(222, 48%, 46%); --accent-strong:hsl(222, 53%, 38%); --accent-tint:hsl(222, 53%, 90%); --accent-ink:hsl(222, 58%, 20%); }
+.main[data-section="reports"], .nav-item[data-nav-section="reports"]{ --accent:hsl(268, 36%, 50%); --accent-strong:hsl(268, 41%, 42%); --accent-tint:hsl(268, 41%, 90%); --accent-ink:hsl(268, 46%, 20%); }
+.main[data-section="messages"], .nav-item[data-nav-section="messages"]{ --accent:hsl(200, 58%, 44%); --accent-strong:hsl(200, 63%, 36%); --accent-tint:hsl(200, 63%, 90%); --accent-ink:hsl(200, 68%, 20%); }
+.main[data-section="signoffs"], .nav-item[data-nav-section="signoffs"]{ --accent:hsl(350, 55%, 46%); --accent-strong:hsl(350, 60%, 38%); --accent-tint:hsl(350, 60%, 90%); --accent-ink:hsl(350, 65%, 20%); }
+.main[data-section="about"], .nav-item[data-nav-section="about"]{ --accent:hsl(340, 25%, 40%); --accent-strong:hsl(340, 30%, 32%); --accent-tint:hsl(340, 30%, 90%); --accent-ink:hsl(340, 35%, 20%); }
+.main[data-section="settings"], .nav-item[data-nav-section="settings"]{ --accent:hsl(210, 18%, 42%); --accent-strong:hsl(210, 23%, 34%); --accent-tint:hsl(210, 23%, 90%); --accent-ink:hsl(210, 28%, 20%); }
+.main[data-section="team"], .nav-item[data-nav-section="team"]{ --accent:hsl(250, 38%, 50%); --accent-strong:hsl(250, 43%, 42%); --accent-tint:hsl(250, 43%, 90%); --accent-ink:hsl(250, 48%, 20%); }
+.main[data-section="directory"], .nav-item[data-nav-section="directory"]{ --accent:hsl(285, 40%, 50%); --accent-strong:hsl(285, 45%, 42%); --accent-tint:hsl(285, 45%, 90%); --accent-ink:hsl(285, 50%, 20%); }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .main[data-section="flock"], :root:not([data-theme="light"]) .nav-item[data-nav-section="flock"]{ --accent:hsl(24, 53%, 62%); --accent-strong:hsl(24, 55%, 70%); --accent-tint:hsl(24, 40%, 18%); --accent-ink:hsl(24, 55%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="eggs"], :root:not([data-theme="light"]) .nav-item[data-nav-section="eggs"]{ --accent:hsl(44, 75%, 68%); --accent-strong:hsl(44, 77%, 76%); --accent-tint:hsl(44, 62%, 18%); --accent-ink:hsl(44, 77%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="feed"], :root:not([data-theme="light"]) .nav-item[data-nav-section="feed"]{ --accent:hsl(98, 41%, 58%); --accent-strong:hsl(98, 43%, 66%); --accent-tint:hsl(98, 28%, 18%); --accent-ink:hsl(98, 43%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="health"], :root:not([data-theme="light"]) .nav-item[data-nav-section="health"]{ --accent:hsl(172, 51%, 56%); --accent-strong:hsl(172, 53%, 64%); --accent-tint:hsl(172, 38%, 18%); --accent-ink:hsl(172, 53%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="expenses"], :root:not([data-theme="light"]) .nav-item[data-nav-section="expenses"]{ --accent:hsl(12, 65%, 69%); --accent-strong:hsl(12, 67%, 77%); --accent-tint:hsl(12, 52%, 18%); --accent-ink:hsl(12, 67%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="income"], :root:not([data-theme="light"]) .nav-item[data-nav-section="income"]{ --accent:hsl(145, 48%, 57%); --accent-strong:hsl(145, 50%, 65%); --accent-tint:hsl(145, 35%, 18%); --accent-ink:hsl(145, 50%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="customers"], :root:not([data-theme="light"]) .nav-item[data-nav-section="customers"]{ --accent:hsl(322, 53%, 72%); --accent-strong:hsl(322, 55%, 80%); --accent-tint:hsl(322, 40%, 18%); --accent-ink:hsl(322, 55%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="finance"], :root:not([data-theme="light"]) .nav-item[data-nav-section="finance"]{ --accent:hsl(222, 51%, 68%); --accent-strong:hsl(222, 53%, 76%); --accent-tint:hsl(222, 38%, 18%); --accent-ink:hsl(222, 53%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="reports"], :root:not([data-theme="light"]) .nav-item[data-nav-section="reports"]{ --accent:hsl(268, 39%, 72%); --accent-strong:hsl(268, 41%, 80%); --accent-tint:hsl(268, 26%, 18%); --accent-ink:hsl(268, 41%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="messages"], :root:not([data-theme="light"]) .nav-item[data-nav-section="messages"]{ --accent:hsl(200, 61%, 66%); --accent-strong:hsl(200, 63%, 74%); --accent-tint:hsl(200, 48%, 18%); --accent-ink:hsl(200, 63%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="signoffs"], :root:not([data-theme="light"]) .nav-item[data-nav-section="signoffs"]{ --accent:hsl(350, 58%, 68%); --accent-strong:hsl(350, 60%, 76%); --accent-tint:hsl(350, 45%, 18%); --accent-ink:hsl(350, 60%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="about"], :root:not([data-theme="light"]) .nav-item[data-nav-section="about"]{ --accent:hsl(340, 28%, 62%); --accent-strong:hsl(340, 30%, 70%); --accent-tint:hsl(340, 15%, 18%); --accent-ink:hsl(340, 30%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="settings"], :root:not([data-theme="light"]) .nav-item[data-nav-section="settings"]{ --accent:hsl(210, 21%, 64%); --accent-strong:hsl(210, 23%, 72%); --accent-tint:hsl(210, 8%, 18%); --accent-ink:hsl(210, 23%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="team"], :root:not([data-theme="light"]) .nav-item[data-nav-section="team"]{ --accent:hsl(250, 41%, 72%); --accent-strong:hsl(250, 43%, 80%); --accent-tint:hsl(250, 28%, 18%); --accent-ink:hsl(250, 43%, 88%); }
+    :root:not([data-theme="light"]) .main[data-section="directory"], :root:not([data-theme="light"]) .nav-item[data-nav-section="directory"]{ --accent:hsl(285, 43%, 72%); --accent-strong:hsl(285, 45%, 80%); --accent-tint:hsl(285, 30%, 18%); --accent-ink:hsl(285, 45%, 88%); }
+  }
+  :root[data-theme="dark"] .main[data-section="flock"], :root[data-theme="dark"] .nav-item[data-nav-section="flock"]{ --accent:hsl(24, 53%, 62%); --accent-strong:hsl(24, 55%, 70%); --accent-tint:hsl(24, 40%, 18%); --accent-ink:hsl(24, 55%, 88%); }
+  :root[data-theme="dark"] .main[data-section="eggs"], :root[data-theme="dark"] .nav-item[data-nav-section="eggs"]{ --accent:hsl(44, 75%, 68%); --accent-strong:hsl(44, 77%, 76%); --accent-tint:hsl(44, 62%, 18%); --accent-ink:hsl(44, 77%, 88%); }
+  :root[data-theme="dark"] .main[data-section="feed"], :root[data-theme="dark"] .nav-item[data-nav-section="feed"]{ --accent:hsl(98, 41%, 58%); --accent-strong:hsl(98, 43%, 66%); --accent-tint:hsl(98, 28%, 18%); --accent-ink:hsl(98, 43%, 88%); }
+  :root[data-theme="dark"] .main[data-section="health"], :root[data-theme="dark"] .nav-item[data-nav-section="health"]{ --accent:hsl(172, 51%, 56%); --accent-strong:hsl(172, 53%, 64%); --accent-tint:hsl(172, 38%, 18%); --accent-ink:hsl(172, 53%, 88%); }
+  :root[data-theme="dark"] .main[data-section="expenses"], :root[data-theme="dark"] .nav-item[data-nav-section="expenses"]{ --accent:hsl(12, 65%, 69%); --accent-strong:hsl(12, 67%, 77%); --accent-tint:hsl(12, 52%, 18%); --accent-ink:hsl(12, 67%, 88%); }
+  :root[data-theme="dark"] .main[data-section="income"], :root[data-theme="dark"] .nav-item[data-nav-section="income"]{ --accent:hsl(145, 48%, 57%); --accent-strong:hsl(145, 50%, 65%); --accent-tint:hsl(145, 35%, 18%); --accent-ink:hsl(145, 50%, 88%); }
+  :root[data-theme="dark"] .main[data-section="customers"], :root[data-theme="dark"] .nav-item[data-nav-section="customers"]{ --accent:hsl(322, 53%, 72%); --accent-strong:hsl(322, 55%, 80%); --accent-tint:hsl(322, 40%, 18%); --accent-ink:hsl(322, 55%, 88%); }
+  :root[data-theme="dark"] .main[data-section="finance"], :root[data-theme="dark"] .nav-item[data-nav-section="finance"]{ --accent:hsl(222, 51%, 68%); --accent-strong:hsl(222, 53%, 76%); --accent-tint:hsl(222, 38%, 18%); --accent-ink:hsl(222, 53%, 88%); }
+  :root[data-theme="dark"] .main[data-section="reports"], :root[data-theme="dark"] .nav-item[data-nav-section="reports"]{ --accent:hsl(268, 39%, 72%); --accent-strong:hsl(268, 41%, 80%); --accent-tint:hsl(268, 26%, 18%); --accent-ink:hsl(268, 41%, 88%); }
+  :root[data-theme="dark"] .main[data-section="messages"], :root[data-theme="dark"] .nav-item[data-nav-section="messages"]{ --accent:hsl(200, 61%, 66%); --accent-strong:hsl(200, 63%, 74%); --accent-tint:hsl(200, 48%, 18%); --accent-ink:hsl(200, 63%, 88%); }
+  :root[data-theme="dark"] .main[data-section="signoffs"], :root[data-theme="dark"] .nav-item[data-nav-section="signoffs"]{ --accent:hsl(350, 58%, 68%); --accent-strong:hsl(350, 60%, 76%); --accent-tint:hsl(350, 45%, 18%); --accent-ink:hsl(350, 60%, 88%); }
+  :root[data-theme="dark"] .main[data-section="about"], :root[data-theme="dark"] .nav-item[data-nav-section="about"]{ --accent:hsl(340, 28%, 62%); --accent-strong:hsl(340, 30%, 70%); --accent-tint:hsl(340, 15%, 18%); --accent-ink:hsl(340, 30%, 88%); }
+  :root[data-theme="dark"] .main[data-section="settings"], :root[data-theme="dark"] .nav-item[data-nav-section="settings"]{ --accent:hsl(210, 21%, 64%); --accent-strong:hsl(210, 23%, 72%); --accent-tint:hsl(210, 8%, 18%); --accent-ink:hsl(210, 23%, 88%); }
+  :root[data-theme="dark"] .main[data-section="team"], :root[data-theme="dark"] .nav-item[data-nav-section="team"]{ --accent:hsl(250, 41%, 72%); --accent-strong:hsl(250, 43%, 80%); --accent-tint:hsl(250, 28%, 18%); --accent-ink:hsl(250, 43%, 88%); }
+  :root[data-theme="dark"] .main[data-section="directory"], :root[data-theme="dark"] .nav-item[data-nav-section="directory"]{ --accent:hsl(285, 43%, 72%); --accent-strong:hsl(285, 45%, 80%); --accent-tint:hsl(285, 30%, 18%); --accent-ink:hsl(285, 45%, 88%); }
+
   *,*::before,*::after{ box-sizing:border-box; }
   html,body{ height:100%; }
   body{
@@ -126,11 +183,15 @@
   .brand-text span{ display:block; font-size:11px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
   .nav-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
   .nav-item{ position:relative; display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:var(--radius-sm); border:none; background:none; width:100%; text-align:left; color:var(--ink-2); font-weight:500; font-size:14px; }
-  .nav-badge{ position:absolute; top:3px; left:22px; background:var(--bad); color:#fff; font-size:10px; font-weight:700; line-height:1.4; padding:1px 5px; border-radius:999px; min-width:8px; text-align:center; }
-  .nav-item svg{ width:18px; height:18px; flex:none; opacity:.85; }
+  .nav-badge{ position:absolute; top:2px; left:28px; background:var(--bad); color:#fff; font-size:10px; font-weight:700; line-height:1.4; padding:1px 5px; border-radius:999px; min-width:8px; text-align:center; z-index:1; }
+  /* Each item's icon sits in its own small color chip (see the
+     .nav-item[data-nav-section] color overrides) — this is what makes the
+     sidebar read as a little color-coded key to the app's sections. */
+  .nav-ico{ display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; background:var(--accent-tint); color:var(--accent-strong); flex:none; transition:background .12s ease, color .12s ease; }
+  .nav-ico svg{ width:15px; height:15px; flex:none; }
   .nav-item:hover{ background:var(--surface-2); color:var(--ink); }
   .nav-item.active{ background:var(--accent-tint); color:var(--accent-ink); font-weight:600; }
-  .nav-item.active svg{ opacity:1; }
+  .nav-item.active .nav-ico{ background:var(--accent); color:var(--accent-ink); }
   .rail-foot{ margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 6px; }
   .sync-chip{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-3); }
   .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-3); flex:none; }
@@ -316,16 +377,45 @@
 
   #urgent-alert{ position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:200; width:100%; max-width:440px; padding:0 16px; }
   #urgent-alert[hidden]{ display:none; }
-  .urgent-alert-box{ display:flex; gap:12px; align-items:flex-start; background:var(--bad-tint); border:1px solid var(--bad); color:var(--bad); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); animation:urgent-pop .18s ease-out; }
-  .urgent-alert-box svg{ width:24px; height:24px; flex:none; margin-top:1px; }
-  .urgent-alert-text{ flex:1; font-size:13.5px; color:var(--ink); }
-  .urgent-alert-text strong{ display:block; margin-bottom:3px; color:var(--bad); }
+  /* A rounded icon "coin" in front, a soft gradient card behind — the same
+     shape for every kind of alert, just recolored: red for a plain Urgent
+     message, warm gold for "needs your signature" (see .urgent-alert-box.signoff). */
+  .urgent-alert-box{ display:flex; gap:12px; align-items:flex-start; background:linear-gradient(160deg, var(--bad-tint), var(--surface)); border:1px solid var(--bad); color:var(--bad); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); animation:urgent-pop .22s cubic-bezier(.2,.8,.3,1.1); }
+  .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,75%,92%), var(--surface)); border-color:hsl(38,65%,55%); color:hsl(30,70%,32%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); } }
+  :root[data-theme="dark"] .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); }
+  .urgent-alert-icon{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.5); flex:none; }
+  .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,80%,88%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-icon{ background:rgba(0,0,0,.25); } :root:not([data-theme="light"]) .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,40%,28%); } }
+  :root[data-theme="dark"] .urgent-alert-icon{ background:rgba(0,0,0,.25); }
+  :root[data-theme="dark"] .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,40%,28%); }
+  .urgent-alert-box svg{ width:20px; height:20px; flex:none; }
+  .urgent-alert-text{ flex:1; font-size:13.5px; color:var(--ink); padding-top:2px; }
+  .urgent-alert-text strong{ display:block; margin-bottom:3px; color:inherit; }
   .urgent-alert-actions{ display:flex; flex-direction:column; gap:6px; }
-  @keyframes urgent-pop{ from{ transform:scale(.92); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes urgent-pop{ from{ transform:scale(.9) translateY(-6px); opacity:0; } to{ transform:scale(1) translateY(0); opacity:1; } }
 
-  .message-row{ display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-soft); align-items:flex-start; }
+  /* The soft, no-action-needed egg notification — bottom corner, gentle
+     amber/cream "eggshell" card, gone on its own after 30s (see
+     triggerEggToast). Deliberately not the big red urgent banner above:
+     nothing here ever needs the administrator to do anything. */
+  .egg-toast-root{ position:fixed; bottom:18px; right:18px; z-index:190; display:flex; flex-direction:column-reverse; gap:10px; max-width:340px; width:calc(100% - 36px); }
+  .egg-toast{ display:flex; gap:10px; align-items:flex-start; background:linear-gradient(150deg, hsl(44,75%,93%), hsl(42,55%,86%)); border:1px solid hsl(42,55%,68%); color:hsl(30,55%,20%); border-radius:var(--radius); padding:12px 14px; box-shadow:var(--shadow); animation:egg-toast-in .28s cubic-bezier(.2,.8,.3,1.1); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .egg-toast{ background:linear-gradient(150deg, hsl(42,45%,22%), hsl(40,35%,16%)); border-color:hsl(42,40%,38%); color:hsl(44,70%,86%); } }
+  :root[data-theme="dark"] .egg-toast{ background:linear-gradient(150deg, hsl(42,45%,22%), hsl(40,35%,16%)); border-color:hsl(42,40%,38%); color:hsl(44,70%,86%); }
+  .egg-toast-icon{ display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.5); flex:none; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .egg-toast-icon{ background:rgba(0,0,0,.25); } }
+  :root[data-theme="dark"] .egg-toast-icon{ background:rgba(0,0,0,.25); }
+  .egg-toast svg{ width:16px; height:16px; flex:none; }
+  .egg-toast-text{ flex:1; font-size:13px; padding-top:2px; }
+  .egg-toast-text strong{ display:block; margin-bottom:2px; }
+  .egg-toast.closing{ animation:egg-toast-out .28s ease-in forwards; }
+  @keyframes egg-toast-in{ from{ transform:translateY(10px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  @keyframes egg-toast-out{ from{ opacity:1; max-height:200px; } to{ opacity:0; max-height:0; margin:0; padding-top:0; padding-bottom:0; border-width:0; } }
+
+  .message-row{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:flex-start; }
   .message-row:last-child{ border-bottom:none; }
-  .message-row.unread{ background:var(--accent-tint); margin:0 -20px; padding:10px 20px; border-radius:var(--radius-sm); border-bottom-color:transparent; }
+  .message-row.unread{ background:var(--accent-tint); margin:0 -20px; padding:12px 20px; border-radius:var(--radius-sm); border-bottom-color:transparent; }
   .message-meta{ font-size:12px; color:var(--ink-3); margin-top:2px; }
 
   @media (max-width:860px){
@@ -461,7 +551,7 @@
 <div id="auth-gate" class="auth-gate" hidden></div>
 <div class="app" id="app">
   <nav class="rail" id="rail"></nav>
-  <div class="main">
+  <div class="main" id="main-content">
     <header class="topbar" id="topbar"></header>
     <div class="global-search-bar" id="global-search-bar"></div>
     <main class="panel" id="panel"></main>
@@ -470,6 +560,7 @@
 <div id="modal-root"></div>
 <div class="toast-root" id="toast-root"></div>
 <div id="urgent-alert" hidden></div>
+<div id="egg-toast-root" class="egg-toast-root"></div>
 <div id="kem-ai-root" hidden></div>
 <div id="receipt-print-area" class="print-area"></div>
 
@@ -478,6 +569,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 
 <script id="qrcode-lib">
 /*
@@ -1041,7 +1133,9 @@ var qrcode = (function(){
     send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12L20 4l-6.5 16-2.7-7.3z"/><path d="M4 12l9-1"/></svg>',
     signature:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c2-1 3-3 4-6 1-3 2-3 3 0s2 5 3 3 1-5 2-3 1 3 3 3"/><path d="M3 21h18"/></svg>',
     verify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12.5l2 2 4-4.5"/></svg>',
-    statement:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h8l4 4v16H7z"/><path d="M15 2v4h4"/><path d="M9 11h8M9 14h8M9 17h5"/></svg>'
+    statement:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h8l4 4v16H7z"/><path d="M15 2v4h4"/><path d="M9 11h8M9 14h8M9 17h5"/></svg>',
+    directory:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10.5" r="2.3"/><path d="M5.3 16.3c.6-1.9 2-2.9 3.7-2.9s3.1 1 3.7 2.9"/><path d="M14.5 8.5h4M14.5 12h4M14.5 15.5h4"/></svg>',
+    camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>'
   };
 
   /* ============================= UTILS ============================= */
@@ -1416,6 +1510,7 @@ var qrcode = (function(){
       ['reports','Reports',ICONS.reports],
       ['messages','Messages',ICONS.bell],
       ['signoffs','Pending signatures',ICONS.shield],
+      ['directory','Team Directory',ICONS.directory],
       ['about','About',ICONS.info],
       ['settings','Settings',ICONS.settings],
       ['team','Team',ICONS.team]
@@ -1431,7 +1526,10 @@ var qrcode = (function(){
         items.map(function(it){
           var badgeCount = it[0]==='messages' ? unread : (it[0]==='signoffs' ? pendingCount : 0);
           var badge = badgeCount>0 ? '<span class="nav-badge">'+(badgeCount>99?'99+':badgeCount)+'</span>' : '';
-          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-action="nav:'+it[0]+'">'+it[2]+badge+'<span>'+it[1]+'</span></button></li>';
+          // data-nav-section carries this item's own bold color (see the
+          // .nav-item[data-nav-section] CSS) — independent of which page is
+          // currently open, so the whole rail reads as a little color key.
+          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-nav-section="'+it[0]+'" data-action="nav:'+it[0]+'"><span class="nav-ico">'+it[2]+'</span>'+badge+'<span>'+it[1]+'</span></button></li>';
         }).join('')+
       '</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
@@ -1479,6 +1577,12 @@ var qrcode = (function(){
     if(!sectionAllowed(ui.section)){ ui.section = 'overview'; saveUIPref(); }
     renderNav();
     var sec = SECTIONS[ui.section] || SECTIONS.overview;
+    // Drives the bold per-section color theme (see the CSS comment near
+    // .main[data-section] near the top of this file) — every page's
+    // buttons/charts/pills just re-read var(--accent) etc, so this one
+    // attribute is all it takes to recolor the whole page.
+    var mainEl = document.getElementById('main-content');
+    if(mainEl) mainEl.setAttribute('data-section', ui.section);
     document.getElementById('topbar').innerHTML = sec.topbar();
     document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + sec.panel();
   }
@@ -3408,6 +3512,8 @@ var qrcode = (function(){
       case 'team':
       case 'signoffs':
         return false;
+      case 'directory':
+        return !!currentUser;
       default:
         return sectionAllowedUngated(key);
     }
@@ -3422,6 +3528,7 @@ var qrcode = (function(){
     if(key==='team') return isAdmin();
     if(key==='signoffs') return isAdmin();
     if(key==='messages') return !!currentUser;
+    if(key==='directory') return !!currentUser;
     return true;
   }
   function accountCardHTML(){
@@ -3986,21 +4093,179 @@ var qrcode = (function(){
       '</div>';
   }
 
+  /* ============================= TEAM DIRECTORY (photo + About, shared with everyone) ============================= */
+  // A small circular photo, or — if this person hasn't set one — their
+  // initials on a soft tinted circle in the current section's color, so it
+  // never looks like a broken image.
+  function avatarHTML(u, size){
+    size = size || 40;
+    u = u || {};
+    var label = (u.name || (u.email ? u.email.split('@')[0] : '')).trim();
+    var initials = label ? label.split(/\s+/).map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase() : '?';
+    if(u.photoURL){
+      return '<img src="'+esc(u.photoURL)+'" alt="" style="width:'+size+'px; height:'+size+'px; border-radius:50%; object-fit:cover; flex:none; background:var(--surface-2)">';
+    }
+    return '<div style="width:'+size+'px; height:'+size+'px; border-radius:50%; background:var(--accent-tint); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:'+Math.round(size*0.38)+'px; flex:none">'+esc(initials)+'</div>';
+  }
+  // The "edit yourself" card shown at the top of the Team Directory — photo
+  // upload (tap the camera badge) plus a free-text About. Anyone signed in
+  // can only ever edit their own; everyone else's shows read-only below.
+  function profileEditFormHTML(){
+    var mine = teamUsers.find(function(u){ return currentUser && u.uid===currentUser.uid; }) || {};
+    var meForAvatar = Object.assign({}, mine, {name: (currentUser&&currentUser.name) || mine.name});
+    return '<div style="display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap">'+
+      '<div style="text-align:center; flex:none">'+
+        '<div style="position:relative; display:inline-block">'+
+          '<span id="profile-photo-preview">'+avatarHTML(meForAvatar, 84)+'</span>'+
+          '<label class="icon-btn" style="position:absolute; bottom:-2px; right:-2px; background:var(--accent); color:var(--accent-ink); border:2px solid var(--surface); cursor:pointer" title="Change photo">'+ICONS.camera+
+            '<input type="file" accept="image/*" data-change="profile-photo-file" style="display:none">'+
+          '</label>'+
+        '</div>'+
+        '<div class="hint" style="margin-top:6px; max-width:120px">Tap the camera to change your photo</div>'+
+      '</div>'+
+      '<form data-form="update-own-about" style="flex:1; min-width:220px">'+
+        '<div class="field-row"><label>About you</label><textarea class="field" name="about" rows="3" maxlength="500" placeholder="Your role, what you look after on the farm, anything the team should know">'+esc(mine.about||'')+'</textarea></div>'+
+        '<button class="btn primary" type="submit" style="margin-top:8px">Save About</button>'+
+      '</form>'+
+    '</div>';
+  }
+  // Resizes/compresses to a square JPEG client-side before it ever leaves
+  // the device — keeps uploads small and fast on a slow farm connection,
+  // and means everyone's photo renders at a predictable size everywhere.
+  function uploadProfilePhoto(file){
+    if(!file || !currentUser) return;
+    if(!storage){ toast('Photo upload needs an internet connection.'); return; }
+    if(file.type.indexOf('image/')!==0){ toast('Please choose an image file.'); return; }
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var SIZE = 320;
+      var canvas = document.createElement('canvas');
+      canvas.width = SIZE; canvas.height = SIZE;
+      var ctx = canvas.getContext('2d');
+      var side = Math.min(img.naturalWidth, img.naturalHeight);
+      var sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+      canvas.toBlob(function(blob){
+        if(!blob){ toast('Could not process that image.'); return; }
+        toast('Uploading photo…');
+        var ref = storage.ref('profilePhotos/'+currentUser.uid+'/photo.jpg');
+        ref.put(blob, {contentType:'image/jpeg'}).then(function(){
+          return ref.getDownloadURL();
+        }).then(function(downloadURL){
+          return firebase.functions().httpsCallable('updateOwnProfile')({photoURL: downloadURL});
+        }).then(function(){
+          toast('Photo updated.');
+          var preview = document.getElementById('profile-photo-preview');
+          if(preview) preview.innerHTML = avatarHTML({photoURL: currentURLWithCacheBust(), name: currentUser.name}, 84);
+          if(ui.section==='directory') render();
+        }).catch(function(err){ toast((err&&err.message) || 'Could not upload that photo — please try again.'); });
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); toast('Could not read that image file.'); };
+    img.src = url;
+  }
+  // Storage URLs already carry their own unique download token, so the
+  // browser never caches a stale photo under a "new" upload's URL — the
+  // live users/{uid} listener (initDirectorySync) refreshes the real
+  // photoURL a moment later anyway, this just avoids a blank flash.
+  function currentURLWithCacheBust(){
+    var mine = teamUsers.find(function(u){ return currentUser && u.uid===currentUser.uid; });
+    return mine && mine.photoURL;
+  }
+  function directoryPanel(){
+    if(!currentUser) return '<div class="empty">'+ICONS.empty+'<div>Sign in to see the team directory.</div></div>';
+    var roster = teamUsers.filter(function(u){ return !u.disabled; }).slice().sort(function(a,b){
+      if(a.role==='administrator' && b.role!=='administrator') return -1;
+      if(b.role==='administrator' && a.role!=='administrator') return 1;
+      return (a.name||a.email||'').localeCompare(b.name||b.email||'');
+    });
+    var cards = roster.map(function(u){
+      var isSelf = currentUser && u.uid===currentUser.uid;
+      var roleTxt = u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
+      return '<div class="card" style="display:flex; gap:14px; align-items:flex-start">'+
+        avatarHTML(u, 56)+
+        '<div style="flex:1; min-width:0">'+
+          '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap"><strong>'+esc(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+'</strong>'+
+            '<span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(roleTxt)+'</span>'+
+            (isSelf ? '<span class="hint">(you)</span>' : '')+
+          '</div>'+
+          (u.about ? '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(u.about)+'</p>' : '<p class="hint" style="margin:6px 0 0; font-style:italic">Hasn\'t added an About yet.</p>')+
+        '</div>'+
+      '</div>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Your profile</h3><span class="hint">Photo &amp; About — visible to the whole team</span></div>'+
+        profileEditFormHTML()+
+      '</div>'+
+      '<div class="card-title" style="margin-top:4px"><h3>Everyone on the farm</h3><span class="hint">'+roster.length+' member'+(roster.length===1?'':'s')+'</span></div>'+
+      '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px">'+cards+'</div>';
+  }
+
   /* ============================= MESSAGING (team-wide broadcast + one-to-one) ============================= */
   var urgentAlertQueue = [];
-  function playAlertSound(){
+  // Three gentle, procedurally-synthesized sounds (Web Audio — no audio
+  // files to fetch or license) instead of the old flat square-wave beep,
+  // one per alert kind: a soft chick "peep" for a document waiting on your
+  // signature, a soft hen "cluck" for egg activity, and a soft rooster
+  // "crow" for a plain team message. All three are deliberately quiet —
+  // sine/triangle waves with a gentle attack/decay, never a harsh buzz.
+  function playChickSound(){
     try{
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if(!Ctx) return;
+      var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
       var ctx = new Ctx();
-      [0, 0.22, 0.44].forEach(function(delay){
+      [0, 0.16].forEach(function(delay){
         var o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'square'; o.frequency.value = 880;
-        g.gain.value = 0.16;
+        o.type = 'sine';
+        var t0 = ctx.currentTime + delay;
+        o.frequency.setValueAtTime(1500, t0);
+        o.frequency.exponentialRampToValueAtTime(1900, t0+0.09);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.11, t0+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.12);
         o.connect(g); g.connect(ctx.destination);
-        o.start(ctx.currentTime+delay);
-        o.stop(ctx.currentTime+delay+0.18);
+        o.start(t0); o.stop(t0+0.14);
       });
+    }catch(e){}
+  }
+  function playHenSound(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+      var ctx = new Ctx();
+      [0, 0.24].forEach(function(delay){
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle';
+        var t0 = ctx.currentTime + delay;
+        o.frequency.setValueAtTime(360, t0);
+        o.frequency.exponentialRampToValueAtTime(240, t0+0.16);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.10, t0+0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0+0.2);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0); o.stop(t0+0.22);
+      });
+    }catch(e){}
+  }
+  function playRoosterSound(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+      var ctx = new Ctx();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      var t0 = ctx.currentTime;
+      var notes = [520, 640, 560, 420]; // a gentle up-down "crow" shape, soft not sharp
+      var segDur = 0.14;
+      notes.forEach(function(f, i){
+        var when = t0 + i*segDur;
+        if(i===0) o.frequency.setValueAtTime(f, when);
+        else o.frequency.exponentialRampToValueAtTime(f, when);
+      });
+      var total = notes.length*segDur;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.12, t0+0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+total);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0); o.stop(t0+total+0.05);
     }catch(e){}
   }
   function renderUrgentAlert(){
@@ -4008,9 +4273,11 @@ var qrcode = (function(){
     if(!el) return;
     if(!urgentAlertQueue.length){ el.hidden = true; el.innerHTML = ''; return; }
     var msg = urgentAlertQueue[0];
+    var isSignoff = msg.kind==='signoff-request';
     el.hidden = false;
-    el.innerHTML = '<div class="urgent-alert-box">'+ICONS.warning+
-      '<div class="urgent-alert-text"><strong>Urgent message from '+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
+    el.innerHTML = '<div class="urgent-alert-box'+(isSignoff?' signoff':'')+'">'+
+      '<span class="urgent-alert-icon">'+(isSignoff?ICONS.signature:ICONS.warning)+'</span>'+
+      '<div class="urgent-alert-text"><strong>'+(isSignoff?'Waiting on your signature — ':'Urgent message from ')+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
       '<div class="urgent-alert-actions">'+
         '<button class="btn sm primary" data-action="urgent-alert-view">View</button>'+
         '<button class="btn sm ghost" data-action="urgent-alert-dismiss">Dismiss</button>'+
@@ -4019,8 +4286,26 @@ var qrcode = (function(){
   function triggerUrgentAlert(msg){
     urgentAlertQueue.push(msg);
     renderUrgentAlert();
-    playAlertSound();
+    if(msg.kind==='signoff-request') playChickSound(); else playRoosterSound();
     showBackgroundAlert(msg);
+  }
+  // The soft, nothing-to-do egg notification — bottom-corner toast, hen
+  // sound, gone on its own after 30s. Deliberately separate from
+  // triggerUrgentAlert above: this never interrupts with a popup or asks
+  // for a decision, it's purely "here's what happened, and who did it".
+  function triggerEggToast(msg){
+    var root = document.getElementById('egg-toast-root');
+    if(!root) return;
+    var el = document.createElement('div');
+    el.className = 'egg-toast';
+    el.innerHTML = '<span class="egg-toast-icon">'+ICONS.eggs+'</span>'+
+      '<div class="egg-toast-text"><strong>'+esc(msg.fromLabel||'A team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>';
+    root.appendChild(el);
+    playHenSound();
+    setTimeout(function(){
+      el.classList.add('closing');
+      setTimeout(function(){ el.remove(); }, 320);
+    }, 30000);
   }
   // A real system notification for Urgent messages, so they're impossible
   // to miss even when this tab isn't the one on screen — another tab is
@@ -4105,9 +4390,13 @@ var qrcode = (function(){
           if(change.type==='removed'){ delete merged[change.doc.id]; return; }
           var data = Object.assign({id:change.doc.id}, change.doc.data());
           merged[change.doc.id] = data;
-          if(change.type==='added' && seenInitial && data.urgency==='urgent' && data.fromUid!==currentUser.uid &&
+          if(change.type==='added' && seenInitial && data.fromUid!==currentUser.uid &&
              (data.toUid===currentUser.uid || data.toUid==='all')){
-            triggerUrgentAlert(data);
+            // Egg activity is always a soft, no-action toast (see
+            // notifyEggActivity/triggerEggToast) — never the big popup,
+            // even though it's carried on the same messages collection.
+            if(data.kind==='egg-activity') triggerEggToast(data);
+            else if(data.urgency==='urgent') triggerUrgentAlert(data);
           }
         });
         seenInitial = true;
@@ -4147,6 +4436,14 @@ var qrcode = (function(){
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Send</button></div>'+
     '</form>';
   }
+  // A small colored kind-pill so a glance down the list tells "needs your
+  // signature" (chick/gold), "egg activity" (hen/amber) and a plain message
+  // apart, without having to read the body text.
+  function messageKindPillHtml(m){
+    if(m.kind==='signoff-request') return '<span class="pill" style="background:hsl(38,75%,90%); color:hsl(30,70%,30%)">🐣 Needs your signature</span>';
+    if(m.kind==='egg-activity') return '<span class="pill" style="background:hsl(44,70%,90%); color:hsl(30,55%,28%)">🥚 Egg activity</span>';
+    return '';
+  }
   function messageRowHtml(m){
     var unread = isMessageForMe(m) && (m.readBy||[]).indexOf(currentUser.uid)===-1;
     var when = (m.createdAt && m.createdAt.toDate) ? fmtDate(m.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Sending…';
@@ -4154,11 +4451,13 @@ var qrcode = (function(){
     var attr = unread ? ' data-action="mark-message-read:'+m.id+'"' : '';
     var quoteBlock = m.replyToSnippet ? '<div class="hint" style="margin:6px 0; padding:6px 8px; border-left:3px solid var(--border, #ccc)">↩ '+esc(m.replyToFromLabel||'a message')+': "'+esc(m.replyToSnippet)+'"</div>' : '';
     var canReply = currentUser && m.fromUid && m.fromUid!==currentUser.uid;
+    var sender = teamUsers.find(function(u){ return u.uid===m.fromUid; });
     return '<div class="message-row'+(unread?' unread':'')+'"'+attr+'>'+
-      '<div style="flex:1">'+
-        '<div>'+(unread?'<strong>':'')+esc(m.fromLabel||'Unknown')+(unread?'</strong>':'')+' <span class="hint">→ '+esc(toLabel)+'</span></div>'+
+      avatarHTML(sender || {name:m.fromLabel}, 38)+
+      '<div style="flex:1; min-width:0">'+
+        '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap">'+(unread?'<strong>':'')+esc(m.fromLabel||'Unknown')+(unread?'</strong>':'')+' <span class="hint">→ '+esc(toLabel)+'</span>'+messageKindPillHtml(m)+'</div>'+
         quoteBlock+
-        '<div style="margin-top:2px">'+esc(m.body||'')+'</div>'+
+        '<div style="margin-top:3px">'+esc(m.body||'')+'</div>'+
         '<div class="message-meta">'+when+(unread?' · tap to mark read':'')+'</div>'+
         (canReply || m.pendingSignoffId ? '<div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap">'+
           (m.pendingSignoffId ? '<button class="btn sm primary" data-action="open-pending-signoff:'+esc(m.pendingSignoffId)+'">Open document</button>' : '')+
@@ -4537,7 +4836,8 @@ var qrcode = (function(){
     settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge()); }, panel:settingsPanel },
     team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', ''); }, panel:teamPanel },
     messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', ''); }, panel:messagesPanel },
-    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', ''); }, panel:signoffsPanel }
+    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', ''); }, panel:signoffsPanel },
+    directory:{ topbar:function(){ return topbarHTML('Team Directory','Everyone on the farm, in one place', ''); }, panel:directoryPanel }
   };
   // Plain display names for each section key — used by voice control's
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
@@ -4994,6 +5294,17 @@ var qrcode = (function(){
 
   /* ============================= MUTATE + SYNC ============================= */
   function mutate(fn){ fn(state); render(); scheduleSave(); }
+  // Best-effort FYI to the administrator when a team member (never the
+  // administrator themself — nothing to tell yourself) logs or loses eggs.
+  // Fire-and-forget: the egg entry itself already saved via mutate() above,
+  // so a failure here (offline, cold function) must never surface to the
+  // person logging the eggs.
+  function notifyEggActivity(action, detail){
+    if(!currentUser || isAdmin() || !cloudMode) return;
+    try{
+      firebase.functions().httpsCallable('notifyEggActivity')({action:action, detail:detail}).catch(function(){});
+    }catch(e){}
+  }
   function persistLocalFallback(){ try{ localStorage.setItem('coop-ledger-state', JSON.stringify(state)); }catch(e){ toast('Could not save — your browser storage may be full or blocked.'); } }
   function scheduleSave(){
     // Always keep an instant local copy — works offline, and is the only
@@ -5023,6 +5334,7 @@ var qrcode = (function(){
     try{
       if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
+      storage = firebase.storage ? firebase.storage() : null;
       mpesaEnabled = !!firebase.functions;
       try{ db.enablePersistence({synchronizeTabs:true}).catch(function(){}); }catch(e){}
       cloudMode = true;
@@ -5479,6 +5791,7 @@ var qrcode = (function(){
     }
     if(name==='display-currency'){ mutate(function(s){ s.settings.displayCurrency = el.value; }); return; }
     if(name==='import-file'){ importBackupFile(el.files[0]); el.value=''; return; }
+    if(name==='profile-photo-file'){ uploadProfilePhoto(el.files[0]); el.value=''; return; }
     if(name==='brooding-date'){
       var preview = document.getElementById('brooding-hatch-preview');
       if(preview && el.value) preview.textContent = fmtDate(parseISO(addDaysISO(el.value, EGG_INCUBATION_DAYS)));
@@ -5507,6 +5820,7 @@ var qrcode = (function(){
         }
       });
       closeModal(); toast('Egg log saved.');
+      notifyEggActivity('logged', total+' egg(s) for '+fmtDate(parseISO(date))+(note?' — '+note:''));
       return;
     }
     if(name==='eggloss'){
@@ -5543,6 +5857,7 @@ var qrcode = (function(){
       closeModal();
       if(elReason==='sold'){ viewReceipt(eggReceiptOpts(newElId)); }
       else { toast(elId?'Saved.':'Egg loss logged.'); }
+      notifyEggActivity('lost', elCount+' egg(s) — '+elReason+(elNote?' — '+elNote:''));
       return;
     }
     if(name==='flock'){
@@ -5858,6 +6173,14 @@ var qrcode = (function(){
       }).catch(function(err){ toast((err&&err.message)||'Could not save your name.'); });
       return;
     }
+    if(name==='update-own-about'){
+      if(!currentUser){ toast('Sign in first.'); return; }
+      var ownAbout = (val('about')||'').trim();
+      firebase.functions().httpsCallable('updateOwnProfile')({about:ownAbout}).then(function(){
+        toast('About saved.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not save this.'); });
+      return;
+    }
     if(name==='compose-message'){
       if(!currentUser){ toast('Sign in first.'); return; }
       var toVal = val('to'), msgUrgency = val('urgency')||'normal', msgBody = (val('body')||'').trim();
@@ -6057,6 +6380,7 @@ var qrcode = (function(){
   var standaloneMode = false;
   var cloudMode = false;
   var db = null;
+  var storage = null; // Firebase Storage — only used for profile photo uploads (see uploadProfilePhoto)
   var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name, totpEnrolled, portalTotpEnrolled }
   var guestMode = false;
   var financeRevealed = false; // masked by default — cleared back to false on every fresh page load

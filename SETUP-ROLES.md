@@ -1,6 +1,74 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed the real Feed bug you found, plus a small
+> **Update (latest):** Soft animal alert sounds, prettier notifications, a
+> bold color for every section, and profile photos + About for the whole
+> team.
+>
+> **New alert sounds — soft, not the old flat beep.** Three gentle sounds,
+> synthesized right in the app (no audio files, works offline, nothing to
+> license): a soft chick "peep" plays when a document is sent to you for
+> signature; a soft hen "cluck" plays for egg activity; a soft rooster
+> "crow" plays for an ordinary team message. All three are deliberately
+> quiet.
+>
+> **Egg activity now notifies you — as a gentle toast, not a popup.**
+> Whenever anyone other than you logs eggs or records a loss, you get a
+> small warm-toned notification in the bottom corner saying what happened
+> and who did it — it plays the hen sound, needs nothing from you, and
+> disappears on its own after 30 seconds. It's never the big "needs a
+> decision" banner that Urgent messages and signature requests use.
+>
+> **Messages and alerts, restyled.** The urgent-alert banner now has a
+> rounded icon and a color that matches what it's about (warm gold for
+> "waiting on your signature", red for a plain Urgent message), and every
+> row in Messages now shows the sender's photo and a small colored tag
+> ("🐣 Needs your signature" / "🥚 Egg activity") so you can tell what's
+> what at a glance.
+>
+> **Every section now has its own bold color.** Flock, Eggs, Feed, Health,
+> Expenses, Income, Customers, Finance, Reports, Messages, Pending
+> signatures, Team Directory, About, Settings, and Team each get their own
+> distinct color, used throughout that page's buttons, charts and
+> highlights — and the matching color shows behind that section's icon in
+> the sidebar too, so the whole rail reads as a little color key. Overview
+> keeps the original amber — it's the app's "home" screen.
+>
+> **New: Team Directory, with photos and an About for everyone.** A new
+> "Team Directory" page (anyone signed in can open it) lists every team
+> member with their photo and a short About they write themselves — role,
+> what they look after on the farm, anything worth knowing. At the top of
+> that page, "Your profile" lets you set your own photo (tap the small
+> camera badge — it resizes and compresses automatically, no need to
+> shrink it yourself first) and write your own About. Nobody can ever set
+> or see anyone else's — you can only ever change your own.
+>
+> **This needs three things deployed, not the usual two** — a Cloud
+> Functions update, a brand-new Storage rules file (this app has never
+> used Firebase Storage before now — it's what holds profile photos), plus
+> the front-end files. No Firestore rules change this time.
+> ```
+> firebase deploy --only functions
+> firebase deploy --only storage
+> git add .
+> git commit -m "Soft alert sounds; prettier messages/notifications; bold per-section colors; Team Directory with photos + About"
+> git push
+> ```
+> **One extra one-time step in the Firebase console**, since this is the
+> first time this app uses Storage: open Firebase console → Storage → if
+> you've never opened Storage on this project before, it will prompt you
+> to "Get started" once (accept the defaults) before `firebase deploy
+> --only storage` will succeed — if that command errors out asking you to
+> set up Storage first, that's exactly why; do that one-time step in the
+> console, then redeploy.
+>
+> After deploying, please try: log a feed or egg entry as a Supervisor or
+> Farmhand teammate on another account and confirm you (the administrator)
+> get a soft toast notification for eggs specifically, not a popup; send
+> yourself a document for signature and confirm you hear the chick sound;
+> and open Team Directory to set your own photo and About, then check it
+> shows up correctly for a teammate too.
+
+> **Earlier update:** Fixed the real Feed bug you found, plus a small
 > "Skip" button mislabel — and a note on what's most likely going on with
 > the "malformed field" report.
 >

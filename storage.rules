@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Team profile photos (Team Directory — see index.html/roles.js). Each
+    // account can only ever write into its OWN folder here, named after its
+    // own uid, which is exactly what updateOwnProfile checks server-side
+    // before it will accept a photoURL — so nobody can end up pointing
+    // their profile at an image they didn't upload themselves. Reading is
+    // open to anyone (no `request.auth` check) because a profile photo
+    // isn't sensitive and the app shows it inside an ordinary <img> tag —
+    // gating reads would just mean broken images for a signed-out preview
+    // or a shared link.
+    match /profilePhotos/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
