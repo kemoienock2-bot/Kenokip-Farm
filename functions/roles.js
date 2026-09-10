@@ -148,6 +148,12 @@ module.exports = function (admin, db) {
     // the person can change their own from Team Directory afterward too.
     const genderInput = String((request.data && request.data.gender) || 'unspecified');
     const gender = GENDERS.includes(genderInput) ? genderInput : 'unspecified';
+    // A starter "About" — normally the obvious one-line description of the
+    // role the app computes client-side (see defaultAboutForRole in
+    // index.html) and sends along here, so it's saved as real data from the
+    // moment the account exists rather than shown-but-unsaved — the person
+    // can edit or replace it from their own Team Directory profile anytime.
+    const about = typeof (request.data && request.data.about) === 'string' ? request.data.about.trim().slice(0, 500) : null;
     if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
     if (password.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
     if (!JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
@@ -161,7 +167,7 @@ module.exports = function (admin, db) {
       throw new HttpsError('internal', 'Could not create the account.');
     }
     await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'employee', jobTitle });
-    await db.collection('users').doc(userRecord.uid).set({
+    const newUserDoc = {
       email,
       name,
       role: 'employee',
@@ -170,7 +176,9 @@ module.exports = function (admin, db) {
       disabled: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: auth.uid,
-    });
+    };
+    if (about) newUserDoc.about = about;
+    await db.collection('users').doc(userRecord.uid).set(newUserDoc);
     return { ok: true, uid: userRecord.uid };
   });
 
@@ -253,6 +261,15 @@ module.exports = function (admin, db) {
     if (request.data && typeof request.data.gender === 'string') {
       if (!GENDERS.includes(request.data.gender)) throw new HttpsError('invalid-argument', 'Choose a valid option.');
       patch.gender = request.data.gender;
+    }
+    // Lets the administrator save a starter "About" for a team member added
+    // before this existed — a real saved value from here on, not just
+    // something shown until they write their own (see the
+    // 'fill-in-starter-about'/'bulk-seed-about' action in index.html, which
+    // calls this once per team member missing one). The person can still
+    // edit or replace it themselves from Team Directory anytime after.
+    if (request.data && typeof request.data.about === 'string') {
+      patch.about = request.data.about.trim().slice(0, 500);
     }
     // Resets the account's password outright (there is no way to look up
     // the existing one — Firebase never stores or exposes plaintext

@@ -4184,12 +4184,22 @@ var qrcode = (function(){
         '<button class="btn sm" data-action="access-log-page:next" '+(accessLogPage>=totalLogPages-1?'disabled':'')+'>Next</button>'+
       '</div>' : '';
 
+    // Anyone (besides the administrator, who writes their own from Team
+    // Directory) still missing a saved About — covers the team added before
+    // this existed. New team members get one automatically now (see
+    // 'add-staff' in handleForm), so this count should shrink to zero and
+    // stay there.
+    var missingAboutUsers = teamUsers.filter(function(u){ return u.uid!==currentUser.uid && !u.about; });
+
     return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
       '</div>' : '')+
       '<div class="card"><div class="card-title"><h3>Team</h3><span class="hint">'+teamUsers.length+' account'+(teamUsers.length===1?'':'s')+'</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-        '<div style="margin-top:14px"><button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button></div>'+
+        '<div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center">'+
+          '<button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button>'+
+          (missingAboutUsers.length ? '<button class="btn" data-action="bulk-seed-about">Fill in starter Abouts ('+missingAboutUsers.length+' missing)</button>' : '')+
+        '</div>'+
       '</div>'+
       '<div class="card"><div class="card-title"><h3>Finance portal password</h3></div>'+
         '<p class="hint">A separate password — not anyone\'s sign-in password — that only you set. Share it only with whoever should be able to open the Finance portal; they\'ll also need their own Finance portal authenticator code (Settings → Your account) to get in.</p>'+
@@ -5852,6 +5862,18 @@ var qrcode = (function(){
         if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
         openModal(staffFormHtml());
         break;
+      case 'bulk-seed-about': {
+        if(!isAdmin()) break;
+        var seedTargets = teamUsers.filter(function(u){ return u.uid!==currentUser.uid && !u.about; });
+        if(!seedTargets.length){ toast('Everyone already has an About.'); break; }
+        toast('Saving starter Abouts…');
+        Promise.all(seedTargets.map(function(u){
+          return firebase.functions().httpsCallable('updateStaffAccount')({uid:u.uid, about: defaultAboutForRole(u)}).catch(function(){ return null; });
+        })).then(function(){
+          toast('Starter Abouts saved — everyone can edit their own from Team Directory.');
+        });
+        break;
+      }
       case 'open-change-password':
         if(!currentUser){ toast('Sign in first.'); break; }
         openModal(changePasswordFormHtml());
@@ -6328,7 +6350,11 @@ var qrcode = (function(){
     if(name==='add-staff'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
       var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle'), sGender = val('gender')||'unspecified';
-      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle, gender:sGender}).then(function(){
+      // Saved as real data from the moment the account exists (the obvious
+      // one-liner for their role) — not just shown until they write their
+      // own — so it's already there for the whole team to see right away.
+      var sAbout = defaultAboutForRole({role:'employee', jobTitle:sJobTitle});
+      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle, gender:sGender, about:sAbout}).then(function(){
         closeModal(); toast('Account created — share the email and password with them.');
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
       return;

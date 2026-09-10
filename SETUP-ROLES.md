@@ -1,24 +1,27 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Every team member now gets a starter "About" they can
-> just edit instead of a blank box, plus a Gender field (Female/Male/
-> Unspecified) that picks their default profile icon before they upload a
-> real photo.
+> **Update (latest):** Every team member's "About" is now actually saved
+> with the obvious starter description of their role — not just shown until
+> they write their own — and they can edit it anytime after. Also new: a
+> Gender field (Female/Male/Unspecified) that picks their default profile
+> icon before they upload a real photo.
 >
-> **Every About now starts pre-filled with the obvious version.** Team
-> Directory used to show "Hasn't added an About yet." for anyone who hadn't
-> written their own — now it shows a sensible one-line description of what
-> that role obviously does (e.g. Supervisor: "Oversees daily farm operations
-> — keeping the flock, feed, and records on track."), for every role
-> including yours. It's just a starting draft, not saved anywhere until
-> someone actually edits and saves it from their own "Your profile" card on
-> Team Directory — at that point it becomes their real About and replaces
-> the draft everywhere, for them specifically. Nobody but the person
-> themselves can ever set their own About — same as before.
+> **About is now real, saved data for everyone — a starter draft they edit
+> afterward, not a placeholder.** A brand-new team member's About is saved
+> the moment their account is created — the obvious one-line description of
+> their role (e.g. Supervisor: "Oversees daily farm operations — keeping the
+> flock, feed, and records on track."). For your existing team (added
+> before this existed), open Team and press **"Fill in starter Abouts"** —
+> it saves that same starter line for everyone on the team who doesn't have
+> one yet, in one go. Either way, it's a real saved value from that point
+> on — anyone can open their own "Your profile" card on Team Directory and
+> edit or replace it as their own, anytime. Nobody but the person themselves
+> can ever set their own About going forward — this button is only ever a
+> one-time starting point for people who don't have one yet.
 >
-> **New: Gender — Female / Male / Unspecified.** This is purely cosmetic: it
-> picks which default illustrated profile icon shows before someone uploads
-> a real photo (a small illustrated lady or man icon instead of plain
+> **New: Gender — Female / Male / Unspecified.** Purely cosmetic: it picks
+> which default illustrated profile icon shows before someone uploads a
+> real photo (a small illustrated lady or man icon instead of plain
 > initials) — set it to "Unspecified" (the default) and nothing changes
 > from before. Unlike About, this one you (the administrator) DO set on
 > behalf of everyone, since you're the one adding the team:
@@ -30,20 +33,20 @@
 >   "Your profile" card on Team Directory — whatever you picked for them is
 >   just a starting point, not locked in.
 >
-> **This needs a Cloud Functions update, not just the front-end files** —
-> the Gender field is validated and saved server-side:
+> **This needs a Cloud Functions update, not just the front-end files:**
 > ```
 > firebase deploy --only functions
 > git add .
-> git commit -m "Starter About drafts per role; add Gender (Female/Male/Unspecified) with default profile icons"
+> git commit -m "Save starter About per role (not just show it); add Gender (Female/Male/Unspecified) with default profile icons"
 > git push
 > ```
-> After deploying, please try: open Team Directory and confirm everyone
-> without a custom About now shows a sensible one-liner instead of "Hasn't
-> added an About yet."; set a Gender for one or two existing team members
-> from Team → "Edit name & gender" and confirm their Directory card picture
-> changes to the matching icon; and check that a team member can still
-> change their own from their profile card.
+> After deploying, please try: on the Team page, press "Fill in starter
+> Abouts" and confirm the count of people missing one goes to zero, then
+> open Team Directory and check a couple of their cards show the new
+> description; set a Gender for an existing team member from Team → "Edit
+> name & gender" and confirm their Directory picture changes to match; and
+> add one brand-new team member to confirm their About and Gender are both
+> already there from the start.
 
 > **Earlier update:** Fixed a real bug where a Supervisor or Farmhand
 > recording an egg or bird sale never actually got it counted as income, and
