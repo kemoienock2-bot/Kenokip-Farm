@@ -2,7 +2,7 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v41';
+var CACHE_NAME = 'kenokip-farm-v42';
 var APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ var APP_SHELL = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
   './icons/favicon-16.png',
+  './icons/logo-mark.png',
   // Precache the Firebase SDK itself too, so a phone that has opened the app
   // at least once while online can still load it — and use its offline
   // write queue — with zero signal.
