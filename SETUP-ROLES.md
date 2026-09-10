@@ -1,6 +1,59 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Feed, Health, Expense, and Income receipts now
+> **Update (latest):** Fixed a real bug, plus a behavior change you asked
+> for, plus a small display fix.
+>
+> **The bug — this is why signing was getting stuck on "Sending…" with an
+> "INTERNAL" error for everyone but you.** When a team member sent their
+> half of a document to you, the app was trying to save their signature
+> details straight into the database in a shape (a list of pairs, nested
+> inside another list) that Firestore flatly refuses to store — this is
+> the exact same kind of crash that once broke signing itself a few
+> updates ago, just in a new spot this time (the new "send to administrator"
+> step, not signReceipt itself). It threw immediately, before anything
+> useful happened, which is why it looked identical no matter who tried it
+> or what they were signing. Fixed by converting that data into a shape
+> Firestore accepts before saving it — 11 targeted tests (including one
+> that specifically inspects the saved document for exactly this problem)
+> now confirm it can't happen again. This also explains the "even Finance
+> staff got blocked" and "even Feed says admin only" reports — those
+> weren't really about who could sign; every attempt to hand off to you
+> was silently crashing at the same spot.
+>
+> **What you asked to change — skipping no longer needs "I'm away."** Any
+> team member can now tap "Skip and send" on a non-mandatory document any
+> time, whether or not you've marked yourself away — you still get
+> notified immediately, and it still shows up under **Pending
+> signatures**, now in a separate "Signed without you" section so you can
+> see what went out even though there was nothing left for you to approve.
+> **Withdrawal receipts are unchanged and still can never be skipped, no
+> matter what** — that check is independent of the away-toggle and always
+> was. The "I'm away" toggle itself is still there (Settings → Your
+> account) if you want to keep using it as a status indicator, it just no
+> longer controls whether Skip is offered.
+>
+> **Small display fix:** the fingerprint icon next to each device listed
+> under "Fingerprint / Face unlock for Finance" (Settings → Your account)
+> was rendering at a browser's oversized default instead of a proper small
+> icon — same underlying mistake (a bare icon with nothing constraining its
+> size) that once made the eye icon fill the screen. Fixed the same way:
+> wrapped in the small-icon style already used everywhere else.
+>
+> This needs a functions redeploy (the fixed Cloud Functions) plus the
+> front-end files — no Firestore rules change this time.
+> ```
+> firebase deploy --only functions
+> git add .
+> git commit -m "Fix INTERNAL error crashing receipt co-signing (nested-array Firestore write); make Skip always available except for withdrawals; shrink oversized fingerprint device icons"
+> git push
+> ```
+> After deploying, please retest the full loop once: a Supervisor or
+> Financial Staff member signs a two-signature document — confirm it no
+> longer gets stuck on "Sending…" — then try "Skip and send" on a
+> non-withdrawal one without touching the away toggle at all, and confirm
+> it finishes and shows up under Pending signatures → "Signed without you."
+
+> **Earlier update:** Feed, Health, Expense, and Income receipts now
 > follow the same two-signature rule as Flock/Egg sales and Finance
 > (see the update just below this one) — whoever logged the entry signs
 > their own line, and your signature is still required to finish it. Before

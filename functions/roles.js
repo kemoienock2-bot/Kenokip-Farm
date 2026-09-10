@@ -411,6 +411,19 @@ module.exports = function (admin, db) {
     });
   }
 
+  // Firestore refuses to store an array directly inside another array
+  // (fields here are [label, value] pairs, i.e. an array of arrays) — the
+  // exact same restriction that once crashed signReceipt's own audit-log
+  // write (see receipts.js). Converting each pair to a {label, value}
+  // object before it's ever written sidesteps that, the same fix applied
+  // there. Without this, requestReceiptSignoff/approveReceiptSignoff throw
+  // a raw, non-HttpsError exception that Firebase masks to the client as a
+  // bare "internal" error — which is exactly what got reported as "stuck
+  // on Sending... / INTERNAL".
+  function tripleToFieldObjects(fields) {
+    return fields.map((f) => ({ label: String(f[0]), value: f[1] == null ? '' : String(f[1]) }));
+  }
+
   function validateReceiptOptsSnapshot(opts) {
     if (!opts || typeof opts !== 'object') throw new HttpsError('invalid-argument', 'Missing receipt.');
     if (!Array.isArray(opts.rows) || opts.rows.length > RECEIPT_FIELD_LIMITS.rows) {
@@ -485,7 +498,7 @@ module.exports = function (admin, db) {
       opts,
       signatures,
       mandatory: !!d.mandatory,
-      firstSignerFields: d.firstSignerFields,
+      firstSignerFields: tripleToFieldObjects(d.firstSignerFields),
       status: 'pending',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -536,7 +549,7 @@ module.exports = function (admin, db) {
     const signatures = (data.signatures || []).map((s) => (s.role === 'Administrator' ? Object.assign({}, s, { img: signatureImg }) : s));
     await ref.set({
       status: 'approved',
-      adminFields: d.adminFields,
+      adminFields: tripleToFieldObjects(d.adminFields),
       code,
       signatures,
       reviewedBy: auth.uid,
@@ -563,12 +576,11 @@ module.exports = function (admin, db) {
     return { ok: true };
   });
 
-  // Team member: gives up waiting and finalizes with just their own
-  // signature. Only allowed when the request itself isn't mandatory AND
-  // the administrator is currently marked away — both checked here, fresh,
-  // never trusted from the client, so a stale UI or a tampered call can
-  // never skip a withdrawal receipt or skip past an administrator who's
-  // actually available.
+  // Team member: doesn't wait, and finalizes with just their own signature.
+  // Allowed any time — the only thing checked here, fresh, never trusted
+  // from the client, is that this particular request isn't mandatory. A
+  // withdrawal receipt can never be skipped no matter what the client
+  // sends, even from a stale or tampered copy of the app.
   const skipReceiptSignoff = onCall({ region: 'us-central1' }, async (request) => {
     const auth = requireAuth(request);
     const d = request.data || {};
@@ -590,10 +602,6 @@ module.exports = function (admin, db) {
     if (data.status !== 'pending') throw new HttpsError('failed-precondition', 'That request was already ' + data.status + '.');
     if (data.mandatory) throw new HttpsError('permission-denied', "This document needs the administrator's signature — it can't be skipped.");
 
-    const adminSnap = await db.collection('users').doc(data.adminUid).get();
-    const away = !!(adminSnap.exists && adminSnap.data().away);
-    if (!away) throw new HttpsError('failed-precondition', "The administrator is available right now — wait for them to sign, or check again shortly.");
-
     await ref.set({ status: 'skipped', code, skippedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
     try {
@@ -602,7 +610,7 @@ module.exports = function (admin, db) {
         fromLabel: data.createdByLabel,
         toUid: data.adminUid,
         toLabel: 'Administrator',
-        body: data.createdByLabel + ' signed "' + data.opts.title + '" (' + data.opts.receiptNo + ') and sent it without your signature because you were marked away.',
+        body: data.createdByLabel + ' signed "' + data.opts.title + '" (' + data.opts.receiptNo + ') and sent it on without waiting for your signature.',
         urgency: 'urgent',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         readBy: [auth.uid],

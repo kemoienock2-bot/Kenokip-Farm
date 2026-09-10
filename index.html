@@ -1421,7 +1421,7 @@ var qrcode = (function(){
       ['team','Team',ICONS.team]
     ].filter(function(it){ return sectionAllowed(it[0]); });
     var unread = unreadMessageCount();
-    var pendingCount = pendingSignoffsForAdmin.length;
+    var pendingCount = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; }).length;
     rail.innerHTML =
       '<div class="brand">'+
         '<svg class="brand-mark" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="16" fill="var(--accent-tint)"/><ellipse cx="17" cy="19" rx="7" ry="9" fill="var(--accent)"/><circle cx="17" cy="9" r="2.6" fill="var(--accent-strong)"/></svg>'+
@@ -2768,12 +2768,21 @@ var qrcode = (function(){
       toast((err && err.message) || 'Could not send this to the administrator — please try again.');
     });
   }
+  // pendingSignoffs stores each signature block as [{label,value}, ...]
+  // rather than [[label,value], ...] — Firestore refuses to store an array
+  // directly inside another array, so roles.js converts before writing
+  // (see tripleToFieldObjects there). Converting back here is what lets
+  // this reconstruct the exact same [label,value] pairs that were signed,
+  // for hashing/verifying and for receiptCanonicalFields to concatenate with.
+  function fieldObjectsToTuples(fields){
+    return (fields||[]).map(function(f){ return [f.label, f.value]; });
+  }
   // The exact fields that were (or would be) signed for a pendingSignoffs
   // document — reconstructed the same way whether we're watching it live
   // right after signing, or reopening it later from a Messages notification.
   function finalizedSignoffFields(doc){
-    var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields || []);
-    if(doc.status==='approved' && doc.adminFields) fields = fields.concat(doc.adminFields);
+    var fields = receiptCanonicalFields(doc.opts).concat(fieldObjectsToTuples(doc.firstSignerFields));
+    if(doc.status==='approved' && doc.adminFields) fields = fields.concat(fieldObjectsToTuples(doc.adminFields));
     return fields;
   }
   function stopPendingSignoffWatch(){
@@ -2783,10 +2792,11 @@ var qrcode = (function(){
   // Live "waiting for the administrator" view — used right after a team
   // member signs their half, and again any time the same request is
   // reopened later (from Messages, or from Team → Pending signatures).
-  // Watches the request itself (to flip to the finished receipt the moment
-  // it's approved or skipped) AND the administrator's own account (so an
-  // "I'm away" toggle shows or hides the Skip button here instantly,
-  // without needing to refresh or re-open anything).
+  // Watches the request itself, to flip to the finished receipt the moment
+  // it's approved or skipped, AND (purely as an FYI note, not a gate — see
+  // skipPendingSignoff) the administrator's own account, so an "I'm away"
+  // toggle shows up here instantly without needing to refresh or reopen
+  // anything.
   function showPendingSignoffModal(id){
     if(!id){ toast('That request is missing.'); return; }
     if(!db){ toast('Needs an internet connection.'); return; }
@@ -2806,17 +2816,21 @@ var qrcode = (function(){
         showSignedReceiptModal(finalOpts, pendingReceiptRenderFn || buildReceiptHTML, lastDoc.opts.title);
         return;
       }
-      var canSkip = !lastDoc.mandatory && adminAway;
+      // Any team member can skip waiting at any time — the one thing that
+      // can never be skipped is a mandatory (withdrawal) request, no matter
+      // what. Whether the administrator is marked away is shown below only
+      // as a heads-up, it doesn't change whether Skip is offered.
+      var canSkip = !lastDoc.mandatory;
       var draftOpts = Object.assign({}, lastDoc.opts, {signatures: lastDoc.signatures, unsigned:true, unsignedReason:"waiting for the administrator's signature"});
       var draftHtml = (pendingReceiptRenderFn || buildReceiptHTML)(draftOpts);
       openModal(
         '<div class="modal-head"><h3>'+esc(lastDoc.opts.title||'Receipt')+' — pending</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
         '<div style="max-height:50vh; overflow:auto; margin-bottom:14px">'+draftHtml+'</div>'+
         '<p class="hint" style="margin-top:-6px">Sent to the administrator — this usually takes a few minutes. You\'ll be notified the moment it\'s approved; you can safely close this and reopen it from Messages later.</p>'+
-        (canSkip ? '<p class="hint" style="margin-top:4px">The administrator is currently marked away.</p>' : '')+
+        (canSkip ? '<p class="hint" style="margin-top:4px">Not urgent enough to wait? Tap "Skip and send" below to finish with just your own signature'+(adminAway?' — the administrator is currently marked away':'')+'. They\'ll see it in Pending signatures either way.</p>' : '')+
         '<div class="modal-foot">'+
           '<button type="button" class="btn" data-action="close-modal">Close</button>'+
-          (canSkip ? '<button type="button" class="btn" data-action="skip-pending-signoff:'+esc(id)+'">Skip and send anyway</button>' : '')+
+          (canSkip ? '<button type="button" class="btn" data-action="skip-pending-signoff:'+esc(id)+'">Skip and send</button>' : '')+
         '</div>'
       );
     }
@@ -2832,19 +2846,20 @@ var qrcode = (function(){
       draw();
     }, function(){ toast('Could not load this document right now.'); });
   }
-  // Team member gives up waiting and finishes with just their own
-  // signature — only reachable from the button showPendingSignoffModal
-  // shows, which only appears when this request isn't mandatory and the
-  // administrator is currently marked away (skipReceiptSignoff re-checks
-  // both, fresh, on the server, regardless).
+  // Team member skips waiting and finishes with just their own signature —
+  // available any time for a non-mandatory request (skipReceiptSignoff
+  // re-checks "not mandatory" fresh on the server regardless of what the
+  // client believes). The administrator is still notified immediately and
+  // still sees it afterward in Pending signatures, just as an FYI instead
+  // of something to approve.
   function skipPendingSignoff(id){
-    confirmModal("Send this without the administrator's signature? They'll be notified immediately that you signed alone.", function(){
+    confirmModal("Send this without waiting for the administrator's signature? They'll be notified immediately and will still see it under Pending signatures.", function(){
       if(!cloudMode){ toast('Needs an internet connection to finish this.'); return; }
       openModal('<div class="modal-head"><h3>Sending…</h3></div><p class="hint" style="margin:0">Finishing this document with just your signature.</p>');
       db.collection('pendingSignoffs').doc(id).get().then(function(snap){
         if(!snap.exists) throw Object.assign(new Error('That request no longer exists.'), {code:'client/gone'});
         var doc = snap.data();
-        var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields);
+        var fields = receiptCanonicalFields(doc.opts).concat(fieldObjectsToTuples(doc.firstSignerFields));
         return callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
           var code = res.data && res.data.code;
           return callFunctionResilient('skipReceiptSignoff', {id: id, code: code}).then(function(){
@@ -2907,7 +2922,7 @@ var qrcode = (function(){
           ['Signed at (Administrator)', new Date().toISOString()],
           ['Signature hash (Administrator)', sigHash]
         ];
-        var fields = receiptCanonicalFields(doc.opts).concat(doc.firstSignerFields).concat(adminFields);
+        var fields = receiptCanonicalFields(doc.opts).concat(fieldObjectsToTuples(doc.firstSignerFields)).concat(adminFields);
         openModal('<div class="modal-head"><h3>Signing…</h3></div><p class="hint" style="margin:0">Getting a verification code for this document.</p>');
         if(!cloudMode){ toast('Approving needs an internet connection.'); showPendingSignoffModal(id); return; }
         callFunctionResilient('signReceipt', {fields: fields}).then(function(res){
@@ -2927,20 +2942,34 @@ var qrcode = (function(){
   }
   function signoffsPanel(){
     if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator sees this.</div></div>';
-    if(!pendingSignoffsForAdmin.length) return '<div class="empty">'+ICONS.empty+'<div>Nothing waiting on your signature right now.</div></div>';
-    var rows = pendingSignoffsForAdmin.map(function(doc){
-      var when = (doc.createdAt && doc.createdAt.toDate) ? fmtDate(doc.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Just now';
+    if(!pendingSignoffsForAdmin.length) return '<div class="empty">'+ICONS.empty+'<div>Nothing here right now.</div></div>';
+    function when(doc){ return (doc.createdAt && doc.createdAt.toDate) ? fmtDate(doc.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Just now'; }
+    var pending = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; });
+    var skipped = pendingSignoffsForAdmin.filter(function(d){ return d.status==='skipped'; });
+    var pendingRows = pending.map(function(doc){
       return '<div class="card" style="margin-bottom:10px">'+
         '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">'+
           '<div>'+
             '<strong>'+esc(doc.opts.title||'Receipt')+'</strong> — '+esc(doc.opts.receiptNo||'')+
-            '<div class="hint">From '+esc(doc.createdByLabel||doc.createdByRole)+' · '+when+(doc.mandatory?' · <strong>Withdrawal — cannot be skipped</strong>':'')+'</div>'+
+            '<div class="hint">From '+esc(doc.createdByLabel||doc.createdByRole)+' · '+when(doc)+(doc.mandatory?' · <strong>Withdrawal — cannot be skipped</strong>':'')+'</div>'+
           '</div>'+
           '<button class="btn primary" data-action="review-pending-signoff:'+esc(doc.id)+'">Review &amp; sign</button>'+
         '</div>'+
       '</div>';
     }).join('');
-    return '<p class="hint" style="margin-bottom:10px">These are waiting on your signature before the team member can download them.</p>'+rows;
+    var skippedRows = skipped.map(function(doc){
+      return '<div class="card" style="margin-bottom:10px">'+
+        '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">'+
+          '<div>'+
+            '<strong>'+esc(doc.opts.title||'Receipt')+'</strong> — '+esc(doc.opts.receiptNo||'')+
+            '<div class="hint">From '+esc(doc.createdByLabel||doc.createdByRole)+' · '+when(doc)+' · <span class="role-pill pending">Skipped — already downloaded</span></div>'+
+          '</div>'+
+          '<button class="btn" data-action="open-pending-signoff:'+esc(doc.id)+'">View</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+    return (pending.length ? '<p class="hint" style="margin-bottom:10px">Waiting on your signature before the team member can download them.</p>'+pendingRows : '<div class="empty">'+ICONS.empty+'<div>Nothing waiting on your signature right now.</div></div>')+
+      (skipped.length ? '<div class="card-title" style="margin-top:18px"><h3>Signed without you</h3><span class="hint">Sent on and already downloaded — nothing to do, just for your records</span></div>'+skippedRows : '');
   }
   function printReceiptNow(html){
     if(!html){ toast('That record is no longer available.'); return; }
@@ -3478,7 +3507,7 @@ var qrcode = (function(){
     var devices = (gs && gs.fingerprintDevices) || [];
     var deviceRows = devices.map(function(d){
       return '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-top:1px solid var(--border, #eee)">'+
-        '<span>'+ICONS.fingerprint+' '+esc(d.label||'A device')+(d.addedAt?' <span class="hint">— added '+fmtDate(new Date(d.addedAt))+'</span>':'')+'</span>'+
+        '<span><span class="inline-ico" style="width:14px; height:14px; vertical-align:-2px">'+ICONS.fingerprint+'</span> '+esc(d.label||'A device')+(d.addedAt?' <span class="hint">— added '+fmtDate(new Date(d.addedAt))+'</span>':'')+'</span>'+
         '<button class="icon-btn" data-action="remove-finance-fingerprint:'+esc(d.id||'')+'" title="Remove">'+ICONS.trash+'</button>'+
       '</div>';
     }).join('');
@@ -3768,7 +3797,10 @@ var qrcode = (function(){
   function initPendingSignoffsAdminSync(){
     if(pendingSignoffsAdminSyncStarted || !db || !isAdmin()) return;
     pendingSignoffsAdminSyncStarted = true;
-    db.collection('pendingSignoffs').where('status','==','pending').onSnapshot(function(snap){
+    // Both statuses so a skipped request still shows up here as an FYI —
+    // "approved" ones aren't included since those were the administrator's
+    // own action and don't need to linger in this list.
+    db.collection('pendingSignoffs').where('status','in',['pending','skipped']).onSnapshot(function(snap){
       pendingSignoffsForAdmin = [];
       snap.forEach(function(doc){ pendingSignoffsForAdmin.push(Object.assign({id:doc.id}, doc.data())); });
       pendingSignoffsForAdmin.sort(function(a,b){
