@@ -1,6 +1,55 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed the phone bug where the section icons showed
+> **Update (latest):** Fixed a real bug where a Supervisor or Farmhand
+> recording an egg or bird sale never actually got it counted as income, and
+> the urgent-alert popup now also greets you with anything still waiting the
+> moment you open the app — not only while you happen to be in it already.
+>
+> **Egg/bird sales recorded by a Supervisor or Farmhand not showing up in
+> Income — fixed, a real bug.** Recording a sale (an egg loss or a flock
+> removal with reason "Sold" and an amount) saves the sale/loss itself and a
+> matching Income entry in the very same save — but the database rules only
+> let a Supervisor or Farmhand change certain parts of the farm record, and
+> "Income" wasn't one of them (Farmhand was also missing "Customers"). That
+> meant the whole combined save was silently rejected by the database
+> whenever one of them recorded a sale — the sale looked like it saved (it
+> was still sitting on their own device), but it never actually reached the
+> shared farm record, so it never appeared as income anywhere else. This
+> only ever affected sales recorded by a Supervisor or Farmhand — you
+> (administrator) recording a sale yourself was never affected, which is
+> probably why this went unnoticed until now. Existing sales that were
+> quietly dropped this way can't be recovered automatically since they were
+> never actually saved anywhere — if you know of specific ones a Supervisor
+> or Farmhand told you about that never showed up in Income, you'll need to
+> re-enter those by hand; everything from here on will save correctly.
+>
+> **The urgent-alert popup now checks in when you open the app, not only
+> while you're already in it.** Until now, the big popup (with the chick or
+> rooster sound) only ever appeared for something that arrived while you
+> already had the app open — if a signature request or an Urgent message
+> was waiting from before, opening the app fresh only showed it quietly in
+> Messages, no popup. Now, opening the app checks for anything still unread
+> and pending and pops the same alert for it, so nothing waiting for you
+> gets missed just because it arrived while you were away. Once you've
+> viewed or dismissed something, it won't pop again on the next open unless
+> it's still genuinely unread.
+>
+> **This needs the database rules redeployed, not just the front-end
+> files** — the sales/income fix lives entirely in `firestore.rules`:
+> ```
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Fix Supervisor/Farmhand egg & bird sales not reaching Income; pop the urgent alert on app open for anything still pending"
+> git push
+> ```
+> After deploying, please try: sign in as (or ask) a Supervisor or Farmhand
+> to record an egg or bird sale with an amount, and confirm it now shows up
+> under Income on your (administrator) account. Also try sending yourself a
+> document for signature, then fully closing and reopening the app (or just
+> reloading) before looking at it — you should get the popup and chick sound
+> right away instead of having to open Messages to notice it.
+
+> **Earlier update:** Fixed the phone bug where the section icons showed
 > nothing, replaced every icon in the app with colorful illustrated artwork,
 > and gave every page a soft background tint of its own color.
 >

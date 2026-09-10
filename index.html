@@ -4363,6 +4363,33 @@ var qrcode = (function(){
     if(msg.kind==='signoff-request') playChickSound(); else playRoosterSound();
     showBackgroundAlert(msg);
   }
+  // Surfaces whatever urgent items were already waiting — a signature
+  // request, an Urgent message — before this device even opened the app,
+  // using the same popup + sound a live arrival would get. Called exactly
+  // once, right after the very first snapshot of each messages listener
+  // loads (see initMessagesSync): that batch reports every existing
+  // matching message as 'added', so without this filter every message
+  // you'd ever received would re-pop on every single app open — instead
+  // only ones still unread get the alert, and it stops repeating for a
+  // given message as soon as it's opened/marked read.
+  function queueInitialUrgentAlerts(list){
+    if(!currentUser) return;
+    var qualifying = list.filter(function(m){
+      return isMessageForMe(m) && (m.readBy||[]).indexOf(currentUser.uid)===-1 &&
+        (m.kind==='signoff-request' || m.urgency==='urgent');
+    });
+    if(!qualifying.length) return;
+    qualifying.sort(function(a,b){
+      var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+      var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+      return ta - tb; // oldest first, so "View" walks through them in arrival order
+    });
+    qualifying.forEach(function(m){ urgentAlertQueue.push(m); });
+    renderUrgentAlert();
+    // One sound for the whole batch, not one per pending item.
+    if(qualifying.some(function(m){ return m.kind==='signoff-request'; })) playChickSound(); else playRoosterSound();
+    showBackgroundAlert(qualifying[0]);
+  }
   // The soft, nothing-to-do egg notification — bottom-corner toast, hen
   // sound, gone on its own after 30s. Deliberately separate from
   // triggerUrgentAlert above: this never interrupts with a popup or asks
@@ -4460,11 +4487,20 @@ var qrcode = (function(){
     function makeHandler(){
       var seenInitial = false;
       return function(snap){
+        var initialBatch = [];
         snap.docChanges().forEach(function(change){
           if(change.type==='removed'){ delete merged[change.doc.id]; return; }
           var data = Object.assign({id:change.doc.id}, change.doc.data());
           merged[change.doc.id] = data;
-          if(change.type==='added' && seenInitial && data.fromUid!==currentUser.uid &&
+          if(!seenInitial){
+            // The very first snapshot from a fresh listener delivers every
+            // already-existing matching message as an 'added' change, not
+            // just genuinely new ones — collected here so they can be
+            // checked for anything still unread once the whole batch is in
+            // (see queueInitialUrgentAlerts below), instead of popping the
+            // big alert for the entire history on every app open.
+            initialBatch.push(data);
+          } else if(change.type==='added' && data.fromUid!==currentUser.uid &&
              (data.toUid===currentUser.uid || data.toUid==='all')){
             // Egg activity is always a soft, no-action toast (see
             // notifyEggActivity/triggerEggToast) — never the big popup,
@@ -4473,7 +4509,10 @@ var qrcode = (function(){
             else if(data.urgency==='urgent') triggerUrgentAlert(data);
           }
         });
-        seenInitial = true;
+        if(!seenInitial){
+          seenInitial = true;
+          queueInitialUrgentAlerts(initialBatch);
+        }
         applyAll();
       };
     }

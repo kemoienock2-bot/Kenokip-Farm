@@ -20,10 +20,27 @@ service cloud.firestore {
       // index.html), so without 'expenses' allowed here that combined
       // write was rejected outright and the feed entry never actually
       // saved whenever a price was included.
+      //
+      // Both also include 'incomes' for the same reason: recording an egg
+      // or bird sale (reason "sold", with an amount) auto-creates a linked
+      // Income record in the SAME write as eggLosses/flock (see the
+      // 'eggloss' and 'removal' branches of handleForm) — without 'incomes'
+      // allowed here, that combined write was rejected outright and the
+      // sale never actually recorded as income, even though the
+      // sale/loss itself appeared to save (it's one Firestore document, so
+      // the whole write bounced, not just the income half — a Supervisor
+      // or Farmhand's device just never found out, since the local copy
+      // still showed it until the next reload/reconnect).
+      //
+      // Farmhand also includes 'customers': the same sale flow calls
+      // resolveOrCreateCustomer() when a buyer name is given, which can
+      // add a new row to 'customers' in that same write — Supervisor
+      // already had this key, but Farmhand didn't, so a Farmhand-recorded
+      // sale with a new buyer name hit the identical rejection.
       return jobTitle == 'financial' ? ['expenses', 'incomes'] :
-             jobTitle == 'supervisor' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'healthRecords', 'customers', 'expenses'] :
+             jobTitle == 'supervisor' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'healthRecords', 'customers', 'expenses', 'incomes'] :
              jobTitle == 'vet' ? ['healthRecords'] :
-             jobTitle == 'farmhand' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'expenses'] :
+             jobTitle == 'farmhand' ? ['flock', 'broodings', 'eggs', 'eggLosses', 'feedLogs', 'expenses', 'incomes', 'customers'] :
              [];
     }
     // 'settings' (currencies/categories/the About text) and 'version' (a
