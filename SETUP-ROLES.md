@@ -1,6 +1,20 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Every team member's "About" is now actually saved
+> **Update (latest):** Fixed the oversized sign-in icon (the padlock that
+> filled almost the whole gold circle and squeezed "Sign in" onto two
+> lines) and replaced it with a small, neatly-sized quill/feather icon — it
+> nods to both the farm (feathers) and signing in (a quill signature). This
+> is front-end only:
+> ```
+> git add .
+> git commit -m "Fix oversized sign-in icon; replace lock with a feather icon"
+> git push
+> ```
+> After deploying, please try: open the sign-in screen (sign out, or open
+> in a private window) and confirm the "Sign in" button now shows a small
+> feather icon next to normal-sized text, in both light and dark mode.
+
+> **Earlier update:** Every team member's "About" is now actually saved
 > with the obvious starter description of their role — not just shown until
 > they write their own — and they can edit it anytime after. Also new: a
 > Gender field (Female/Male/Unspecified) that picks their default profile
