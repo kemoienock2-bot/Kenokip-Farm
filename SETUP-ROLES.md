@@ -1,6 +1,92 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Fixed the oversized sign-in icon (the padlock that
+> **Update (latest):** Reorganized the navigation into groups — Farm
+> Records (Flock, Eggs, Feed, Health), Money (Income, Expenses, Finance,
+> Reports), and Team (Team, Team Directory, Messages, Pending signatures)
+> — and completely replaced the phone navigation with a proper bottom tab
+> bar. This is front-end only:
+> ```
+> git add .
+> git commit -m "Group navigation into Farm Records/Money/Team; new phone bottom-tab navigation"
+> git push
+> ```
+> **Why:** the phone nav used to be the sidebar squeezed into a
+> horizontally-scrolling row of 16 nearly-identical icons with no labels —
+> and it silently dropped your account/sign-out info too. It's now a fixed
+> bottom bar with 7 labelled tabs (grouped ones — Farm Records, Money,
+> Team — show their own sections as a second row of tabs right above the
+> page). On desktop, nothing moved or got removed — every section is
+> still there, just organized under its group's heading in the sidebar
+> instead of one long flat list.
+> After deploying, please open the app on your phone and try: tapping
+> "Farm Records" (should show Flock/Eggs/Feed/Health as a second tab row),
+> switching between those, and — if you ever view as a Guest on a phone —
+> confirming "Sign in" is now reachable from the Settings tab.
+
+> **Earlier update:** Five things — you can now edit a brooding record any
+> time (eggs given, date, note, and even the hatch numbers after the fact);
+> everyone on the team gets a real push notification the moment chicks
+> hatch, even with the app closed; Supervisor/Farmhand/Vet accounts now sign
+> out automatically after 5 hours of inactivity (they used to never time
+> out); and every list — Eggs, Feed, Health, Expenses, Income, Customers,
+> Brooding, Flock batches, Finance transactions, Messages, Team, the Access
+> log and more — now shows 5 at a time with Prev/Next paging instead of one
+> long list.
+>
+> **Edit brooding, any time.** The Brooding card on the Flock page now has
+> an Edit (pencil) button on every row, not just Delete. Before it's
+> hatched you can change the eggs given, the date, or the note freely.
+> After it's hatched, you can still fix the numbers — how many chicks
+> actually hatched vs. didn't — and the flock batch those chicks became is
+> resized to match automatically. The linked "given for brooding" entry on
+> the Eggs page stays in sync with whatever you set here.
+>
+> **Chicks hatched — a real notification, even with the app closed.**
+> Whoever records a hatch (Supervisor, Farmhand, or you) now sends an
+> Urgent broadcast to the *whole team* — a real push notification via
+> Firebase Cloud Messaging, the same mechanism as an Urgent message, so it
+> reaches every phone even if the app is fully closed, not just
+> backgrounded. It shows the same big gold popup with a chick sound as a
+> signature request. This needs the Cloud Functions deploy below (it's a
+> brand-new function, `notifyHatch`).
+>
+> **5-hour auto sign-out for Supervisor, Farmhand, and Vet accounts.**
+> These roles used to have no inactivity timeout at all — signed in forever
+> until someone manually signed out. They now sign out automatically after
+> 5 hours of inactivity, the same mechanism the Administrator and Financial
+> Staff have always had (who still keep their tighter 10-minute timeout,
+> unchanged — that one's specifically for the safety of financial data).
+> Using the app (even in another tab) keeps the clock reset; it works in
+> the background too.
+>
+> **5 items per page, everywhere.** Every list in the app that could grow
+> long now shows 5 rows at a time, with a "‹ Page X of Y ›" control at the
+> bottom — Eggs (daily log and losses), Brooding, Flock (batches and
+> losses/sales), Feed, Health, Expenses, Income, Customers, Messages (per
+> urgency), Finance transactions, Team and pending Finance approvals, Team
+> Directory, Pending signatures, and your Access log / Finance security
+> events (previously 10 per page, now 5 to match everywhere else). A list
+> with 5 or fewer entries looks exactly like before — no page control
+> shown.
+>
+> **This needs BOTH a Cloud Functions deploy AND a front-end push** (the
+> hatch notification is a new Cloud Function; everything else is
+> front-end):
+> ```
+> firebase deploy --only functions
+> git add .
+> git commit -m "Editable brooding, team-wide hatch push notification, 5-hour idle logout for all roles, 5-per-page pagination everywhere"
+> git push
+> ```
+> After deploying, please try: edit a brooding record (both before and
+> after recording its hatch) and confirm the Eggs page's "given for
+> brooding" entry updates to match; record a hatch from a non-administrator
+> account and confirm every other signed-in account gets the popup +
+> notification, even in another browser/device that's closed; and open any
+> page with more than 5 records (Eggs is a good one) to confirm the Prev/
+> Next paging works.
+
+> **Earlier update:** Fixed the oversized sign-in icon (the padlock that
 > filled almost the whole gold circle and squeezed "Sign in" onto two
 > lines) and replaced it with a small, neatly-sized quill/feather icon — it
 > nods to both the farm (feathers) and signing in (a quill signature). This

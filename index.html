@@ -197,7 +197,19 @@
   .nav-item:hover .nav-ico{ box-shadow:0 0 0 1.5px var(--accent); }
   .nav-item.active{ background:var(--accent-tint); color:var(--accent-ink); font-weight:600; }
   .nav-item.active .nav-ico{ background:var(--surface); box-shadow:0 0 0 2px var(--accent); }
+  /* A grouped section (Farm Records / Money / Team) on the desktop
+     sidebar — a small label, then its sections indented right underneath,
+     same nav-item buttons as any standalone section. */
+  .nav-group{ margin-top:6px; }
+  .nav-group-label{ padding:6px 10px 2px; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-3); }
+  .nav-sublist{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .nav-item-sub{ padding-left:18px; }
   .rail-foot{ margin-top:auto; display:flex; flex-direction:column; gap:8px; padding:0 6px; }
+  /* Phone-only bottom tab bar + its sub-tabs strip — see renderNav() in
+     the script. Hidden entirely above the 860px breakpoint, where the
+     regular sidebar (.rail) is what's shown instead. */
+  .mobile-tabbar{ display:none; }
+  .mobile-subtabs{ display:none; }
   .sync-chip{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-3); }
   .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-3); flex:none; }
   .sync-dot.saved{ background:var(--good); }
@@ -340,6 +352,8 @@
   .icon-btn{ border:none; background:none; color:var(--ink-3); padding:4px; border-radius:6px; display:inline-flex; }
   .icon-btn:hover{ background:var(--surface-2); color:var(--ink); }
   .icon-btn svg{ width:15px; height:15px; }
+  .pager{ display:flex; align-items:center; justify-content:center; gap:10px; padding:10px 0 2px; }
+  .pager .hint{ margin:0; min-width:88px; text-align:center; }
   /* A small icon dropped inline inside a sentence of text (not a button) —
      without this, a bare <svg> defaults to a huge intrinsic size in most
      browsers, which is what made the eye icon fill the whole screen. */
@@ -417,14 +431,14 @@
      shape for every kind of alert, just recolored: red for a plain Urgent
      message, warm gold for "needs your signature" (see .urgent-alert-box.signoff). */
   .urgent-alert-box{ display:flex; gap:12px; align-items:flex-start; background:linear-gradient(160deg, var(--bad-tint), var(--surface)); border:1px solid var(--bad); color:var(--bad); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); animation:urgent-pop .22s cubic-bezier(.2,.8,.3,1.1); }
-  .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,75%,92%), var(--surface)); border-color:hsl(38,65%,55%); color:hsl(30,70%,32%); }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); } }
-  :root[data-theme="dark"] .urgent-alert-box.signoff{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); }
-  .urgent-alert-icon{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.5); flex:none; }
-  .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,80%,88%); }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-icon{ background:rgba(0,0,0,.25); } :root:not([data-theme="light"]) .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,40%,28%); } }
+  .urgent-alert-box.signoff, .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,75%,92%), var(--surface)); border-color:hsl(38,65%,55%); color:hsl(30,70%,32%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-box.signoff, :root:not([data-theme="light"]) .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); } }
+  :root[data-theme="dark"] .urgent-alert-box.signoff, :root[data-theme="dark"] .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); }
+  .urgent-alert-icon{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.5); flex:none; font-size:18px; }
+  .urgent-alert-box.signoff .urgent-alert-icon, .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,80%,88%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-icon{ background:rgba(0,0,0,.25); } :root:not([data-theme="light"]) .urgent-alert-box.signoff .urgent-alert-icon, :root:not([data-theme="light"]) .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,40%,28%); } }
   :root[data-theme="dark"] .urgent-alert-icon{ background:rgba(0,0,0,.25); }
-  :root[data-theme="dark"] .urgent-alert-box.signoff .urgent-alert-icon{ background:hsl(38,40%,28%); }
+  :root[data-theme="dark"] .urgent-alert-box.signoff .urgent-alert-icon, :root[data-theme="dark"] .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,40%,28%); }
   .urgent-alert-box svg{ width:20px; height:20px; flex:none; }
   .urgent-alert-text{ flex:1; font-size:13.5px; color:var(--ink); padding-top:2px; }
   .urgent-alert-text strong{ display:block; margin-bottom:3px; color:inherit; }
@@ -456,17 +470,36 @@
 
   @media (max-width:860px){
     .app{ flex-direction:column; }
-    .rail{ width:100%; flex-direction:row; align-items:center; padding:12px 14px; gap:14px; border-right:none; border-bottom:1px solid var(--border-soft); }
-    .brand-text span{ display:none; }
-    .nav-list{ flex-direction:row; overflow-x:auto; gap:2px; }
-    /* Only the text label hides on mobile (icon-only nav row) — this used
-       to be a bare "span" selector, which also matched .nav-ico (the
-       colored icon chip added for the per-section theme) and hid every
-       icon on phones, leaving blank nav buttons. */
-    .nav-item .nav-label{ display:none; }
-    .nav-item{ padding:9px; }
-    .rail-foot{ display:none; }
+    /* The old phone nav was the same sidebar squeezed into a horizontal,
+       icon-only, side-scrolling row — with 16 sections it meant hunting
+       sideways through near-identical circular icons, and it dropped your
+       account info entirely (.rail-foot had nowhere to go). Replaced below
+       with a proper bottom tab bar (7 grouped, labelled tabs — see
+       NAV_GROUPS/renderNav in the script) plus a second row of tabs for
+       whichever group is open, which is also where account info now lives
+       (folded into the Settings section, one of the 7 tabs). */
+    .rail{ display:none; }
     .topbar, .panel{ padding-left:18px; padding-right:18px; }
+    .panel{ padding-bottom:88px; } /* keeps content clear of the fixed tab bar */
+    .mobile-subtabs:not([hidden]){ display:flex; overflow-x:auto; gap:8px; padding:10px 14px; background:var(--surface); border-bottom:1px solid var(--border-soft); }
+    .mobile-subtab{ flex:none; border:1px solid var(--border-soft); background:var(--surface-2); color:var(--ink-2); padding:7px 14px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; }
+    .mobile-subtab.active{ background:var(--accent-tint); color:var(--accent-ink); border-color:var(--accent); }
+    .mobile-tabbar{
+      display:flex; position:fixed; left:0; right:0; bottom:0; z-index:60;
+      background:var(--surface); border-top:1px solid var(--border-soft);
+      padding:6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
+      box-shadow:0 -2px 10px rgba(0,0,0,.06);
+    }
+    .mobile-tab{
+      flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+      border:none; background:none; color:var(--ink-3); padding:5px 2px; font-size:10.5px; font-weight:600;
+    }
+    .mobile-tab-ico{ position:relative; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; }
+    .mobile-tab-ico svg{ width:22px; height:22px; }
+    .mobile-tab-label{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mobile-tab.active{ color:var(--accent-ink); }
+    .mobile-tab.active .mobile-tab-ico{ color:var(--accent); }
+    .mobile-tab .nav-badge{ top:-4px; left:auto; right:-6px; }
   }
 
   /* Printing a Report or a Receipt: hide everything else on the page and
@@ -594,8 +627,10 @@
   <div class="main" id="main-content">
     <header class="topbar" id="topbar"></header>
     <div class="global-search-bar" id="global-search-bar"></div>
+    <div class="mobile-subtabs" id="mobile-subtabs" hidden></div>
     <main class="panel" id="panel"></main>
   </div>
+  <nav class="mobile-tabbar" id="mobile-tabbar"></nav>
 </div>
 <div id="modal-root"></div>
 <div class="toast-root" id="toast-root"></div>
@@ -1145,6 +1180,8 @@ var qrcode = (function(){
     income:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><line x1="8.3" y1="12" x2="15.7" y2="12"/><line x1="12" y1="8.3" x2="12" y2="15.7"/></svg>',
     settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>',
     plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    chevronLeft:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 9 12 15 19"/></svg>',
+    chevronRight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 15 12 9 19"/></svg>',
     edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.3-.9L18.1 9.3l-3.4-3.4L4.9 15.7 4 20z"/></svg>',
     trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>',
@@ -1225,6 +1262,42 @@ var qrcode = (function(){
   /* ============================= UTILS ============================= */
   function uid(p){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  /* ============================= PAGINATION ============================= */
+  // Every list-style table in the app (Eggs, Feed logs, Health, Expenses,
+  // Income, Customers, Brooding, Messages, Flock batches, Finance
+  // transactions, Access log...) shows PAGE_SIZE rows at a time through
+  // this one shared helper, so "5 per page" behaves identically everywhere
+  // instead of sixteen slightly-different bespoke implementations. Current
+  // page per list lives in ui.pages (keyed by a short string id, e.g.
+  // "eggs") — in-memory only, so it resets to page 1 on reload, which is
+  // the least surprising behavior for a list that can change shape between
+  // visits.
+  var PAGE_SIZE = 5;
+  function pageFor(key){ return Math.max(1, ui.pages[key]||1); }
+  function setPageFor(key, n){ ui.pages[key] = Math.max(1, n); }
+  // Returns { items, page, pageCount } — items is already sliced to the
+  // current page, and the current page is clamped back into range first
+  // (so deleting the last row on page 3 of 3 doesn't leave you looking at
+  // an empty page 3 forever).
+  function paginate(key, list){
+    var pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    var page = Math.min(pageFor(key), pageCount);
+    setPageFor(key, page);
+    var start = (page-1)*PAGE_SIZE;
+    return { items: list.slice(start, start+PAGE_SIZE), page: page, pageCount: pageCount, total: list.length };
+  }
+  // A small "‹ Page 2 of 5 ›" footer — omitted entirely when everything
+  // fits on one page, so short lists (most days, for most farms) look
+  // exactly as they always did.
+  function pagerHtml(key, pageCount, page){
+    if(pageCount<=1) return '';
+    return '<div class="pager">'+
+      '<button class="icon-btn" data-action="pager-prev:'+key+'" '+(page<=1?'disabled':'')+' title="Previous page">'+ICONS.chevronLeft+'</button>'+
+      '<span class="hint">Page '+page+' of '+pageCount+'</span>'+
+      '<button class="icon-btn" data-action="pager-next:'+key+'" '+(page>=pageCount?'disabled':'')+' title="Next page">'+ICONS.chevronRight+'</button>'+
+    '</div>';
+  }
   function clamp(n,lo,hi){ return Math.max(lo,Math.min(hi,n)); }
 
   /* ---- privacy masking (Finance, until unlocked with an authenticator code) ----
@@ -1575,48 +1648,107 @@ var qrcode = (function(){
     if(chip) chip.innerHTML = syncChipHTML();
     renderBanner();
   }
+  // Grouping related sections together — Farm Records, Money, Team — is
+  // what makes the phone nav workable: 16 flat top-level sections became a
+  // cramped, horizontally-scrolling icon row on small screens (see the
+  // mobile-tabbar CSS below). Desktop still lists every section (just with
+  // group headers now, for the same organizing benefit), but the phone
+  // tab bar only ever shows these 7 top-level entries — tapping a group
+  // reveals its own children as a second row of tabs (#mobile-subtabs)
+  // rather than needing all 16 icons in one row. A leaf with no `children`
+  // behaves exactly like a section always has.
+  var NAV_GROUPS = [
+    {key:'overview', label:'Overview', icon:PICS.overview},
+    {key:'flock-group', label:'Farm Records', icon:PICS.flockNav, children:[
+      {key:'flock', label:'Flock', icon:PICS.flockNav},
+      {key:'eggs', label:'Eggs', icon:PICS.eggs},
+      {key:'feed', label:'Feed', icon:PICS.feed},
+      {key:'health', label:'Health', icon:PICS.health}
+    ]},
+    {key:'money-group', label:'Money', icon:PICS.finance, children:[
+      {key:'income', label:'Income', icon:PICS.income},
+      {key:'expenses', label:'Expenses', icon:PICS.expenses},
+      {key:'finance', label:'Finance', icon:PICS.finance},
+      {key:'reports', label:'Reports', icon:PICS.reports}
+    ]},
+    {key:'customers', label:'Customers', icon:PICS.customers},
+    {key:'team-group', label:'Team', icon:PICS.team, children:[
+      {key:'team', label:'Manage Team', icon:PICS.team},
+      {key:'directory', label:'Team Directory', icon:PICS.directory},
+      {key:'messages', label:'Messages', icon:PICS.messages},
+      {key:'signoffs', label:'Pending signatures', icon:PICS.signoffs}
+    ]},
+    {key:'about', label:'About', icon:PICS.about},
+    {key:'settings', label:'Settings', icon:PICS.settings}
+  ];
   function renderNav(){
     var rail = document.getElementById('rail');
+    var tabbar = document.getElementById('mobile-tabbar');
+    var subtabsEl = document.getElementById('mobile-subtabs');
+    var unread = unreadMessageCount();
+    var pendingCount = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; }).length;
+    function badgeFor(key){ return key==='messages' ? unread : (key==='signoffs' ? pendingCount : 0); }
+    function badgeHtml(n){ return n>0 ? '<span class="nav-badge">'+(n>99?'99+':n)+'</span>' : ''; }
+
     // Filtered through sectionAllowed() so the nav never shows a link to a
     // page this account's role can't actually open — matches whatever
     // render() would bounce them out of anyway if they got there some
-    // other way (a stale link, browser back button, etc.).
-    var items = [
-      ['overview','Overview',PICS.overview],
-      ['flock','Flock',PICS.flockNav],
-      ['eggs','Eggs',PICS.eggs],
-      ['feed','Feed',PICS.feed],
-      ['health','Health',PICS.health],
-      ['expenses','Expenses',PICS.expenses],
-      ['income','Income',PICS.income],
-      ['customers','Customers',PICS.customers],
-      ['finance','Finance',PICS.finance],
-      ['reports','Reports',PICS.reports],
-      ['messages','Messages',PICS.messages],
-      ['signoffs','Pending signatures',PICS.signoffs],
-      ['directory','Team Directory',PICS.directory],
-      ['about','About',PICS.about],
-      ['settings','Settings',PICS.settings],
-      ['team','Team',PICS.team]
-    ].filter(function(it){ return sectionAllowed(it[0]); });
-    var unread = unreadMessageCount();
-    var pendingCount = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; }).length;
+    // other way (a stale link, browser back button, etc.). A group with
+    // every child filtered out disappears entirely, same as a leaf would.
+    var groups = NAV_GROUPS.map(function(g){
+      if(!g.children) return sectionAllowed(g.key) ? g : null;
+      var kids = g.children.filter(function(c){ return sectionAllowed(c.key); });
+      return kids.length ? Object.assign({}, g, {children:kids}) : null;
+    }).filter(Boolean);
+
+    // ---- Desktop sidebar: every section still listed, just organized
+    // under its group's header now instead of one long flat list. ----
+    var desktopHtml = groups.map(function(g){
+      if(!g.children){
+        return '<li><button class="nav-item '+(ui.section===g.key?'active':'')+'" data-nav-section="'+g.key+'" data-action="nav:'+g.key+'"><span class="nav-ico">'+g.icon+'</span>'+badgeHtml(badgeFor(g.key))+'<span class="nav-label">'+g.label+'</span></button></li>';
+      }
+      var kidsHtml = g.children.map(function(c){
+        return '<li><button class="nav-item nav-item-sub '+(ui.section===c.key?'active':'')+'" data-nav-section="'+c.key+'" data-action="nav:'+c.key+'"><span class="nav-ico">'+c.icon+'</span>'+badgeHtml(badgeFor(c.key))+'<span class="nav-label">'+c.label+'</span></button></li>';
+      }).join('');
+      return '<li class="nav-group"><div class="nav-group-label">'+esc(g.label)+'</div><ul class="nav-sublist">'+kidsHtml+'</ul></li>';
+    }).join('');
+
     rail.innerHTML =
       '<div class="brand">'+
         '<img class="brand-mark" src="icons/logo-mark.png" alt="Kenokip Farm">'+
         '<div class="brand-text"><h1>Kenokip Farm</h1><span>Poultry Keeping</span></div>'+
       '</div>'+
-      '<ul class="nav-list">'+
-        items.map(function(it){
-          var badgeCount = it[0]==='messages' ? unread : (it[0]==='signoffs' ? pendingCount : 0);
-          var badge = badgeCount>0 ? '<span class="nav-badge">'+(badgeCount>99?'99+':badgeCount)+'</span>' : '';
-          // data-nav-section carries this item's own bold color (see the
-          // .nav-item[data-nav-section] CSS) — independent of which page is
-          // currently open, so the whole rail reads as a little color key.
-          return '<li><button class="nav-item '+(ui.section===it[0]?'active':'')+'" data-nav-section="'+it[0]+'" data-action="nav:'+it[0]+'"><span class="nav-ico">'+it[2]+'</span>'+badge+'<span class="nav-label">'+it[1]+'</span></button></li>';
-        }).join('')+
-      '</ul>'+
+      '<ul class="nav-list">'+desktopHtml+'</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
+
+    // ---- Phone bottom tab bar: only the 7 top-level entries. Tapping a
+    // group jumps to whichever of its sections was open last (or its
+    // first one), and reveals that group's own sections as a second,
+    // horizontally-scrollable row of tabs right under the search bar. ----
+    var activeGroup = null;
+    groups.forEach(function(g){
+      if(g.children && g.children.some(function(c){ return c.key===ui.section; })) activeGroup = g;
+    });
+    if(tabbar){
+      tabbar.innerHTML = groups.map(function(g){
+        var isActive = g.children ? (activeGroup===g) : (ui.section===g.key);
+        var n = g.children ? g.children.reduce(function(a,c){ return a+badgeFor(c.key); },0) : badgeFor(g.key);
+        var action = g.children ? 'nav-group:'+g.key : 'nav:'+g.key;
+        return '<button class="mobile-tab '+(isActive?'active':'')+'" data-action="'+action+'">'+
+          '<span class="mobile-tab-ico">'+g.icon+badgeHtml(n)+'</span><span class="mobile-tab-label">'+esc(g.label)+'</span></button>';
+      }).join('');
+    }
+    if(subtabsEl){
+      if(activeGroup && activeGroup.children.length>1){
+        subtabsEl.hidden = false;
+        subtabsEl.innerHTML = activeGroup.children.map(function(c){
+          return '<button class="mobile-subtab '+(ui.section===c.key?'active':'')+'" data-action="nav:'+c.key+'">'+esc(c.label)+badgeHtml(badgeFor(c.key))+'</button>';
+        }).join('');
+      } else {
+        subtabsEl.hidden = true;
+        subtabsEl.innerHTML = '';
+      }
+    }
   }
   function accountFootHTML(){
     if(currentUser){
@@ -1629,6 +1761,18 @@ var qrcode = (function(){
         '<button class="btn ghost sm" data-action="guest-signin" style="width:100%;margin-top:8px">Sign in</button></div>';
     }
     return '';
+  }
+  // Guest mode's "Sign in" link lives in the desktop sidebar footer
+  // (accountFootHTML above), which is hidden on phones (see the
+  // .mobile-tabbar CSS) — without this, a guest on a phone would have no
+  // way back to signing in at all. Settings is reachable by anyone
+  // (including a guest, see sectionAllowed), so that's where this shows
+  // up instead; accountCardHTML() already covers a signed-in account.
+  function guestAccountCardHTML(){
+    if(!guestMode) return '';
+    return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill">Guest</span></div>'+
+      '<p class="hint">Viewing a read-only copy of the ledger — nothing you change here is saved.</p>'+
+      '<button class="btn primary" data-action="guest-signin">Sign in</button></div>';
   }
   function topbarHTML(title,sub,right,icon){
     return '<div style="display:flex; align-items:center; gap:14px">'+(icon?'<div class="pic-badge lg">'+icon+'</div>':'')+'<div><h2>'+title+'</h2><div class="topbar-sub">'+(sub||'')+'</div></div></div><div class="topbar-actions">'+(right||'')+'</div>';
@@ -1807,7 +1951,8 @@ var qrcode = (function(){
     }).join('');
 
     var batches = state.flock.slice().sort(function(a,b){ return a.dateAdded<b.dateAdded?1:-1; });
-    var rows = batches.map(function(b){
+    var batchesPage = paginate('flock-batches', batches);
+    var rows = batchesPage.items.map(function(b){
       var c = currentCount(b), wk = ageWeeks(b);
       var histCount = (b.removals||[]).filter(function(r){return r.reason!=='resexed';}).length + (b.removals||[]).filter(function(r){return r.reason==='resexed';}).length;
       return '<tr>'+
@@ -1837,7 +1982,7 @@ var qrcode = (function(){
         (batches.length ?
           '<table><thead><tr><th>Added</th><th>Gender</th><th>Age</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
           : '<div class="empty">'+ICONS.empty+'<div>No birds recorded yet. Use the '+'+ '+'button above — or on any Chicks / Growers / Layers card — to add your first batch.</div></div>')+
-        '</div></div>'+
+        '</div>'+pagerHtml('flock-batches', batchesPage.pageCount, batchesPage.page)+'</div>'+
       flockActivityPanelHTML()+
       broodingPanelHTML()+
       '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
@@ -1861,7 +2006,8 @@ var qrcode = (function(){
   }
   function flockActivityPanelHTML(){
     var activity = flockActivityRows();
-    var rows = activity.map(function(item){
+    var activityPage = paginate('flock-activity', activity);
+    var rows = activityPage.items.map(function(item){
       var b = item.batch, r = item.removal;
       var batchLabel = genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+' · added '+fmtDate(parseISO(b.dateAdded));
       var amountText = r.reason==='sold' ? (r.saleAmount>0 ? fmtMoney(r.saleAmount) : 'Not recorded') : '—';
@@ -1886,11 +2032,12 @@ var qrcode = (function(){
       (activity.length ?
         '<table><thead><tr><th>Date</th><th>Batch</th><th>Reason</th><th class="num">Count</th><th>Buyer</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('flock-activity', activityPage.pageCount, activityPage.page)+'</div>';
   }
   function broodingPanelHTML(){
     var list = (state.broodings||[]).slice().sort(function(a,b){ return a.dateStarted<b.dateStarted?1:-1; });
-    var rows = list.map(function(b){
+    var broodPage = paginate('brooding', list);
+    var rows = broodPage.items.map(function(b){
       var hatchDate = broodingHatchDateISO(b);
       var statusHtml;
       if(b.status==='hatched'){
@@ -1909,6 +2056,7 @@ var qrcode = (function(){
         '<td>'+esc(b.note||'—')+'</td>'+
         '<td><div class="row-actions">'+
           (b.status!=='hatched' ? '<button class="btn sm primary" data-action="open-resolve-brooding:'+b.id+'" '+(readOnly?'disabled':'')+'>Record hatch</button>' : '')+
+          '<button class="icon-btn" data-action="open-edit-brooding:'+b.id+'" title="Edit" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
           '<button class="icon-btn" data-action="delete-brooding:'+b.id+'" title="Delete" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
         '</div></td></tr>';
     }).join('');
@@ -1918,7 +2066,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (rows ? '<table><thead><tr><th>Started</th><th class="num">Eggs given</th><th>Expected hatch</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No brooding hens recorded yet.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('brooding', broodPage.pageCount, broodPage.page)+'</div>';
   }
 
   function historyModalHtml(batchId){
@@ -2054,6 +2202,38 @@ var qrcode = (function(){
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
+  // Lets a brooding record be corrected at any time — before or after it's
+  // hatched — not just recorded once and locked in. Before hatching, the
+  // egg count/date/note are wide open (and stay in sync with the linked
+  // "given for brooding" egg-loss entry, so the Eggs page never drifts out
+  // of step with this one). After hatching, the eggs-given total is fixed
+  // relative to what's already happened — you correct chicks-hatched /
+  // didn't-hatch instead, and the flock batch those chicks became gets
+  // resized to match (handled in handleForm's 'edit-brooding' case).
+  function editBroodingFormHtml(id){
+    var b = (state.broodings||[]).find(function(x){return x.id===id;});
+    if(!b) return '<div class="modal-head"><h3>Edit brooding</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div><p class="hint">That brooding record is no longer available.</p>';
+    var isHatched = b.status==='hatched';
+    var ti = todayISO();
+    var hatchFieldsHtml = isHatched
+      ? '<div class="field-grid" style="margin-top:12px">'+
+          '<div class="field-row"><label>Chicks that hatched</label><input class="field" type="number" min="0" name="chicksAdded" value="'+b.chicksAdded+'" required></div>'+
+          '<div class="field-row"><label>Eggs that did not hatch</label><input class="field" type="number" min="0" name="eggsNotHatched" value="'+b.eggsNotHatched+'" required></div>'+
+        '</div>'+
+        '<p class="hint" style="margin-top:6px">These two must add up to the eggs given. If chicks-hatched goes up or down, the flock batch it added is resized to match.</p>'
+      : '';
+    return '<div class="modal-head"><h3>Edit brooding</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="edit-brooding">'+
+      '<input type="hidden" name="id" value="'+b.id+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Eggs given to the hen</label><input class="field" type="number" min="1" name="eggsGiven" value="'+b.eggsGiven+'" required autofocus></div>'+
+        '<div class="field-row"><label>Date started</label><input class="field" type="date" name="dateStarted" value="'+b.dateStarted+'" max="'+ti+'" required></div>'+
+      '</div>'+
+      hatchFieldsHtml+
+      '<div class="field-row" style="margin-top:12px"><label>Note (optional)</label><input class="field" type="text" name="note" maxlength="80" value="'+esc(b.note||'')+'" placeholder="e.g. Brown hen in coop A"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save changes</button></div>'+
+    '</form>';
+  }
 
   /* ============================= EGGS ============================= */
   function eggsPanel(){
@@ -2067,7 +2247,8 @@ var qrcode = (function(){
     var months = [];
     for(var m=0; m<6; m++){ var refM=new Date(); refM.setDate(1); refM.setMonth(refM.getMonth()-m); var rm=getRange('month', refM); months.push({label:rm.label, total:sumEggs(rm.startISO,rm.endISO), days:daysBetween(rm.start,rm.end)+1}); }
 
-    var rows = entries.map(function(e){
+    var eggsPage = paginate('eggs-log', entries);
+    var rows = eggsPage.items.map(function(e){
       return '<tr><td>'+fmtDate(parseISO(e.date))+'</td><td class="num">'+e.total+'</td><td>'+esc(e.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="edit-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
@@ -2077,7 +2258,8 @@ var qrcode = (function(){
 
     var laidAll = totalEggsLaid(), lostAll = totalEggsLost(), availableAll = laidAll - lostAll;
     var lossEntries = state.eggLosses.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var lossRows = lossEntries.map(function(x){
+    var lossPage = paginate('egg-losses', lossEntries);
+    var lossRows = lossPage.items.map(function(x){
       return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+eggLossReasonLabel(x.reason)+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         (x.reason==='sold' ? '<button class="icon-btn" data-action="view-egg-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
@@ -2104,14 +2286,14 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No eggs logged yet.</div></div>')+
-      '</div></div>'+
+      '</div>'+pagerHtml('eggs-log', eggsPage.pageCount, eggsPage.page)+'</div>'+
     '<div class="card"><div class="card-title"><h3>Sold, used &amp; lost eggs</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">Sales, breakage, home use, or given for brooding</span>'+
       '<button class="icon-btn" data-action="open-add-eggloss" title="Log a sale or a loss" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
       countBars(eggLossesByReason())+
       '<div class="table-wrap" style="margin-top:14px">'+
       (lossEntries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Reason</th><th>Note</th><th></th></tr></thead><tbody>'+lossRows+'</tbody></table>'
         : '<div class="empty">No egg losses recorded yet.</div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('egg-losses', lossPage.pageCount, lossPage.page)+'</div>';
   }
   function eggFormHtml(id){
     var e = id ? state.eggs.find(function(x){return x.id===id;}) : null;
@@ -2177,7 +2359,8 @@ var qrcode = (function(){
     }).join('');
 
     var entries = (state.feedLogs||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var rows = entries.map(function(x){
+    var feedPage = paginate('feed-log', entries);
+    var rows = feedPage.items.map(function(x){
       return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td>'+esc(x.feedType)+'</td><td class="num">'+(x.quantityKg||0).toFixed(1)+' kg</td><td class="num">'+fmtMoney(x.cost||0)+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="view-feed-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>'+
@@ -2191,7 +2374,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Feed type</th><th class="num">Quantity</th><th class="num">Cost</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No feed logged yet — track what you buy and use to see feed-per-egg, and spot waste early.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('feed-log', feedPage.pageCount, feedPage.page)+'</div>';
   }
   function feedFormHtml(id){
     var x = id ? (state.feedLogs||[]).find(function(i){return i.id===id;}) : null;
@@ -2245,7 +2428,8 @@ var qrcode = (function(){
     }).join('') : '<div class="empty">'+ICONS.empty+'<div>Nothing due — set a "next due" date on a record to see reminders here.</div></div>';
 
     var entries = (state.healthRecords||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var rows = entries.map(function(x){
+    var healthPage = paginate('health-log', entries);
+    var rows = healthPage.items.map(function(x){
       return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+healthTypeLabel(x.type)+'</span></td><td>'+esc(x.title)+'</td><td>'+esc(healthBatchLabel(x.batchId))+'</td>'+
       '<td>'+(x.nextDueDate ? fmtDate(parseISO(x.nextDueDate)) : '—')+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
@@ -2260,7 +2444,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Type</th><th>What</th><th>Batch</th><th>Next due</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No health records yet.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('health-log', healthPage.pageCount, healthPage.page)+'</div>';
   }
   function healthFormHtml(id){
     var x = id ? (state.healthRecords||[]).find(function(i){return i.id===id;}) : null;
@@ -3142,7 +3326,9 @@ var qrcode = (function(){
     function when(doc){ return (doc.createdAt && doc.createdAt.toDate) ? fmtDate(doc.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Just now'; }
     var pending = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; });
     var skipped = pendingSignoffsForAdmin.filter(function(d){ return d.status==='skipped'; });
-    var pendingRows = pending.map(function(doc){
+    var pendingSoPage = paginate('signoffs-pending', pending);
+    var skippedPage = paginate('signoffs-skipped', skipped);
+    var pendingRows = pendingSoPage.items.map(function(doc){
       return '<div class="card" style="margin-bottom:10px">'+
         '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">'+
           '<div>'+
@@ -3153,7 +3339,7 @@ var qrcode = (function(){
         '</div>'+
       '</div>';
     }).join('');
-    var skippedRows = skipped.map(function(doc){
+    var skippedRows = skippedPage.items.map(function(doc){
       return '<div class="card" style="margin-bottom:10px">'+
         '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">'+
           '<div>'+
@@ -3164,8 +3350,8 @@ var qrcode = (function(){
         '</div>'+
       '</div>';
     }).join('');
-    return (pending.length ? '<p class="hint" style="margin-bottom:10px">Waiting on your signature before the team member can download them.</p>'+pendingRows : '<div class="empty">'+ICONS.empty+'<div>Nothing waiting on your signature right now.</div></div>')+
-      (skipped.length ? '<div class="card-title" style="margin-top:18px"><h3>Signed without you</h3><span class="hint">Sent on and already downloaded — nothing to do, just for your records</span></div>'+skippedRows : '');
+    return (pending.length ? '<p class="hint" style="margin-bottom:10px">Waiting on your signature before the team member can download them.</p>'+pendingRows+pagerHtml('signoffs-pending', pendingSoPage.pageCount, pendingSoPage.page) : '<div class="empty">'+ICONS.empty+'<div>Nothing waiting on your signature right now.</div></div>')+
+      (skipped.length ? '<div class="card-title" style="margin-top:18px"><h3>Signed without you</h3><span class="hint">Sent on and already downloaded — nothing to do, just for your records</span></div>'+skippedRows+pagerHtml('signoffs-skipped', skippedPage.pageCount, skippedPage.page) : '');
   }
   function printReceiptNow(html){
     if(!html){ toast('That record is no longer available.'); return; }
@@ -3418,7 +3604,8 @@ var qrcode = (function(){
   function customersPanel(){
     var list = (state.customers||[]).slice().map(function(c){ return Object.assign({}, c, customerStats(c.id)); })
       .sort(function(a,b){ return b.totalSpent-a.totalSpent; });
-    var rows = list.map(function(c){
+    var custPage = paginate('customers', list);
+    var rows = custPage.items.map(function(c){
       return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.phone||'—')+'</td><td class="num">'+fmtMoney(c.totalSpent)+'</td><td class="num">'+c.count+'</td>'+
       '<td>'+(c.lastDate?fmtDate(parseISO(c.lastDate)):'—')+'</td><td>'+esc(c.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
@@ -3436,7 +3623,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (list.length ? '<table><thead><tr><th>Name</th><th>Phone</th><th class="num">Total spent</th><th class="num">Purchases</th><th>Last purchase</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No customers yet — they\'ll show up here as soon as a sale names a buyer.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('customers', custPage.pageCount, custPage.page)+'</div>';
   }
   function customerFormHtml(id){
     var c = id ? state.customers.find(function(x){return x.id===id;}) : null;
@@ -3463,7 +3650,8 @@ var qrcode = (function(){
     }).join('');
 
     var entries = list.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var rows = entries.map(function(x){
+    var moneyPage = paginate(kind+'-log', entries);
+    var rows = moneyPage.items.map(function(x){
       return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+esc(x.category)+'</span></td><td class="num">'+fmtMoney(x.amount)+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="view-'+kind+'-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>'+
@@ -3477,7 +3665,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml(kind+'-log', moneyPage.pageCount, moneyPage.page)+'</div>';
   }
   function moneyFormHtml(kind,id){
     var list = kind==='expense' ? state.expenses : state.incomes;
@@ -3524,7 +3712,7 @@ var qrcode = (function(){
       '</div></td></tr>';
     }).join('');
 
-    return accountCardHTML()+
+    return (currentUser ? accountCardHTML() : guestAccountCardHTML())+
     '<div class="card">'+
       '<div class="card-title"><h3>Currencies</h3><span class="hint">Rates are set by you — there\'s no internet access to fetch live rates.</span></div>'+
       '<div class="table-wrap"><table><thead><tr><th>Code</th><th>Symbol</th><th class="num">Rate (per 1 KES)</th><th class="num">Decimals</th><th></th></tr></thead><tbody>'+currRows+'</tbody></table></div>'+
@@ -3656,7 +3844,9 @@ var qrcode = (function(){
     }
     return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
-      (idleTimeoutApplies() ? ' For the safety of financial data, this account signs out automatically after 10 minutes of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.' : '')+
+      (idleTimeoutApplies() ? ((isAdmin()||isFinancialStaffUser())
+        ? ' For the safety of financial data, this account signs out automatically after 10 minutes of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.'
+        : ' This account signs out automatically after 5 hours of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.') : '')+
       '</p>'+
       '<form data-form="update-own-name" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">'+
         '<div class="field-row" style="max-width:220px"><label>Your name (shown in messages)</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" value="'+esc(currentUser.name||'')+'"></div>'+
@@ -3793,18 +3983,24 @@ var qrcode = (function(){
     '</div>';
   }
 
-  /* ---- 10-minute inactivity sign-out (administrator + Financial Staff
-     only) ---- Resets on real activity (mouse/keyboard/touch/scroll), same
-     idea as a normal idle timer, just checked against a stored timestamp
-     with Date.now() rather than one long-running setTimeout — a background
-     tab can get its timers throttled or paused by the browser, so this
-     re-checks on a short interval and whenever the tab regains visibility,
-     which catches time that passed while it was in the background too. The
-     last-activity time lives in localStorage (keyed by uid) so it survives
-     a page reload — reloading with nothing else happening does NOT reset
-     the clock. Every other role (Supervisor, Vet, Farmhand) has no timeout
-     at all and stays signed in indefinitely, foreground or background. */
-  function idleTimeoutApplies(){ return isAdmin() || isFinancialStaffUser(); }
+  /* ---- Inactivity sign-out, for every signed-in role ---- Resets on real
+     activity (mouse/keyboard/touch/scroll), same idea as a normal idle
+     timer, just checked against a stored timestamp with Date.now() rather
+     than one long-running setTimeout — a background tab can get its timers
+     throttled or paused by the browser, so this re-checks on a short
+     interval and whenever the tab regains visibility, which catches time
+     that passed while it was in the background too. The last-activity time
+     lives in localStorage (keyed by uid) so it survives a page reload —
+     reloading with nothing else happening does NOT reset the clock.
+     The threshold isn't the same for everyone: the Administrator and
+     Financial Staff handle money, so they keep the tight 10-minute
+     timeout that was always here. Every other role (Supervisor, Vet,
+     Farmhand) used to have no timeout at all and stayed signed in
+     indefinitely — they now sign out after 5 hours of inactivity instead,
+     long enough to never interrupt an actual work session. */
+  function idleTimeoutApplies(){ return !!currentUser; }
+  function sessionLimitMs(){ return (isAdmin() || isFinancialStaffUser()) ? SESSION_LIMIT_MS : OTHER_ROLES_SESSION_LIMIT_MS; }
+  function sessionLimitLabel(){ return (isAdmin() || isFinancialStaffUser()) ? '10 minutes' : '5 hours'; }
   function lastActivityKey(uid){ return 'kenokip-last-activity-'+uid; }
   var lastActivityWriteAt = 0;
   function markSessionActivity(){
@@ -3822,10 +4018,11 @@ var qrcode = (function(){
       last = Date.now();
       try{ localStorage.setItem(key, String(last)); }catch(e){}
     }
-    if(Date.now() - last >= SESSION_LIMIT_MS){
+    if(Date.now() - last >= sessionLimitMs()){
+      var label = sessionLimitLabel();
       stopIdleTimer();
       try{ localStorage.removeItem(key); }catch(e){}
-      toast('Signed out after 10 minutes of inactivity — for the safety of financial data.');
+      toast('Signed out after '+label+' of inactivity'+((isAdmin()||isFinancialStaffUser())?' — for the safety of financial data.':'.'));
       firebase.auth().signOut();
     }
   }
@@ -4112,7 +4309,7 @@ var qrcode = (function(){
   };
   function financeSecurityCardHTML(){
     var locked = financeGuardStatus && financeGuardStatus.locked;
-    var LOG_PAGE_SIZE = 10;
+    var LOG_PAGE_SIZE = PAGE_SIZE;
     var totalPages = Math.max(1, Math.ceil(securityEvents.length / LOG_PAGE_SIZE));
     if(securityEventPage >= totalPages) securityEventPage = totalPages - 1;
     if(securityEventPage < 0) securityEventPage = 0;
@@ -4143,7 +4340,9 @@ var qrcode = (function(){
   }
   function teamPanel(){
     if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
-    var rows = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); }).map(function(u){
+    var teamSorted = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); });
+    var teamPage = paginate('team-list', teamSorted);
+    var rows = teamPage.items.map(function(u){
       var isSelf = u.uid === currentUser.uid;
       return '<tr><td>'+esc(u.name||'—')+'</td><td>'+esc(u.email||'—')+'</td>'+
         '<td><span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'</span></td>'+
@@ -4158,7 +4357,8 @@ var qrcode = (function(){
     }).join('');
 
     var pending = financeState().transactions.filter(function(t){ return t.status==='pending'; });
-    var pendingRows = pending.map(function(t){
+    var pendingPage = paginate('team-pending-finance', pending);
+    var pendingRows = pendingPage.items.map(function(t){
       return '<tr><td>'+fmtDate(parseISO(t.date))+'</td>'+
         '<td>'+(t.type==='deposit'?'Deposit':'Withdrawal')+'</td>'+
         '<td class="num">'+fmtMoney(t.amount)+'</td>'+
@@ -4171,7 +4371,7 @@ var qrcode = (function(){
     }).join('');
 
     var LOCATION_STATUS_LABELS = { denied:'Location denied', unavailable:'Location unavailable', timeout:'Location timed out', unsupported:'Not supported on this device', unknown:'Unknown' };
-    var LOG_PAGE_SIZE = 10;
+    var LOG_PAGE_SIZE = PAGE_SIZE;
     var totalLogPages = Math.max(1, Math.ceil(accessLogs.length / LOG_PAGE_SIZE));
     if(accessLogPage >= totalLogPages) accessLogPage = totalLogPages - 1;
     if(accessLogPage < 0) accessLogPage = 0;
@@ -4199,9 +4399,11 @@ var qrcode = (function(){
 
     return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
+        pagerHtml('team-pending-finance', pendingPage.pageCount, pendingPage.page)+
       '</div>' : '')+
       '<div class="card"><div class="card-title"><h3>Team</h3><span class="hint">'+teamUsers.length+' account'+(teamUsers.length===1?'':'s')+'</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+        pagerHtml('team-list', teamPage.pageCount, teamPage.page)+
         '<div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center">'+
           '<button class="btn primary" data-action="open-add-staff">'+ICONS.plus+'Add team member</button>'+
           (missingAboutUsers.length ? '<button class="btn" data-action="bulk-seed-about">Fill in starter Abouts ('+missingAboutUsers.length+' missing)</button>' : '')+
@@ -4215,7 +4417,7 @@ var qrcode = (function(){
         '</form>'+
       '</div>'+
       financeSecurityCardHTML()+
-      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, 10 per page — visible only to you</span></div>'+
+      '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, '+PAGE_SIZE+' per page — visible only to you</span></div>'+
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
         '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
         logPagerHtml+
@@ -4327,7 +4529,8 @@ var qrcode = (function(){
       if(b.role==='administrator' && a.role!=='administrator') return 1;
       return (a.name||a.email||'').localeCompare(b.name||b.email||'');
     });
-    var cards = roster.map(function(u){
+    var dirPage = paginate('directory', roster);
+    var cards = dirPage.items.map(function(u){
       var isSelf = currentUser && u.uid===currentUser.uid;
       var roleTxt = u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
       return '<div class="card" style="display:flex; gap:14px; align-items:flex-start">'+
@@ -4345,7 +4548,8 @@ var qrcode = (function(){
         profileEditFormHTML()+
       '</div>'+
       '<div class="card-title" style="margin-top:4px"><h3>Everyone on the farm</h3><span class="hint">'+roster.length+' member'+(roster.length===1?'':'s')+'</span></div>'+
-      '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px">'+cards+'</div>';
+      '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px">'+cards+'</div>'+
+      pagerHtml('directory', dirPage.pageCount, dirPage.page);
   }
 
   /* ============================= MESSAGING (team-wide broadcast + one-to-one) ============================= */
@@ -4420,10 +4624,11 @@ var qrcode = (function(){
     if(!urgentAlertQueue.length){ el.hidden = true; el.innerHTML = ''; return; }
     var msg = urgentAlertQueue[0];
     var isSignoff = msg.kind==='signoff-request';
+    var isHatch = msg.kind==='hatch';
     el.hidden = false;
-    el.innerHTML = '<div class="urgent-alert-box'+(isSignoff?' signoff':'')+'">'+
-      '<span class="urgent-alert-icon">'+(isSignoff?ICONS.signature:ICONS.warning)+'</span>'+
-      '<div class="urgent-alert-text"><strong>'+(isSignoff?'Waiting on your signature — ':'Urgent message from ')+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
+    el.innerHTML = '<div class="urgent-alert-box'+(isSignoff?' signoff':'')+(isHatch?' hatch':'')+'">'+
+      '<span class="urgent-alert-icon">'+(isSignoff?ICONS.signature:isHatch?'🐣':ICONS.warning)+'</span>'+
+      '<div class="urgent-alert-text"><strong>'+(isSignoff?'Waiting on your signature — ':isHatch?'Chicks hatched! — ':'Urgent message from ')+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
       '<div class="urgent-alert-actions">'+
         '<button class="btn sm primary" data-action="urgent-alert-view">View</button>'+
         '<button class="btn sm ghost" data-action="urgent-alert-dismiss">Dismiss</button>'+
@@ -4432,7 +4637,7 @@ var qrcode = (function(){
   function triggerUrgentAlert(msg){
     urgentAlertQueue.push(msg);
     renderUrgentAlert();
-    if(msg.kind==='signoff-request') playChickSound(); else playRoosterSound();
+    if(msg.kind==='signoff-request' || msg.kind==='hatch') playChickSound(); else playRoosterSound();
     showBackgroundAlert(msg);
   }
   // Surfaces whatever urgent items were already waiting — a signature
@@ -4459,7 +4664,7 @@ var qrcode = (function(){
     qualifying.forEach(function(m){ urgentAlertQueue.push(m); });
     renderUrgentAlert();
     // One sound for the whole batch, not one per pending item.
-    if(qualifying.some(function(m){ return m.kind==='signoff-request'; })) playChickSound(); else playRoosterSound();
+    if(qualifying.some(function(m){ return m.kind==='signoff-request' || m.kind==='hatch'; })) playChickSound(); else playRoosterSound();
     showBackgroundAlert(qualifying[0]);
   }
   // The soft, nothing-to-do egg notification — bottom-corner toast, hen
@@ -4489,7 +4694,7 @@ var qrcode = (function(){
   function showBackgroundAlert(msg){
     if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
     if(!document.hidden) return; // in-page banner + sound already cover the foreground case
-    var title = 'Urgent — '+(msg.fromLabel||'a team member');
+    var title = msg.kind==='hatch' ? '🐣 Chicks hatched!' : msg.kind==='signoff-request' ? 'Waiting on your signature' : 'Urgent — '+(msg.fromLabel||'a team member');
     var opts = {
       body: (msg.body||'').slice(0,180),
       icon: './icons/icon-192.png',
@@ -4626,6 +4831,7 @@ var qrcode = (function(){
   // apart, without having to read the body text.
   function messageKindPillHtml(m){
     if(m.kind==='signoff-request') return '<span class="pill" style="background:hsl(38,75%,90%); color:hsl(30,70%,30%)">🐣 Needs your signature</span>';
+    if(m.kind==='hatch') return '<span class="pill" style="background:hsl(44,80%,90%); color:hsl(38,70%,26%)">🐣 Chicks hatched</span>';
     if(m.kind==='egg-activity') return '<span class="pill" style="background:hsl(44,70%,90%); color:hsl(30,55%,28%)">🥚 Egg activity</span>';
     return '';
   }
@@ -4657,10 +4863,14 @@ var qrcode = (function(){
     var list = showAll ? messages : messages.filter(function(m){ return isMessageForMe(m) || m.fromUid===currentUser.uid; });
     var groups = [['urgent','Urgent'],['important','Important'],['normal','Normal']];
     var sectionsHtml = groups.map(function(g){
-      var items = list.filter(function(m){ return (m.urgency||'normal')===g[0]; });
-      if(!items.length) return '';
-      return '<div class="card"><div class="card-title"><h3><span class="role-pill '+g[0]+'">'+g[1]+'</span></h3><span class="hint">'+items.length+'</span></div>'+
+      var allItems = list.filter(function(m){ return (m.urgency||'normal')===g[0]; });
+      if(!allItems.length) return '';
+      var pageKey = 'messages-'+g[0];
+      var msgPage = paginate(pageKey, allItems);
+      var items = msgPage.items;
+      return '<div class="card"><div class="card-title"><h3><span class="role-pill '+g[0]+'">'+g[1]+'</span></h3><span class="hint">'+allItems.length+'</span></div>'+
         items.map(messageRowHtml).join('')+
+        pagerHtml(pageKey, msgPage.pageCount, msgPage.page)+
       '</div>';
     }).join('');
     return '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px">'+
@@ -4718,7 +4928,8 @@ var qrcode = (function(){
     var eyeBtn = '<button class="icon-btn" style="margin-left:6px" data-action="'+(revealed?'finance-reveal-hide':'finance-reveal-prompt')+'" title="'+(revealed?'Hide amounts':'Show amounts')+'">'+(revealed?ICONS.eyeOff:ICONS.eye)+'</button>';
     var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap <span class="inline-ico">'+ICONS.eye+'</span> to reveal them (needs a code from your authenticator app).</div>';
 
-    var rows = txns.map(function(t){
+    var finPage = paginate('finance-txns', txns);
+    var rows = finPage.items.map(function(t){
       var status = t.status || 'approved';
       var good = t.type==='deposit';
       var statusPill = status==='pending' ? ' <span class="role-pill pending">Pending</span>' : (status==='rejected' ? ' <span class="role-pill rejected">Rejected</span>' : '');
@@ -4744,7 +4955,7 @@ var qrcode = (function(){
       '<div class="table-wrap">'+
       (txns.length ? '<table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No transactions recorded yet.</div></div>')+
-      '</div></div>';
+      '</div>'+pagerHtml('finance-txns', finPage.pageCount, finPage.page)+'</div>';
   }
   // WebAuthn (fingerprint/Face) needs the browser's newer JSON-friendly
   // helpers (PublicKeyCredential.parseCreationOptionsFromJSON etc.) — most
@@ -5490,6 +5701,20 @@ var qrcode = (function(){
       firebase.functions().httpsCallable('notifyEggActivity')({action:action, detail:detail}).catch(function(){});
     }catch(e){}
   }
+  // A brooding hatch is exciting enough — and rare enough — that everyone
+  // on the team should hear about it right away, even with the app fully
+  // closed, not just whoever happens to be looking at the Brooding page.
+  // Unlike notifyEggActivity above (a soft FYI to the administrator only),
+  // this reaches every team member (via the same real push-notification
+  // path as an Urgent message) and shows the same big "needs a look" popup
+  // — fire-and-forget for the same reason: the hatch itself already saved
+  // via mutate() before this ever runs.
+  function notifyHatch(detail){
+    if(!currentUser || !cloudMode) return;
+    try{
+      firebase.functions().httpsCallable('notifyHatch')({detail:detail}).catch(function(){});
+    }catch(e){}
+  }
   function persistLocalFallback(){ try{ localStorage.setItem('coop-ledger-state', JSON.stringify(state)); }catch(e){ toast('Could not save — your browser storage may be full or blocked.'); } }
   function scheduleSave(){
     // Always keep an instant local copy — works offline, and is the only
@@ -5633,7 +5858,24 @@ var qrcode = (function(){
     var verb = parts[0], a1 = parts[1], a2 = parts[2];
     switch(verb){
       case 'nav': ui.section = a1; saveUIPref(); render(); break;
+      // Phone tab bar only: tapping a group tab (Farm Records, Money,
+      // Team) jumps to whichever of its sections was open last, or its
+      // first allowed one if none was — the actual page never becomes a
+      // group, ui.section is always a real leaf section either way.
+      case 'nav-group': {
+        var navGroup = NAV_GROUPS.find(function(g){ return g.key===a1 && g.children; });
+        if(navGroup){
+          var navKids = navGroup.children.filter(function(c){ return sectionAllowed(c.key); });
+          if(navKids.length && !navKids.some(function(c){ return c.key===ui.section; })){
+            ui.section = navKids[0].key; saveUIPref();
+          }
+        }
+        render();
+        break;
+      }
       case 'period': ui.periods[a1] = a2; render(); break;
+      case 'pager-prev': setPageFor(a1, pageFor(a1)-1); render(); break;
+      case 'pager-next': setPageFor(a1, pageFor(a1)+1); render(); break;
       case 'close-modal': closeModal(); break;
       case 'open-add-egg': openModal(eggFormHtml()); break;
       case 'edit-egg': openModal(eggFormHtml(a1)); break;
@@ -5706,6 +5948,7 @@ var qrcode = (function(){
       }
       case 'open-add-brooding': openModal(broodingFormHtml()); break;
       case 'open-resolve-brooding': openModal(resolveBroodingFormHtml(a1)); break;
+      case 'open-edit-brooding': openModal(editBroodingFormHtml(a1)); break;
       case 'delete-brooding': {
         var delBrood = (state.broodings||[]).find(function(x){return x.id===a1;});
         var delMsg = (delBrood && delBrood.chickBatchId) ? 'Delete this brooding record? This will also remove the chicks batch it added to the flock.' : 'Delete this brooding record?';
@@ -6165,6 +6408,56 @@ var qrcode = (function(){
       });
       if(rbError){ toast(rbError); return; }
       closeModal(); toast(rbChicks>0 ? rbChicks+' chick'+(rbChicks===1?'':'s')+' added to the flock.' : 'Recorded — none of the eggs hatched.');
+      if(rbChicks>0){
+        var rbBrood = (state.broodings||[]).find(function(x){return x.id===rbId2;});
+        notifyHatch(rbChicks+' chick'+(rbChicks===1?'':'s')+' hatched from the brooding started '+fmtDate(parseISO(rbBrood?rbBrood.dateStarted:rbDate))+'.');
+      }
+      return;
+    }
+    if(name==='edit-brooding'){
+      var ebId = val('id');
+      var ebEggs = Math.max(1, Number(val('eggsGiven')||0));
+      var ebDate = val('dateStarted');
+      var ebNote = val('note') || '';
+      var ebError = null;
+      mutate(function(s){
+        var b = (s.broodings||[]).find(function(x){return x.id===ebId;});
+        if(!b){ ebError = 'That brooding record is no longer available.'; return; }
+        if(b.status==='hatched'){
+          var ebChicks = Math.max(0, Number(val('chicksAdded')||0));
+          var ebNotHatched = Math.max(0, Number(val('eggsNotHatched')||0));
+          if(ebChicks + ebNotHatched !== ebEggs){ ebError = 'Chicks hatched plus eggs that did not hatch must add up to the eggs given.'; return; }
+          if(b.chickBatchId){
+            var batch = s.flock.find(function(x){return x.id===b.chickBatchId;});
+            if(batch){
+              var removedSoFar = (batch.removals||[]).reduce(function(a,r){return a+r.count;},0);
+              if(ebChicks < removedSoFar){ ebError = 'Can\'t reduce chicks hatched below '+removedSoFar+' — that many have already been removed from that batch.'; return; }
+              batch.count = ebChicks;
+            } else if(ebChicks>0){
+              var newBatchId = uid('batch');
+              s.flock.push({id:newBatchId, gender:'unsexed', count:ebChicks, dateAdded:b.resolvedDate||ebDate, birthDate:b.resolvedDate||ebDate, source:'Hatched from brooding', removals:[]});
+              b.chickBatchId = newBatchId;
+            }
+          } else if(ebChicks>0){
+            var newBatchId2 = uid('batch');
+            s.flock.push({id:newBatchId2, gender:'unsexed', count:ebChicks, dateAdded:b.resolvedDate||ebDate, birthDate:b.resolvedDate||ebDate, source:'Hatched from brooding', removals:[]});
+            b.chickBatchId = newBatchId2;
+          }
+          b.chicksAdded = ebChicks;
+          b.eggsNotHatched = ebNotHatched;
+        }
+        b.eggsGiven = ebEggs;
+        b.dateStarted = ebDate;
+        b.note = ebNote;
+        // Keep the linked "given for brooding" egg-loss entry (on the Eggs
+        // page) in sync, so the two never quietly disagree about the count.
+        if(b.eggLossId){
+          var loss = (s.eggLosses||[]).find(function(x){return x.id===b.eggLossId;});
+          if(loss){ loss.count = ebEggs; loss.date = ebDate; loss.note = ebNote; }
+        }
+      });
+      if(ebError){ toast(ebError); return; }
+      closeModal(); toast('Brooding record updated.');
       return;
     }
     if(name==='about'){
@@ -6575,7 +6868,7 @@ var qrcode = (function(){
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
-  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'} };
+  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{} };
   var syncStatus = 'idle';
   var readOnly = false;
   var localMode = false;
@@ -6612,6 +6905,7 @@ var qrcode = (function(){
   var messagesViewAll = false;
   var idleTimer = null;
   var SESSION_LIMIT_MS = 10*60*1000;
+  var OTHER_ROLES_SESSION_LIMIT_MS = 5*60*60*1000;
   var financePortalUnlocked = false; // in-memory only — re-locks on reload, and re-asks after 2 minutes idle
   var financePortalIdleTimer = null;
   // Finance Guard: the fingerprint/Face + personal PIN unlock option, and
