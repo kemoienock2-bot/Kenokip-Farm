@@ -49,6 +49,7 @@ service cloud.firestore {
     // about them is specific to one job.
     function farmWriteAllowed() {
       return request.auth.token.role == 'administrator' ||
+        request.auth.token.role == 'coadmin' ||
         resource == null ||
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(jobAllowedFarmKeys(request.auth.token.jobTitle).concat(['settings', 'version']));
@@ -78,6 +79,7 @@ service cloud.firestore {
     match /finance/kenokip {
       allow read: if request.auth != null &&
         (request.auth.token.role == 'administrator' ||
+         request.auth.token.role == 'coadmin' ||
          (request.auth.token.role == 'employee' && request.auth.token.jobTitle == 'financial'));
       allow write: if false;
     }
@@ -95,7 +97,8 @@ service cloud.firestore {
     // Access log (who signed in, when, from where). Administrator-only —
     // only the logAccess Cloud Function may write here.
     match /accessLogs/{id} {
-      allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin');
       allow write: if false;
     }
 
@@ -107,6 +110,7 @@ service cloud.firestore {
     match /messages/{id} {
       allow read: if request.auth != null &&
         (request.auth.token.role == 'administrator' ||
+         request.auth.token.role == 'coadmin' ||
          resource.data.fromUid == request.auth.uid ||
          resource.data.toUid == request.auth.uid ||
          resource.data.toUid == 'all');
@@ -137,7 +141,8 @@ service cloud.firestore {
     // administrator-only, and only financeGuard.js's Cloud Functions may
     // write here.
     match /securityEvents/{id} {
-      allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin');
       allow write: if false;
     }
 
@@ -145,7 +150,8 @@ service cloud.firestore {
     // ever generated, with exactly what it said and who generated it.
     // Administrator-only; only the signReceipt Cloud Function may write.
     match /receiptLog/{id} {
-      allow read: if request.auth != null && request.auth.token.role == 'administrator';
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin');
       allow write: if false;
     }
 
@@ -163,7 +169,7 @@ service cloud.firestore {
     // reason to see a receipt someone else is in the middle of signing.
     match /pendingSignoffs/{id} {
       allow read: if request.auth != null &&
-        (request.auth.token.role == 'administrator' || resource.data.createdBy == request.auth.uid);
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin' || resource.data.createdBy == request.auth.uid);
       allow write: if false;
     }
 

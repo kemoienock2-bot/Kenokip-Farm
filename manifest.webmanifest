@@ -13,5 +13,21 @@
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log eggs",
+      "short_name": "Log eggs",
+      "description": "Jump straight to logging today's eggs",
+      "url": "./index.html?shortcut=log-eggs",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Log feed",
+      "short_name": "Log feed",
+      "description": "Jump straight to logging feed used today",
+      "url": "./index.html?shortcut=log-feed",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

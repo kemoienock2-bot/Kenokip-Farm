@@ -42,7 +42,7 @@ function requireAuth(request) {
   return request.auth;
 }
 function canUseAuthApp(auth) {
-  return auth.token.role === 'administrator' || (auth.token.role === 'employee' && auth.token.jobTitle === 'financial');
+  return auth.token.role === 'administrator' || auth.token.role === 'coadmin' || (auth.token.role === 'employee' && auth.token.jobTitle === 'financial');
 }
 
 module.exports = function (admin, db, opts) {

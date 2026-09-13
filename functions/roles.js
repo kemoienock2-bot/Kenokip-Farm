@@ -46,14 +46,29 @@ function requireAdmin(request) {
   }
   return auth;
 }
+// Co-Administrator: a second admin-level account that gets "same access as
+// the administrator" for team management and everything else EXCEPT the
+// Finance-authority actions below (those stay requireAdmin-only, true
+// administrator only — see proposeFinanceEntry/reviewFinanceEntry/etc). Used
+// for team/staff management and signoff approval, i.e. everywhere the app
+// treats "administrator or co-administrator" as equally trusted.
+function requireAdminLevel(request) {
+  const auth = requireAuth(request);
+  if (auth.token.role !== 'administrator' && auth.token.role !== 'coadmin') {
+    throw new HttpsError('permission-denied', 'Only the administrator or co-administrator can do this.');
+  }
+  return auth;
+}
 function isFinancialStaff(auth) {
   return auth.token.role === 'employee' && auth.token.jobTitle === 'financial';
 }
 function canProposeFinance(auth) {
-  return auth.token.role === 'administrator' || isFinancialStaff(auth);
+  return auth.token.role === 'administrator' || auth.token.role === 'coadmin' || isFinancialStaff(auth);
 }
 function roleLabelFor(role, jobTitle) {
-  return role === 'administrator' ? 'Administrator' : (JOB_TITLE_LABELS[jobTitle] || jobTitle || 'Employee');
+  if (role === 'administrator') return 'Administrator';
+  if (role === 'coadmin') return 'Co-Administrator';
+  return JOB_TITLE_LABELS[jobTitle] || jobTitle || 'Employee';
 }
 
 
@@ -138,10 +153,15 @@ module.exports = function (admin, db) {
   // (unlike createUserWithEmailAndPassword on the client) it does NOT sign
   // the administrator out or switch the active session to the new account.
   const createStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
-    const auth = requireAdmin(request);
+    const auth = requireAdminLevel(request);
     const email = String((request.data && request.data.email) || '').trim().toLowerCase();
     const password = String((request.data && request.data.password) || '');
-    const jobTitle = String((request.data && request.data.jobTitle) || '');
+    // 'coadmin' is the only other role a caller can ever request here —
+    // 'administrator' is never accepted from the client (see bootstrapFirstAdmin,
+    // the only place that role is ever granted, anywhere).
+    const roleInput = String((request.data && request.data.role) || 'employee');
+    const role = roleInput === 'coadmin' ? 'coadmin' : 'employee';
+    const jobTitle = role === 'coadmin' ? null : String((request.data && request.data.jobTitle) || '');
     const name = String((request.data && request.data.name) || '').trim().slice(0, 60) || null;
     // The administrator picks this when adding someone, since they're the
     // one adding the team — but it's just a starting point, never locked:
@@ -156,7 +176,7 @@ module.exports = function (admin, db) {
     const about = typeof (request.data && request.data.about) === 'string' ? request.data.about.trim().slice(0, 500) : null;
     if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
     if (password.length < 6) throw new HttpsError('invalid-argument', 'Password needs at least 6 characters.');
-    if (!JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
+    if (role === 'employee' && !JOB_TITLES.includes(jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
 
     let userRecord;
     try {
@@ -166,11 +186,11 @@ module.exports = function (admin, db) {
       logger.error('createStaffAccount failed', err);
       throw new HttpsError('internal', 'Could not create the account.');
     }
-    await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'employee', jobTitle });
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role, jobTitle });
     const newUserDoc = {
       email,
       name,
-      role: 'employee',
+      role,
       jobTitle,
       gender,
       disabled: false,
@@ -234,12 +254,46 @@ module.exports = function (admin, db) {
   // their access (disabling blocks sign-in immediately — no need to delete
   // the account to revoke access).
   const updateStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
-    const auth = requireAdmin(request);
+    const auth = requireAdminLevel(request);
     const uid = String((request.data && request.data.uid) || '');
     if (!uid) throw new HttpsError('invalid-argument', 'Missing account.');
     if (uid === auth.uid) throw new HttpsError('invalid-argument', "You can't change your own account here.");
+
+    // Nobody — not even a co-administrator — can touch the true
+    // administrator's own account from here. Combined with 'administrator'
+    // never being an assignable role anywhere below, this is what makes
+    // "can't overrun me" a real, server-enforced guarantee rather than just
+    // a UI nicety.
+    let targetRecord;
+    try {
+      targetRecord = await admin.auth().getUser(uid);
+    } catch (err) {
+      throw new HttpsError('not-found', 'That account no longer exists.');
+    }
+    if (targetRecord.customClaims && targetRecord.customClaims.role === 'administrator') {
+      throw new HttpsError('permission-denied', "The administrator's account can't be changed here.");
+    }
+
     const patch = {};
-    if (request.data && request.data.jobTitle !== undefined) {
+    if (request.data && request.data.role !== undefined) {
+      // Promotes/demotes to or from Co-Administrator. Sent together with
+      // jobTitle when demoting a Co-Administrator back into a specific
+      // employee job title in one step.
+      const roleInput = String(request.data.role || '');
+      if (roleInput !== 'employee' && roleInput !== 'coadmin') {
+        throw new HttpsError('invalid-argument', 'Choose a valid role.');
+      }
+      let nextJobTitle = null;
+      if (roleInput === 'employee') {
+        const jt = request.data.jobTitle !== undefined ? request.data.jobTitle : (targetRecord.customClaims && targetRecord.customClaims.jobTitle);
+        if (!JOB_TITLES.includes(jt)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
+        nextJobTitle = jt;
+      }
+      patch.role = roleInput;
+      patch.jobTitle = nextJobTitle;
+      await admin.auth().setCustomUserClaims(uid, { role: roleInput, jobTitle: nextJobTitle });
+    } else if (request.data && request.data.jobTitle !== undefined) {
+      // Job-title-only change for an existing employee — role unchanged.
       if (!JOB_TITLES.includes(request.data.jobTitle)) throw new HttpsError('invalid-argument', 'Choose a valid role.');
       patch.jobTitle = request.data.jobTitle;
       await admin.auth().setCustomUserClaims(uid, { role: 'employee', jobTitle: request.data.jobTitle });
@@ -287,10 +341,23 @@ module.exports = function (admin, db) {
 
   // Administrator permanently removes an employee's account.
   const deleteStaffAccount = onCall({ region: 'us-central1' }, async (request) => {
-    const auth = requireAdmin(request);
+    const auth = requireAdminLevel(request);
     const uid = String((request.data && request.data.uid) || '');
     if (!uid) throw new HttpsError('invalid-argument', 'Missing account.');
     if (uid === auth.uid) throw new HttpsError('invalid-argument', "You can't delete your own account here.");
+    // Same "can't overrun me" guarantee as updateStaffAccount — nobody can
+    // delete the true administrator's own account from here.
+    try {
+      const targetRecord = await admin.auth().getUser(uid);
+      if (targetRecord.customClaims && targetRecord.customClaims.role === 'administrator') {
+        throw new HttpsError('permission-denied', "The administrator's account can't be deleted here.");
+      }
+    } catch (err) {
+      if (err instanceof HttpsError) throw err;
+      // Auth lookup failed for some other reason (already gone, etc.) — fall
+      // through, the delete attempt below already tolerates a missing Auth
+      // record.
+    }
     try { await admin.auth().deleteUser(uid); } catch (err) { logger.error('deleteStaffAccount auth error', err); }
     await db.collection('users').doc(uid).delete();
     return { ok: true };
@@ -594,7 +661,7 @@ module.exports = function (admin, db) {
   // signReceipt code path (secret handling, the receiptLog audit write)
   // never has to be duplicated here.
   const approveReceiptSignoff = onCall({ region: 'us-central1' }, async (request) => {
-    const auth = requireAdmin(request);
+    const auth = requireAdminLevel(request);
     const d = request.data || {};
     const id = String(d.id || '');
     if (!id) throw new HttpsError('invalid-argument', 'Missing request.');
@@ -707,8 +774,9 @@ module.exports = function (admin, db) {
     if (to === auth.uid) throw new HttpsError('invalid-argument', "You can't message yourself.");
 
     const isAdmin = auth.token.role === 'administrator';
-    if (to === 'all' && !isAdmin) {
-      throw new HttpsError('permission-denied', 'Only the administrator can message the whole team.');
+    const isAdminLevel = isAdmin || auth.token.role === 'coadmin';
+    if (to === 'all' && !isAdminLevel) {
+      throw new HttpsError('permission-denied', 'Only the administrator or co-administrator can message the whole team.');
     }
 
     let toLabel = 'Everyone';
@@ -732,7 +800,7 @@ module.exports = function (admin, db) {
       const origSnap = await db.collection('messages').doc(replyToId).get();
       if (origSnap.exists) {
         const orig = origSnap.data();
-        const canSeeOrig = isAdmin || orig.fromUid === auth.uid || orig.toUid === auth.uid || orig.toUid === 'all';
+        const canSeeOrig = isAdminLevel || orig.fromUid === auth.uid || orig.toUid === auth.uid || orig.toUid === 'all';
         if (canSeeOrig) {
           replyMeta = {
             replyTo: replyToId,
@@ -833,6 +901,51 @@ module.exports = function (admin, db) {
     return { ok: true };
   });
 
+  // A brooding hatch is genuinely exciting news for the whole team, not
+  // just a heads-up for the administrator — so unlike notifyEggActivity
+  // above, this broadcasts to EVERYONE (any signed-in account may call it,
+  // not just the administrator — sendMessage's to==='all' path is
+  // administrator-only, which is why this is its own function rather than
+  // reusing that one) and always sends a real push notification, the same
+  // way an Urgent message does, so it reaches every device even fully
+  // closed. Best-effort throughout: the hatch itself already saved via the
+  // farm document write before the client ever calls this.
+  const notifyHatch = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    const d = request.data || {};
+    const detail = String(d.detail || '').trim().slice(0, 200) || 'A brooding hen hatched.';
+
+    const fromSnap = await db.collection('users').doc(auth.uid).get();
+    const fromData = fromSnap.exists ? fromSnap.data() : {};
+    const fromLabel = roleLabelFor(auth.token.role, auth.token.jobTitle) + '(' + (fromData.name || (auth.token.email ? auth.token.email.split('@')[0] : 'Unnamed')) + ')';
+
+    try {
+      await db.collection('messages').add({
+        fromUid: auth.uid,
+        fromLabel,
+        toUid: 'all',
+        toLabel: 'Everyone',
+        body: detail,
+        urgency: 'urgent',
+        kind: 'hatch', // picks the celebratory 🐣 popup + chick sound client-side
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: [auth.uid],
+      });
+    } catch (e) {
+      logger.error('notifyHatch message write failed', e);
+    }
+
+    try {
+      const usersSnap = await db.collection('users').get();
+      const targetUids = usersSnap.docs.map((doc) => doc.id).filter((uid) => uid !== auth.uid);
+      await sendUrgentPush(admin, db, targetUids, '🐣 Chicks hatched!', fromLabel + ': ' + detail, { urgency: 'urgent', kind: 'hatch' });
+    } catch (e) {
+      logger.error('notifyHatch push send failed', e);
+    }
+
+    return { ok: true };
+  });
+
   // Marks one message as read by the caller — only the actual recipient (or
   // a broadcast's recipients) can mark it, and the administrator, who can
   // see everything.
@@ -844,7 +957,7 @@ module.exports = function (admin, db) {
     const snap = await ref.get();
     if (!snap.exists) throw new HttpsError('not-found', 'That message no longer exists.');
     const msg = snap.data();
-    const allowed = auth.token.role === 'administrator' || msg.toUid === auth.uid || msg.toUid === 'all' || msg.fromUid === auth.uid;
+    const allowed = auth.token.role === 'administrator' || auth.token.role === 'coadmin' || msg.toUid === auth.uid || msg.toUid === 'all' || msg.fromUid === auth.uid;
     if (!allowed) throw new HttpsError('permission-denied', "That message isn't addressed to you.");
     await ref.set({ readBy: admin.firestore.FieldValue.arrayUnion(auth.uid) }, { merge: true });
     return { ok: true };
@@ -855,7 +968,7 @@ module.exports = function (admin, db) {
     logAccess,
     proposeFinanceEntry, reviewFinanceEntry, editFinanceEntry, deleteFinanceEntry, setOpeningBalance,
     requestReceiptSignoff, approveReceiptSignoff, skipReceiptSignoff,
-    sendMessage, markMessageRead, registerPushToken, notifyEggActivity,
+    sendMessage, markMessageRead, registerPushToken, notifyEggActivity, notifyHatch,
   };
 };
 

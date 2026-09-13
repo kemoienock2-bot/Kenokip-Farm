@@ -238,6 +238,10 @@
   .topbar h2{ font-size:24px; }
   .topbar-sub{ color:var(--ink-3); font-size:13px; margin-top:3px; }
   .topbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  /* The back arrow + "Back to homepage" row (see navControlsHTML) — a
+     flex-basis:100% child forces it onto its own line above the rest of
+     the topbar, since .topbar already wraps; no HTML nesting needed. */
+  .page-nav-controls{ display:flex; align-items:center; gap:8px; flex-basis:100%; order:-1; margin-bottom:14px; }
 
   .panel{ padding:26px 32px 60px; display:flex; flex-direction:column; gap:22px; }
 
@@ -1182,6 +1186,7 @@ var qrcode = (function(){
     plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
     chevronLeft:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 9 12 15 19"/></svg>',
     chevronRight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 15 12 9 19"/></svg>',
+    home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9.5h12V10"/><path d="M10 19.5V14h4v5.5"/></svg>',
     edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.3-.9L18.1 9.3l-3.4-3.4L4.9 15.7 4 20z"/></svg>',
     trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>',
@@ -1247,6 +1252,7 @@ var qrcode = (function(){
     directory:'<svg viewBox="0 0 48 48"><rect x="6" y="10" width="36" height="28" rx="4" fill="#9C4F9E"/><circle cx="16" cy="21" r="5" fill="#EFD9AE"/><path d="M8 33 q0 -8 8 -8 q8 0 8 8 Z" fill="#EFD9AE"/><rect x="27" y="17" width="11" height="2.6" rx="1.3" fill="#D9AEDA"/><rect x="27" y="23" width="11" height="2.6" rx="1.3" fill="#D9AEDA"/><rect x="27" y="29" width="7" height="2.6" rx="1.3" fill="#D9AEDA"/></svg>',
     about:'<svg viewBox="0 0 48 48"><circle cx="37" cy="10" r="4" fill="#E8B93D"/><path d="M6 40 V22 L24 10 L42 22 V40 Z" fill="#8B4A34"/><path d="M6 22 L24 10 L42 22" stroke="#6B3624" stroke-width="2.4" fill="none" stroke-linejoin="round"/><rect x="20" y="28" width="8" height="12" fill="#5C3420"/><rect x="11" y="26" width="6" height="6" fill="#D9C6A3"/><rect x="31" y="26" width="6" height="6" fill="#D9C6A3"/></svg>',
     settings:'<svg viewBox="0 0 48 48"><path d="M24 6 l3 5 6 -2 1 6 6 1 -2 6 5 3 -5 3 2 6 -6 1 -1 6 -6 -2 -3 5 -3 -5 -6 2 -1 -6 -6 -1 2 -6 -5 -3 5 -3 -2 -6 6 -1 1 -6 6 2 Z" fill="#5B6B78" opacity=".92"/><circle cx="24" cy="24" r="8" fill="#EFF3F5"/><circle cx="24" cy="24" r="4.4" fill="#5B6B78"/></svg>',
+    trash:'<svg viewBox="0 0 48 48"><rect x="19" y="5" width="10" height="6" rx="2" fill="#5B3E2B"/><rect x="9" y="10" width="30" height="6" rx="2" fill="#8A5E42"/><path d="M13 18 h22 l-2.2 24.5 a3 3 0 0 1 -3 2.7 h-11.6 a3 3 0 0 1 -3 -2.7 Z" fill="#B98A5E"/><path d="M19 22 v18 M24 22 v18 M29 22 v18" stroke="#8A5E42" stroke-width="2.2" stroke-linecap="round"/></svg>',
     team:'<svg viewBox="0 0 48 48"><circle cx="24" cy="10" r="5.5" fill="#5B4B96"/><path d="M15 24 q0 -9 9 -9 q9 0 9 9 Z" fill="#5B4B96"/><circle cx="10" cy="28" r="4.4" fill="#8D7BC4"/><path d="M3 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="38" cy="28" r="4.4" fill="#8D7BC4"/><path d="M31 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="24" cy="26" r="5.6" fill="#402F72"/><path d="M15 40 q0 -9.4 9 -9.4 q9 0 9 9.4 Z" fill="#402F72"/></svg>',
     overview:'<svg viewBox="0 0 48 48"><circle cx="37" cy="9" r="4.4" fill="#E8B93D"/><path d="M6 40 V24 L16 16 L26 24 V40 Z" fill="#B9740E"/><path d="M6 24 L16 16 L26 24" stroke="#8F590A" stroke-width="2.2" fill="none" stroke-linejoin="round"/><rect x="12" y="30" width="6" height="10" fill="#F0DBA0"/><rect x="30" y="20" width="4" height="7" fill="#3E8E5A"/><rect x="36" y="16" width="4" height="11" fill="#E8B93D"/><rect x="42" y="23" width="4" height="4" fill="#7A4F86"/></svg>',
     flockNav:'<svg viewBox="0 0 48 48"><path d="M18 38 Q16 24 28 21 Q40 18 43 27 Q45 32 39 35 L39 40 Z" fill="#A6431F"/><ellipse cx="27" cy="32" rx="6" ry="7" fill="#EDD9B8"/><path d="M39 22 Q44 19 47 22 Q45 25 41 26 Z" fill="#1B1B1B"/><circle cx="29" cy="17" r="5.6" fill="#B5502A"/><path d="M28 12 q1 -3 2 0 q1 -2.6 2 .4" fill="#D6273C"/><path d="M33 16 L39 17.3 L33 19.6 Z" fill="#F2A93D"/><circle cx="31" cy="16.2" r="1" fill="#241a12"/><path d="M20 40 l-1 3 M20 40 l2.4 2.6 M28 41 l-1 3 M28 41 l2.4 2.6" stroke="#E8973D" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10" cy="35" rx="7.5" ry="6.2" fill="#F5C94D"/><ellipse cx="6" cy="35.5" rx="2.6" ry="3.6" fill="#E8B93D"/><circle cx="12" cy="26" r="5.4" fill="#FBE07A"/><path d="M17 25 L22 26.6 L17 28.6 Z" fill="#F2994A"/><circle cx="14.3" cy="25" r="0.9" fill="#3A2705"/><path d="M4 41 l0 2 M10 41.5 l0 2" stroke="#E8973D" stroke-width="1.6" stroke-linecap="round"/></svg>',
@@ -1261,6 +1267,92 @@ var qrcode = (function(){
 
   /* ============================= UTILS ============================= */
   function uid(p){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5); }
+  /* ============================= TRASH ============================= */
+  // A generic 30-day-recoverable trash, sitting underneath the existing
+  // delete confirmations rather than replacing them — "Delete" still asks
+  // "are you sure", but now the answer is recoverable for a month instead
+  // of gone immediately. Each entry keeps the full original record (plus
+  // anything that was cascade-deleted alongside it, e.g. a feed entry's
+  // linked Expense) so Restore can put everything back exactly as it was,
+  // not just the main record on its own.
+  var TRASH_ARRAY_BY_TYPE = { egg:'eggs', eggloss:'eggLosses', feed:'feedLogs', health:'healthRecords', expense:'expenses', income:'incomes', customer:'customers', flock:'flock', brooding:'broodings' };
+  var TRASH_TYPE_LABELS = { egg:'Egg entry', eggloss:'Egg sale/loss', feed:'Feed entry', health:'Health record', expense:'Expense', income:'Income', customer:'Customer', flock:'Flock batch', brooding:'Brooding record' };
+  var TRASH_RETENTION_MS = 30*24*3600*1000;
+  function trashPush(s, type, record, linked){
+    s.trash = s.trash || [];
+    s.trash.push({ id:uid('trash'), type:type, record:record, linked:linked||[], deletedAt:new Date().toISOString(), deletedByRole: roleLabel(currentUser) });
+  }
+  function purgeOldTrash(s){
+    var cutoff = Date.now() - TRASH_RETENTION_MS;
+    s.trash = (s.trash||[]).filter(function(x){ return new Date(x.deletedAt).getTime() >= cutoff; });
+  }
+  function restoreTrashItem(id){
+    mutate(function(s){
+      var idx = (s.trash||[]).findIndex(function(x){return x.id===id;});
+      if(idx===-1) return;
+      var item = s.trash[idx];
+      var arrName = TRASH_ARRAY_BY_TYPE[item.type];
+      if(arrName){ s[arrName] = s[arrName] || []; s[arrName].push(item.record); }
+      (item.linked||[]).forEach(function(l){ s[l.arr] = s[l.arr] || []; s[l.arr].push(l.record); });
+      // Restoring a feed entry re-applies its draw on stock on hand — it
+      // was added back when the entry was first deleted, so this undoes
+      // that and keeps the stock number consistent either way.
+      if(item.type==='feed'){
+        s.feedStock = s.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+        s.feedStock.onHandKg = (s.feedStock.onHandKg||0) - (item.record.quantityKg||0);
+      }
+      s.trash.splice(idx,1);
+    });
+    toast('Restored.');
+  }
+  function purgeTrashItem(id){
+    mutate(function(s){ s.trash = (s.trash||[]).filter(function(x){return x.id!==id;}); });
+  }
+  function trashDaysLeft(deletedAt){
+    var ms = TRASH_RETENTION_MS - (Date.now() - new Date(deletedAt).getTime());
+    return Math.max(0, Math.ceil(ms/(24*3600*1000)));
+  }
+  // Which page's access rules govern seeing a given trash entry — a
+  // farmhand who can't see Expenses shouldn't see a trashed one either,
+  // just because it happened to get deleted.
+  var TRASH_TYPE_SECTION = { egg:'eggs', eggloss:'eggs', feed:'feed', health:'health', expense:'expenses', income:'income', customer:'customers', flock:'flock', brooding:'flock' };
+  function visibleTrashItems(){
+    return (state.trash||[]).filter(function(x){ return sectionAllowed(TRASH_TYPE_SECTION[x.type]||'overview'); });
+  }
+  function describeTrashItem(item){
+    var r = item.record;
+    switch(item.type){
+      case 'egg': return r.total+' eggs — '+fmtDate(parseISO(r.date));
+      case 'eggloss': return r.count+' egg'+(r.count===1?'':'s')+' — '+eggLossReasonLabel(r.reason)+' — '+fmtDate(parseISO(r.date));
+      case 'feed': return (r.quantityKg||0).toFixed(1)+' kg '+r.feedType+' — '+fmtDate(parseISO(r.date));
+      case 'health': return r.title+' ('+healthTypeLabel(r.type)+') — '+fmtDate(parseISO(r.date));
+      case 'expense': return fmtMoney(r.amount)+' — '+r.category+' — '+fmtDate(parseISO(r.date));
+      case 'income': return fmtMoney(r.amount)+' — '+r.category+' — '+fmtDate(parseISO(r.date));
+      case 'customer': return r.name;
+      case 'flock': return r.count+' '+genderLabel(r.gender)+(r.count===1?'':'s')+' — added '+fmtDate(parseISO(r.dateAdded));
+      case 'brooding': return r.eggsGiven+' eggs given for brooding — '+fmtDate(parseISO(r.dateStarted));
+      default: return 'Deleted record';
+    }
+  }
+  function trashPanel(){
+    var items = visibleTrashItems().slice().sort(function(a,b){ return a.deletedAt<b.deletedAt?1:-1; });
+    var page = paginate('trash', items);
+    var rows = page.items.map(function(x){
+      var days = trashDaysLeft(x.deletedAt);
+      return '<tr><td>'+esc(TRASH_TYPE_LABELS[x.type]||x.type)+'</td><td>'+esc(describeTrashItem(x))+'</td>'+
+        '<td>'+fmtDate(parseISO(x.deletedAt.slice(0,10)))+(x.deletedByRole?' · '+esc(x.deletedByRole):'')+'</td>'+
+        '<td class="num" style="color:'+(days<=3?'var(--bad)':'inherit')+'">'+days+' day'+(days===1?'':'s')+'</td>'+
+        '<td><div class="row-actions">'+
+          '<button class="btn sm primary" data-action="restore-trash:'+x.id+'" '+(readOnly?'disabled':'')+'>Restore</button>'+
+          '<button class="icon-btn" data-action="purge-trash:'+x.id+'" title="Delete forever" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+        '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Deleted records</h3><span class="hint">'+items.length+' item'+(items.length===1?'':'s')+' — anything older than 30 days is removed automatically</span></div>'+
+      '<div class="table-wrap">'+
+      (items.length ? '<table><thead><tr><th>Type</th><th>Details</th><th>Deleted</th><th class="num">Time left</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>Nothing in the trash right now.</div></div>')+
+      '</div>'+pagerHtml('trash', page.pageCount, page.page)+'</div>';
+  }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
   /* ============================= PAGINATION ============================= */
@@ -1371,6 +1463,7 @@ var qrcode = (function(){
       version:1,
       settings:{
         displayCurrency:'KES',
+        language:'en',
         traySize:30,
         currencies:{
           KES:{symbol:'KSh',rate:1,decimals:0},
@@ -1391,7 +1484,15 @@ var qrcode = (function(){
           vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
         }
       },
-      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[], customers:[]
+      flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[], customers:[],
+      // Stock on hand is tracked separately from feedLogs (which is a usage
+      // + cost history, unchanged) — restocking adds to onHandKg, and every
+      // usage entry in feedLogs subtracts from it automatically. Starts at 0
+      // until the first restock is recorded, so a farm mid-way through this
+      // update isn't shown a false low-stock warning before anyone's told
+      // the app how much feed they actually have.
+      feedStock:{ onHandKg:0, lowStockKg:20, restocks:[] },
+      trash:[]
     };
   }
   function migrateState(data){
@@ -1416,6 +1517,10 @@ var qrcode = (function(){
     merged.healthRecords = Array.isArray(data&&data.healthRecords) ? data.healthRecords : [];
     merged.feedLogs = Array.isArray(data&&data.feedLogs) ? data.feedLogs : [];
     merged.customers = Array.isArray(data&&data.customers) ? data.customers : [];
+    merged.feedStock = Object.assign({}, base.feedStock, (data&&data.feedStock)||{});
+    merged.feedStock.restocks = Array.isArray(data&&data.feedStock&&data.feedStock.restocks) ? data.feedStock.restocks : [];
+    merged.trash = Array.isArray(data&&data.trash) ? data.trash : [];
+    purgeOldTrash(merged);
     backfillCustomers(merged);
     return merged;
   }
@@ -1467,6 +1572,53 @@ var qrcode = (function(){
     return Object.keys(state.settings.currencies).map(function(c){
       return '<option value="'+c+'" '+(c===state.settings.displayCurrency?'selected':'')+'>'+c+'</option>';
     }).join('');
+  }
+
+  // Cost to raise a batch vs what it's earned back so far. This is
+  // necessarily an estimate for the feed side: feed usage is logged for
+  // the whole flock, not per batch, so each batch's share of the
+  // all-time feed bill is split by how many of the farm's total
+  // "bird-days" belonged to it (its average headcount × how long it's
+  // been on the farm) — a batch that's had more birds for longer gets a
+  // proportionally bigger slice. Acquisition cost and sale income, by
+  // contrast, are exact — they're this batch's own recorded figures.
+  // Egg-sale income isn't included at all, since eggs aren't logged
+  // per batch anywhere in the app.
+  function batchProfitability(){
+    var today = new Date();
+    var weighted = state.flock.map(function(b){
+      var avgAlive = (b.count + currentCount(b)) / 2;
+      var lifetimeDays = Math.max(1, daysBetween(parseISO(b.dateAdded), today));
+      return { b:b, weight: avgAlive * lifetimeDays };
+    });
+    var totalWeight = weighted.reduce(function(a,w){ return a+w.weight; }, 0);
+    var allTimeFeedCost = totalFeedCost('0000-01-01', '9999-12-31');
+    return weighted.map(function(w){
+      var b = w.b;
+      var allocatedFeed = totalWeight>0 ? allTimeFeedCost * (w.weight/totalWeight) : 0;
+      var acquisitionCost = b.acquisitionCost||0;
+      var cost = acquisitionCost + allocatedFeed;
+      var income = (b.removals||[]).filter(function(r){ return r.reason==='sold'; }).reduce(function(a,r){ return a+(r.saleAmount||0); }, 0);
+      return {
+        batch:b, cost:cost, income:income, net: income-cost,
+        acquisitionCost:acquisitionCost, allocatedFeed:allocatedFeed,
+        hasData: acquisitionCost>0 || income>0 || allocatedFeed>=1
+      };
+    }).sort(function(a,b2){ return b2.net - a.net; });
+  }
+  function batchProfitabilityCardHTML(){
+    if(!canSeeFinance()) return '';
+    var rows = batchProfitability();
+    if(!rows.length) return '';
+    var body = rows.map(function(r){
+      var b = r.batch;
+      var label = genderLabel(b.gender)+(b.gender!=='unsexed'?'s':'')+' · added '+fmtDate(parseISO(b.dateAdded))+(currentCount(b)===0?' · fully removed':'');
+      var netColor = r.net<0 ? 'var(--bad)' : (r.net>0 ? 'var(--good)' : 'var(--ink)');
+      return '<tr><td>'+esc(label)+'</td><td class="num">'+fmtMoney(r.cost)+'</td><td class="num">'+fmtMoney(r.income)+'</td><td class="num" style="color:'+netColor+'">'+(r.net>=0?'+':'−')+fmtMoney(Math.abs(r.net))+'</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Batch profitability</h3><span class="hint">Estimate — feed cost is split by flock size &amp; time; egg income isn\'t tracked per batch</span></div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Batch</th><th class="num">Cost</th><th class="num">Sale income</th><th class="num">Net</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '</div>';
   }
 
   /* ============================= AGGREGATES ============================= */
@@ -1703,14 +1855,15 @@ var qrcode = (function(){
 
     // ---- Desktop sidebar: every section still listed, just organized
     // under its group's header now instead of one long flat list. ----
+    function navT(item){ return t('title.'+item.key, item.label); }
     var desktopHtml = groups.map(function(g){
       if(!g.children){
-        return '<li><button class="nav-item '+(ui.section===g.key?'active':'')+'" data-nav-section="'+g.key+'" data-action="nav:'+g.key+'"><span class="nav-ico">'+g.icon+'</span>'+badgeHtml(badgeFor(g.key))+'<span class="nav-label">'+g.label+'</span></button></li>';
+        return '<li><button class="nav-item '+(ui.section===g.key?'active':'')+'" data-nav-section="'+g.key+'" data-action="nav:'+g.key+'"><span class="nav-ico">'+g.icon+'</span>'+badgeHtml(badgeFor(g.key))+'<span class="nav-label">'+esc(navT(g))+'</span></button></li>';
       }
       var kidsHtml = g.children.map(function(c){
-        return '<li><button class="nav-item nav-item-sub '+(ui.section===c.key?'active':'')+'" data-nav-section="'+c.key+'" data-action="nav:'+c.key+'"><span class="nav-ico">'+c.icon+'</span>'+badgeHtml(badgeFor(c.key))+'<span class="nav-label">'+c.label+'</span></button></li>';
+        return '<li><button class="nav-item nav-item-sub '+(ui.section===c.key?'active':'')+'" data-nav-section="'+c.key+'" data-action="nav:'+c.key+'"><span class="nav-ico">'+c.icon+'</span>'+badgeHtml(badgeFor(c.key))+'<span class="nav-label">'+esc(navT(c))+'</span></button></li>';
       }).join('');
-      return '<li class="nav-group"><div class="nav-group-label">'+esc(g.label)+'</div><ul class="nav-sublist">'+kidsHtml+'</ul></li>';
+      return '<li class="nav-group"><div class="nav-group-label">'+esc(navT(g))+'</div><ul class="nav-sublist">'+kidsHtml+'</ul></li>';
     }).join('');
 
     rail.innerHTML =
@@ -1735,14 +1888,14 @@ var qrcode = (function(){
         var n = g.children ? g.children.reduce(function(a,c){ return a+badgeFor(c.key); },0) : badgeFor(g.key);
         var action = g.children ? 'nav-group:'+g.key : 'nav:'+g.key;
         return '<button class="mobile-tab '+(isActive?'active':'')+'" data-action="'+action+'">'+
-          '<span class="mobile-tab-ico">'+g.icon+badgeHtml(n)+'</span><span class="mobile-tab-label">'+esc(g.label)+'</span></button>';
+          '<span class="mobile-tab-ico">'+g.icon+badgeHtml(n)+'</span><span class="mobile-tab-label">'+esc(navT(g))+'</span></button>';
       }).join('');
     }
     if(subtabsEl){
       if(activeGroup && activeGroup.children.length>1){
         subtabsEl.hidden = false;
         subtabsEl.innerHTML = activeGroup.children.map(function(c){
-          return '<button class="mobile-subtab '+(ui.section===c.key?'active':'')+'" data-action="nav:'+c.key+'">'+esc(c.label)+badgeHtml(badgeFor(c.key))+'</button>';
+          return '<button class="mobile-subtab '+(ui.section===c.key?'active':'')+'" data-action="nav:'+c.key+'">'+esc(navT(c))+badgeHtml(badgeFor(c.key))+'</button>';
         }).join('');
       } else {
         subtabsEl.hidden = true;
@@ -1752,13 +1905,13 @@ var qrcode = (function(){
   }
   function accountFootHTML(){
     if(currentUser){
-      return '<div style="margin-bottom:2px"><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span>'+
+      return '<div style="margin-bottom:2px"><span class="role-pill '+(isAdminLevel()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span>'+
         '<div class="hint" style="margin:6px 0 8px; word-break:break-all">'+esc(currentUser.email||'')+'</div>'+
-        '<button class="btn ghost sm" data-action="signout" style="width:100%">Sign out</button></div>';
+        '<button class="btn ghost sm" data-action="signout" style="width:100%">'+t('btn.signout','Sign out')+'</button></div>';
     }
     if(guestMode){
       return '<div style="margin-bottom:2px"><span class="role-pill">Guest</span>'+
-        '<button class="btn ghost sm" data-action="guest-signin" style="width:100%;margin-top:8px">Sign in</button></div>';
+        '<button class="btn ghost sm" data-action="guest-signin" style="width:100%;margin-top:8px">'+t('btn.signin','Sign in')+'</button></div>';
     }
     return '';
   }
@@ -1772,7 +1925,7 @@ var qrcode = (function(){
     if(!guestMode) return '';
     return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill">Guest</span></div>'+
       '<p class="hint">Viewing a read-only copy of the ledger — nothing you change here is saved.</p>'+
-      '<button class="btn primary" data-action="guest-signin">Sign in</button></div>';
+      '<button class="btn primary" data-action="guest-signin">'+t('btn.signin','Sign in')+'</button></div>';
   }
   function topbarHTML(title,sub,right,icon){
     return '<div style="display:flex; align-items:center; gap:14px">'+(icon?'<div class="pic-badge lg">'+icon+'</div>':'')+'<div><h2>'+title+'</h2><div class="topbar-sub">'+(sub||'')+'</div></div></div><div class="topbar-actions">'+(right||'')+'</div>';
@@ -1793,12 +1946,67 @@ var qrcode = (function(){
 
   function bannerHTML(){
     if(readOnly) return '<div class="banner bad">You\'re viewing a read-only copy of this ledger — changes here won\'t be saved.</div>';
+    if(offlineSessionActive) return '<div class="banner">You\'re offline — signed in using your last saved session. Some things (Messages, Team Directory, Finance) may show stale data until you\'re back online.</div>';
     if(localMode && !cloudMode) return '<div class="banner">This device couldn\'t reach the shared farm database — changes are saved only here until it reconnects.</div>';
     return '';
   }
   function renderBanner(){
     var el = document.getElementById('global-banner');
     if(el) el.innerHTML = bannerHTML();
+  }
+  // Navigating anywhere in the app (the sidebar/tab bar, a search result, a
+  // "View" link on a message, Kem AI's answers — anything that changes
+  // ui.section) should go through here rather than setting ui.section
+  // directly, so the back arrow always has an accurate trail to walk back
+  // through. Going to the section you're already on is a no-op (nothing to
+  // push, nothing changed).
+  function goToSection(key){
+    if(key === ui.section){ render(); return; }
+    navHistory.push(ui.section);
+    if(navHistory.length > NAV_HISTORY_MAX) navHistory.shift();
+    ui.section = key;
+    saveUIPref();
+    render();
+  }
+  // One step back through wherever you've actually been this session — not
+  // a browser-style forward/back pair, just "take me to the previous
+  // page", which is all a farm ledger like this really needs. Overview is
+  // the fallback once history runs out, same as "Back to homepage".
+  function goBack(){
+    var prev = navHistory.length ? navHistory.pop() : 'overview';
+    ui.section = prev;
+    saveUIPref();
+    render();
+  }
+  // Long-pressing the app's home-screen icon offers "Log eggs" / "Log
+  // feed" shortcuts (see manifest.webmanifest) — each just opens straight
+  // to that page with the Add form already up, for the common case of
+  // "I just want to log today's eggs, nothing else". Runs once, right
+  // after a real (non-guest, writable) sign-in — the URL param is stripped
+  // immediately either way so a later reload never replays it.
+  function applyLaunchShortcut(){
+    var sc;
+    try{
+      var params = new URLSearchParams(location.search);
+      sc = params.get('shortcut');
+      if(sc) history.replaceState(null, '', location.pathname);
+    }catch(e){ return; }
+    if(!sc || !currentUser || readOnly) return;
+    if(sc==='log-eggs' && sectionAllowed('eggs')){ goToSection('eggs'); openModal(eggFormHtml()); }
+    else if(sc==='log-feed' && sectionAllowed('feed')){ goToSection('feed'); openModal(feedFormHtml()); }
+  }
+  // The back arrow + "Back to homepage" button shown at the top of every
+  // page except Overview itself (no point offering either while already
+  // home). Every section's own topbar() still renders its usual title/
+  // actions right below this — this is deliberately its own row, so it
+  // never has to be added to each of the ~20 topbar() functions by hand.
+  function navControlsHTML(){
+    if(ui.section==='overview') return '';
+    var canBack = navHistory.length>0;
+    return '<div class="page-nav-controls">'+
+      '<button class="icon-btn" data-action="nav-back" title="Back"'+(canBack?'':' disabled')+'>'+ICONS.chevronLeft+'</button>'+
+      '<button class="btn ghost sm" data-action="nav-home"><span class="inline-ico" style="width:15px; height:15px">'+ICONS.home+'</span>'+t('btn.backhome','Back to homepage')+'</button>'+
+    '</div>';
   }
   function render(){
     updateAuthGate();
@@ -1811,7 +2019,7 @@ var qrcode = (function(){
     // attribute is all it takes to recolor the whole page.
     var mainEl = document.getElementById('main-content');
     if(mainEl) mainEl.setAttribute('data-section', ui.section);
-    document.getElementById('topbar').innerHTML = sec.topbar();
+    document.getElementById('topbar').innerHTML = navControlsHTML() + sec.topbar();
     document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + sec.panel();
   }
 
@@ -1832,10 +2040,65 @@ var qrcode = (function(){
   function greetingTimeInfo(d){
     d = d || new Date();
     var h = d.getHours();
-    if(h>=5 && h<12) return {greeting:'Good morning', note:'Time to check on the flock and collect the morning eggs.'};
-    if(h>=12 && h<17) return {greeting:'Good afternoon', note:'Hope the day is going well out on the farm.'};
-    if(h>=17 && h<21) return {greeting:'Good evening', note:'Wrapping up for the day — how did the flock do?'};
-    return {greeting:'Good night', note:'Burning the midnight oil? The chickens turned in hours ago.'};
+    if(h>=5 && h<12) return {greeting:t('greet.morning','Good morning'), note:t('greet.morning.note','Time to check on the flock and collect the morning eggs.')};
+    if(h>=12 && h<17) return {greeting:t('greet.afternoon','Good afternoon'), note:t('greet.afternoon.note','Hope the day is going well out on the farm.')};
+    if(h>=17 && h<21) return {greeting:t('greet.evening','Good evening'), note:t('greet.evening.note','Wrapping up for the day — how did the flock do?')};
+    return {greeting:t('greet.night','Good night'), note:t('greet.night.note','Burning the midnight oil? The chickens turned in hours ago.')};
+  }
+  // ---- Kiswahili toggle: a first pass, not a full translation of every
+  // string in the app. It covers what's visible everywhere at a glance —
+  // navigation, page headers, the Overview greeting — plus the common
+  // buttons/labels repeated across every Add/Edit form (via
+  // swTranslateFragment, applied only inside modals). Deeper screens (Kem
+  // AI's answers, individual field labels, table headers) stay in English
+  // for now; extending coverage later just means adding more keys here.
+  var I18N = { sw: {
+    'title.overview':'Muhtasari', 'sub.overview':'Jinsi shamba linavyoendelea',
+    'title.flock':'Kundi la Kuku', 'sub.flock':'Idadi ya sasa kwa umri na jinsia',
+    'title.eggs':'Mayai', 'sub.eggs':'Uzalishaji wa kila siku, ukihesabiwa',
+    'title.feed':'Chakula', 'sub.feed':'Matumizi, gharama, na chakula kwa yai',
+    'title.health':'Afya', 'sub.health':'Chanjo, matibabu na vikumbusho',
+    'title.reports':'Ripoti', 'sub.reports':'Chapisha au pakua muhtasari wa kipindi',
+    'title.expenses':'Matumizi', 'sub.expenses':'Unachotumia, kwa aina',
+    'title.income':'Mapato', 'sub.income':'Fedha inayoingia, kwa aina',
+    'title.customers':'Wateja', 'sub.customers':'Wanunuzi, wa mara kwa mara na wa mara moja',
+    'title.finance':'Fedha', 'sub.finance':'Akaunti yako ya benki ya kuku pekee',
+    'title.about':'Kuhusu', 'sub.about':'Hadithi ya nyuma ya Kenokip Farm',
+    'title.settings':'Mipangilio', 'sub.settings':'Sarafu, jamii na hifadhi',
+    'title.team':'Timu', 'sub.team':'Akaunti, idhini na kumbukumbu za ufikiaji',
+    'title.messages':'Ujumbe', 'sub.messages':'Ongea na timu',
+    'title.signoffs':'Sahihi Zinazosubiri', 'sub.signoffs':'Nyaraka zinazosubiri sahihi yako',
+    'title.directory':'Orodha ya Timu', 'sub.directory':'Kila mtu shambani, mahali pamoja',
+    'title.flock-group':'Kumbukumbu za Shamba', 'title.money-group':'Fedha', 'title.team-group':'Timu',
+    'greet.morning':'Habari za asubuhi', 'greet.morning.note':'Ni wakati wa kuangalia kundi na kukusanya mayai ya asubuhi.',
+    'greet.afternoon':'Habari za mchana', 'greet.afternoon.note':'Tunatumaini siku inaendelea vizuri shambani.',
+    'greet.evening':'Habari za jioni', 'greet.evening.note':'Kumaliza siku — kundi limefanyaje?',
+    'greet.night':'Habari za usiku', 'greet.night.note':'Bado uko macho? Kuku walilala saa nyingi zilizopita.',
+    'btn.signin':'Ingia', 'btn.signout':'Toka', 'btn.backhome':'Rudi Mwanzoni'
+  } };
+  // Only exact, whole-text-node matches get swapped (a note that happens
+  // to contain one of these words as part of a longer sentence is left
+  // alone) — see the comment above openModal for why this only runs on
+  // modal content, not on data-bearing panels/tables.
+  var COMMON_SW = {
+    'Cancel':'Ghairi', 'Close':'Funga', 'Save':'Hifadhi', 'Save changes':'Hifadhi Mabadiliko',
+    'Delete':'Futa', 'Edit':'Hariri', 'Are you sure?':'Una uhakika?', 'Date':'Tarehe', 'Note':'Maelezo',
+    'Optional':'Si lazima', 'Sign in':'Ingia', 'Sign out':'Toka', 'Add entry':'Ongeza Kipengele',
+    'Add batch':'Ongeza Kundi', 'Log eggs':'Andika Mayai', 'Log feed':'Andika Chakula',
+    'Add expense':'Ongeza Matumizi', 'Add income':'Ongeza Mapato', 'Add record':'Ongeza Rekodi',
+    'Add customer':'Ongeza Mteja', 'Restock':'Ongeza Akiba'
+  };
+  function t(key, fallback){
+    var lang = (state.settings && state.settings.language) || 'en';
+    return (lang==='sw' && I18N.sw.hasOwnProperty(key)) ? I18N.sw[key] : fallback;
+  }
+  function swTranslateFragment(html){
+    if(((state.settings && state.settings.language)||'en')!=='sw') return html;
+    return html.replace(/>([^<]+)</g, function(whole, text){
+      var trimmed = text.trim();
+      if(!trimmed || !COMMON_SW.hasOwnProperty(trimmed)) return whole;
+      return '>'+text.replace(trimmed, COMMON_SW[trimmed])+'<';
+    });
   }
   function overviewGreetingHTML(){
     var info = greetingTimeInfo();
@@ -1896,9 +2159,49 @@ var qrcode = (function(){
       '<div class="card"><div class="card-title"><h3>Eggs, last 14 days</h3><span class="hint">'+last14.reduce(function(a,b){return a+b;},0)+' total</span></div>'+sparklineSVG(last14)+'</div>'+
       '<div class="card"><div class="card-title"><h3>Spending by category · '+r.label+'</h3><span class="hint num">'+fmtMoney(expenseCur)+'</span></div>'+categoryBars(expBreak)+'</div>'+
     '</div>'+
+    kemAiInsightsCardHTML()+
     '<div class="card"><div class="card-title"><h3>Recent activity</h3></div>'+
       (activity.length ? activity.map(activityRowHTML).join('') : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
     '</div>';
+  }
+
+  // Proactive, plain-language observations worked out fresh from whatever's
+  // already in the app — no separate AI service, just the same numbers
+  // Kem AI already answers questions about, checked for a notable change
+  // before anyone asks. Each one only appears when it's actually worth
+  // mentioning (a double-digit swing, or genuinely close to running out),
+  // so this stays a short, useful list rather than noise every time.
+  function costPerEggInRange(s,e){ var eggsN=sumEggs(s,e); return eggsN>0 ? totalFeedCost(s,e)/eggsN : null; }
+  function kemAiProactiveInsights(){
+    var out = [];
+    var rw = getRange('week');
+    var eggsCur = sumEggs(rw.startISO, rw.endISO), eggsPrev = sumEggs(rw.prevStartISO, rw.prevEndISO);
+    if(eggsPrev>0){
+      var pct = Math.round(((eggsCur-eggsPrev)/eggsPrev)*100);
+      if(Math.abs(pct)>=10) out.push({icon:'🥚', text:'Egg production is '+(pct<0?'down':'up')+' '+Math.abs(pct)+'% vs last week — '+eggsCur.toLocaleString()+' vs '+eggsPrev.toLocaleString()+' eggs.'});
+    }
+    var rm = getRange('month');
+    var cpeCur = costPerEggInRange(rm.startISO,rm.endISO), cpePrev = costPerEggInRange(rm.prevStartISO,rm.prevEndISO);
+    if(cpeCur!=null && cpePrev!=null && cpePrev>0){
+      var pct2 = Math.round(((cpeCur-cpePrev)/cpePrev)*100);
+      if(Math.abs(pct2)>=10) out.push({icon:'🌾', text:'Feed cost per egg is '+(pct2>0?'up':'down')+' '+Math.abs(pct2)+'% vs last month — '+fmtMoney(cpeCur)+' vs '+fmtMoney(cpePrev)+' per egg.'});
+    }
+    var fs = feedStockInfo();
+    if(fs.started && fs.daysLeft!=null && fs.daysLeft<=7) out.push({icon:'📦', text:"You're due to restock feed in about "+Math.max(0,Math.round(fs.daysLeft))+' day'+(Math.round(fs.daysLeft)===1?'':'s')+', based on your recent usage rate.'});
+    else if(fs.started && fs.low) out.push({icon:'📦', text:'Feed is already at or below your low-stock warning level — tap Restock on the Feed page once you buy more.'});
+    if(canSeeFinance()){
+      var lossBatches = batchProfitability().filter(function(bp){ return bp.net<0 && bp.hasData; });
+      if(lossBatches.length) out.push({icon:'📉', text:lossBatches.length+' flock batch'+(lossBatches.length===1?'':'es')+' '+(lossBatches.length===1?'is':'are')+' currently costing more than '+(lossBatches.length===1?'it has':'they have')+' earned back — see Flock → Batch profitability.'});
+    }
+    return out;
+  }
+  function kemAiInsightsCardHTML(){
+    var insights = kemAiProactiveInsights();
+    if(!insights.length) return '';
+    return '<div class="card"><div class="card-title"><h3>'+ICONS.kemai+'Kem AI noticed</h3></div>'+
+      insights.map(function(i){ return '<div style="display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--border, #eee)"><span style="font-size:18px; line-height:1.4">'+i.icon+'</span><span>'+esc(i.text)+'</span></div>'; }).join('')
+        .replace('border-top:1px solid var(--border, #eee)','border-top:none') // first row gets no divider — cheap way without a separate template branch
+    +'</div>';
   }
 
   /* ============================= ABOUT ============================= */
@@ -1984,6 +2287,7 @@ var qrcode = (function(){
           : '<div class="empty">'+ICONS.empty+'<div>No birds recorded yet. Use the '+'+ '+'button above — or on any Chicks / Growers / Layers card — to add your first batch.</div></div>')+
         '</div>'+pagerHtml('flock-batches', batchesPage.pageCount, batchesPage.page)+'</div>'+
       flockActivityPanelHTML()+
+      batchProfitabilityCardHTML()+
       broodingPanelHTML()+
       '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
         countBars(lossEntries)+
@@ -2106,7 +2410,15 @@ var qrcode = (function(){
         '<div class="field-row"><label>Age when acquired (weeks)</label><input class="field" type="number" min="0" name="ageWeeks" value="'+(b?weeksBetween(parseISO(b.birthDate),parseISO(b.dateAdded)):presetAge)+'"></div>'+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Source / notes</label><input class="field" type="text" name="source" value="'+(b?esc(b.source||''):'')+'" placeholder="e.g. Hatched on farm, bought from market…"></div>'+
-      '<p class="hint" style="margin-top:8px">The app keeps ageing this batch automatically from the date acquired and its age then.</p>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Cost to acquire (optional)</label><input class="field" type="number" min="0" step="0.01" name="acquisitionCost" value="'+(b&&b.acquisitionCost?(b.acquisitionCost*rateOf(state.settings.displayCurrency)).toFixed(2):'')+'" placeholder="0"></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="acqCurrency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      '<p class="hint" style="margin-top:8px">If entered, it\'s added to Expenses automatically (under "Chicks / Restocking") and used for this batch\'s profitability. The app keeps ageing this batch automatically from the date acquired and its age then.</p>'+
+      (!b ? '<label class="field-row" style="margin-top:12px; flex-direction:row; align-items:center; gap:8px">'+
+        '<input type="checkbox" name="autoVaccinate" value="1" '+(presetAge===0?'checked':'')+' style="width:auto">'+
+        '<span>Add the standard vaccination schedule as Health reminders for this batch (best for day-old chicks)</span>'+
+      '</label>' : '')+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(b?'Save changes':'Add batch')+'</button></div>'+
     '</form>';
   }
@@ -2249,7 +2561,8 @@ var qrcode = (function(){
 
     var eggsPage = paginate('eggs-log', entries);
     var rows = eggsPage.items.map(function(e){
-      return '<tr><td>'+fmtDate(parseISO(e.date))+'</td><td class="num">'+e.total+'</td><td>'+esc(e.note||'—')+'</td>'+
+      var sizeStr = eggSizeSummary(e.sizes);
+      return '<tr><td>'+fmtDate(parseISO(e.date))+'</td><td class="num">'+e.total+'</td><td>'+(sizeStr||'<span class="hint">—</span>')+'</td><td>'+esc(e.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="edit-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
         '<button class="icon-btn" data-action="delete-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
@@ -2282,9 +2595,17 @@ var qrcode = (function(){
     '<div class="card"><div class="card-title"><h3>By month</h3></div>'+
       '<div class="grid stats">'+months.map(function(x){ return statTile(x.label, x.total.toLocaleString()+' eggs', '<span class="hint">avg '+(x.total/x.days).toFixed(1)+'/day</span>'); }).join('')+'</div>'+
     '</div>'+
+    (function(){
+      var sizeTotals = eggSizeTotals(entries);
+      if(!sizeTotals) return '';
+      return '<div class="card"><div class="card-title"><h3>By size, all time</h3></div>'+
+        '<div class="grid" style="grid-template-columns:repeat(4,1fr)">'+
+          EGG_SIZES.map(function(p){ return genderTile(p[1], sizeTotals[p[0]].toLocaleString()); }).join('')+
+        '</div></div>';
+    })()+
     '<div class="card"><div class="card-title"><h3>Daily log</h3><span class="hint">'+entries.length+' entries</span></div>'+
       '<div class="table-wrap">'+
-      (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+      (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>By size</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No eggs logged yet.</div></div>')+
       '</div>'+pagerHtml('eggs-log', eggsPage.pageCount, eggsPage.page)+'</div>'+
     '<div class="card"><div class="card-title"><h3>Sold, used &amp; lost eggs</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">Sales, breakage, home use, or given for brooding</span>'+
@@ -2295,14 +2616,37 @@ var qrcode = (function(){
         : '<div class="empty">No egg losses recorded yet.</div>')+
       '</div>'+pagerHtml('egg-losses', lossPage.pageCount, lossPage.page)+'</div>';
   }
+  var EGG_SIZES = [['small','Small'],['medium','Medium'],['large','Large'],['jumbo','Jumbo']];
+  // Short "S12 · M40 · L20 · J3" style summary for a table row — only the
+  // sizes actually used show up, so an ungraded farm's rows just say '—'.
+  function eggSizeSummary(sizes){
+    if(!sizes) return '';
+    return EGG_SIZES.filter(function(p){ return (sizes[p[0]]||0)>0; })
+      .map(function(p){ return p[1].charAt(0)+(sizes[p[0]]); }).join(' · ');
+  }
+  function eggSizeTotals(entries){
+    var totals = {small:0,medium:0,large:0,jumbo:0}, any=false;
+    entries.forEach(function(e){ if(e.sizes){ any=true; EGG_SIZES.forEach(function(p){ totals[p[0]] += e.sizes[p[0]]||0; }); } });
+    return any ? totals : null;
+  }
   function eggFormHtml(id){
     var e = id ? state.eggs.find(function(x){return x.id===id;}) : null;
+    var hasSizes = !!(e && e.sizes && EGG_SIZES.some(function(p){ return (e.sizes[p[0]]||0)>0; }));
     return '<div class="modal-head"><h3>'+(e?'Edit entry':'Log eggs')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<form data-form="egg">'+
       '<input type="hidden" name="id" value="'+(e?e.id:'')+'">'+
       '<div class="field-grid">'+
         '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(e?e.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
-        '<div class="field-row"><label>Eggs laid</label><input class="field" type="number" min="0" name="eggs" value="'+(e?e.total:'')+'" autofocus required></div>'+
+        '<div class="field-row"><label>Eggs laid'+(hasSizes?' (total)':'')+'</label><input class="field" type="number" min="0" id="egg-total-input" name="eggs" value="'+(e?e.total:'')+'" '+(hasSizes?'readonly':'')+' autofocus required></div>'+
+      '</div>'+
+      '<label class="field-row" style="margin-top:10px; flex-direction:row; align-items:center; gap:8px">'+
+        '<input type="checkbox" id="egg-grade-toggle" data-change="egg-grade-toggle" '+(hasSizes?'checked':'')+' style="width:auto">'+
+        '<span>Grade by size instead of one flat count</span>'+
+      '</label>'+
+      '<div class="field-grid" id="egg-size-fields" style="margin-top:10px; display:'+(hasSizes?'grid':'none')+'; grid-template-columns:repeat(4,1fr)">'+
+        EGG_SIZES.map(function(p){
+          return '<div class="field-row"><label>'+p[1]+'</label><input class="field" type="number" min="0" name="size_'+p[0]+'" data-change="egg-size-input" value="'+(e&&e.sizes&&e.sizes[p[0]]?e.sizes[p[0]]:'')+'"></div>';
+        }).join('')+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(e?esc(e.note||''):'')+'" placeholder="Optional"></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(e?'Save changes':'Add entry')+'</button></div>'+
@@ -2345,6 +2689,59 @@ var qrcode = (function(){
     var kg = totalFeedKg(s,e), eggsCount = sumEggs(s,e);
     return eggsCount>0 ? (kg/eggsCount) : null;
   }
+  // Average kg used per day over the trailing N days — the basis for the
+  // low-stock "days left" estimate. Looks back at actual logged usage
+  // rather than assuming every day is fed the same, so a farm that logs in
+  // batches (e.g. once a week) still gets a sensible average.
+  function avgDailyFeedKg(days){
+    var end = todayISO(), start = toISO(addDays(new Date(),-(days-1)));
+    return totalFeedKg(start,end) / days;
+  }
+  function feedStockInfo(){
+    var st = state.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+    var onHand = st.onHandKg||0;
+    var avgDaily = avgDailyFeedKg(14);
+    var daysLeft = avgDaily>0 ? (onHand/avgDaily) : null;
+    return { onHandKg:onHand, lowStockKg: st.lowStockKg!=null?st.lowStockKg:20, avgDaily:avgDaily, daysLeft:daysLeft, low: onHand <= (st.lowStockKg!=null?st.lowStockKg:20), started: (st.restocks||[]).length>0 || onHand>0 };
+  }
+  function feedStockCardHTML(){
+    var info = feedStockInfo();
+    var pct = info.lowStockKg>0 ? Math.max(0,Math.min(100, (info.onHandKg/(info.lowStockKg*2))*100)) : 0;
+    return '<div class="card">'+
+      '<div class="card-title"><h3>Feed stock on hand</h3>'+
+        '<button class="btn sm primary" data-action="open-restock-feed" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'Restock</button>'+
+      '</div>'+
+      (info.started ?
+        '<div class="stat-value num" style="font-size:26px; color:'+(info.low?'var(--bad)':'var(--ink)')+'">'+info.onHandKg.toFixed(1)+' kg</div>'+
+        '<div style="height:8px; border-radius:5px; background:var(--border,#e5e0d0); margin-top:8px; overflow:hidden">'+
+          '<div style="height:100%; width:'+pct+'%; background:'+(info.low?'var(--bad)':'var(--good)')+'"></div>'+
+        '</div>'+
+        '<div class="hint" style="margin-top:8px">Low-stock warning at '+info.lowStockKg.toFixed(0)+' kg'+(info.avgDaily>0?' · using ≈'+info.avgDaily.toFixed(1)+' kg/day':'')+
+          (info.daysLeft!=null ? ' · about '+Math.max(0,Math.round(info.daysLeft))+' day'+(Math.round(info.daysLeft)===1?'':'s')+' of feed left at that rate' : '')+
+        '</div>'+
+        (info.low ? '<div class="banner bad" style="margin-top:10px">Feed is running low — tap Restock once you buy more.</div>' : '')
+        : '<div class="empty">'+ICONS.empty+'<div>Tap Restock the first time you buy feed, to start tracking how much you have on hand.</div></div>')+
+    '</div>';
+  }
+  function feedStockFormHtml(){
+    var st = state.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+    return '<div class="modal-head"><h3>Restock feed</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Adds to what you have on hand — separate from "Log feed", which is what\'s been used. If you enter a cost, it\'s added to Expenses automatically under "Feed", same as logging usage.</p>'+
+    '<form data-form="feed-stock">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Feed type</label><select class="field" name="feedType">'+FEED_TYPES.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('')+'</select></div>'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+todayISO()+'" max="'+todayISO()+'" required></div>'+
+      '</div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Quantity added (kg)</label><input class="field" type="number" min="0.1" step="0.1" name="quantityKg" required autofocus></div>'+
+        '<div class="field-row"><label>Cost (optional)</label><input class="field" type="number" min="0" step="0.01" name="cost" placeholder="0"></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Low-stock warning at (kg)</label><input class="field" type="number" min="0" step="1" name="lowStockKg" value="'+(st.lowStockKg!=null?st.lowStockKg:20)+'"></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
   function feedPanel(){
     var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
     var cards = periodsDef.map(function(pd){
@@ -2369,7 +2766,8 @@ var qrcode = (function(){
       '</div></td></tr>';
     }).join('');
 
-    return '<div class="grid four">'+cards+'</div>'+
+    return feedStockCardHTML()+
+    '<div class="grid four">'+cards+'</div>'+
     '<div class="card"><div class="card-title"><h3>Feed log</h3><span class="hint">'+entries.length+' records</span></div>'+
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Feed type</th><th class="num">Quantity</th><th class="num">Cost</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
@@ -2399,6 +2797,37 @@ var qrcode = (function(){
 
   /* ============================= HEALTH ============================= */
   var HEALTH_TYPE_LABELS = {vaccination:'Vaccination', treatment:'Treatment / medication', checkup:'Checkup', illness:'Illness / diagnosis', other:'Other'};
+  // A standard poultry vaccination schedule, commonly used by smallholder
+  // farms in Kenya — offered as a sensible starting point, not veterinary
+  // advice specific to this farm's own disease risk. "days" is age since
+  // hatching (birthDate), matching how the app already ages every batch.
+  var VACCINATION_SCHEDULE = [
+    { days:1, title:"Marek's disease vaccine", note:"Usually given at the hatchery before day-old chicks are sold — confirm with your supplier whether this is already done." },
+    { days:7, title:'Newcastle disease (NCD) — 1st dose', note:'HB1 strain, eye drop or drinking water.' },
+    { days:14, title:'Gumboro (IBD) — 1st dose' },
+    { days:21, title:'Gumboro (IBD) — 2nd dose' },
+    { days:28, title:'Newcastle disease — booster (Lasota)' },
+    { days:35, title:'Fowl pox' },
+    { days:56, title:'Newcastle disease — booster' },
+    { days:98, title:'Fowl typhoid' },
+    { days:126, title:'Newcastle disease (killed) + deworming', note:'Before point of lay.' }
+  ];
+  // Queues the standard schedule above as Health reminders for one batch,
+  // dated from its birthDate — used when adding a day-old chick batch (see
+  // the flock form's checkbox). Each is a completely ordinary Health
+  // record, so it can be edited, marked done, or deleted individually like
+  // any other — this just saves typing in the common case.
+  function queueVaccinationSchedule(s, batchId, birthDateISO){
+    s.healthRecords = s.healthRecords || [];
+    VACCINATION_SCHEDULE.forEach(function(item){
+      var dueISO = toISO(addDays(parseISO(birthDateISO), item.days));
+      s.healthRecords.push({
+        id:uid('health'), date:dueISO, type:'vaccination', title:item.title, batchId:batchId,
+        nextDueDate:dueISO, note:(item.note||'')+(item.note?' ':'')+'(Added from the standard vaccination schedule.)',
+        recordedByRole: roleLabel(currentUser)
+      });
+    });
+  }
   function healthTypeLabel(t){ return HEALTH_TYPE_LABELS[t] || 'Other'; }
   function healthBatchLabel(batchId){
     if(!batchId) return 'Whole flock';
@@ -2430,7 +2859,7 @@ var qrcode = (function(){
     var entries = (state.healthRecords||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
     var healthPage = paginate('health-log', entries);
     var rows = healthPage.items.map(function(x){
-      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+healthTypeLabel(x.type)+'</span></td><td>'+esc(x.title)+'</td><td>'+esc(healthBatchLabel(x.batchId))+'</td>'+
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+healthTypeLabel(x.type)+'</span></td><td>'+esc(x.title)+(x.photoURL?' 📷':'')+'</td><td>'+esc(healthBatchLabel(x.batchId))+'</td>'+
       '<td>'+(x.nextDueDate ? fmtDate(parseISO(x.nextDueDate)) : '—')+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="view-health-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>'+
@@ -2466,6 +2895,7 @@ var qrcode = (function(){
         '<div class="field-row"><label>Next due (optional)</label><input class="field" type="date" name="nextDueDate" value="'+(x&&x.nextDueDate?x.nextDueDate:'')+'"></div>'+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      attachPhotoBlockHtml('health', x?x.id:null, x&&x.photoURL)+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add record')+'</button></div>'+
     '</form>';
   }
@@ -2514,33 +2944,50 @@ var qrcode = (function(){
     var totalNow = birdsAsOf(todayISO());
     var overdueHealth = overdueHealthCount();
     var expBreak = breakdownByCategory(state.expenses, r.startISO, r.endISO);
+    var incBreak = breakdownByCategory(state.incomes, r.startISO, r.endISO);
+    var sizeTotalsR = eggSizeTotals(state.eggs.filter(function(e){ return inRange(e.date, r.startISO, r.endISO); }));
+    var profRows = canSeeFinance() ? batchProfitability() : [];
+    var profitableCount = profRows.filter(function(x){ return x.hasData && x.net>=0; }).length;
+    var losingCount = profRows.filter(function(x){ return x.hasData && x.net<0; }).length;
 
     return '<div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">'+
         periodSegment('reports')+
         '<div style="display:flex; gap:8px">'+
           '<button class="btn" data-action="export-report-csv">Download CSV</button>'+
-          '<button class="btn primary" data-action="print-report">Print / Save as PDF</button>'+
+          '<button class="btn primary" data-action="print-report">'+ICONS.reports+' Print / Save branded report as PDF</button>'+
         '</div>'+
       '</div>'+
       '<div id="report-print-area" class="print-area">'+
-        '<div class="card"><div class="card-title"><h3>Kenokip Farm — report</h3><span class="hint">'+r.label+'</span></div>'+
-          '<p class="hint" style="margin:0">Generated '+fmtDate(new Date(),{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</p>'+
+        '<div class="card" style="border-top:6px solid var(--accent-strong, #8F590A)">'+
+          '<div style="display:flex; align-items:center; gap:14px">'+
+            '<img src="icons/logo-mark.png" alt="" style="width:48px; height:48px">'+
+            '<div><h2 style="margin:0">Kenokip Farm</h2><div class="hint" style="margin-top:2px">Poultry Keeping — Monthly Report</div></div>'+
+          '</div>'+
+          '<div class="card-title" style="margin-top:14px"><h3>'+r.label+'</h3><span class="hint">Generated '+fmtDate(new Date(),{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</span></div>'+
         '</div>'+
+        '<div class="card"><div class="card-title"><h3>Production summary</h3></div>'+
+        '<div class="grid stats">'+
+          statTile('Eggs produced', eggsCount.toLocaleString()+' eggs', '')+
+          statTile('Feed used', feedKg.toFixed(1)+' kg', '<span class="hint">'+fmtMoney(feedCost)+'</span>')+
+          statTile('Feed per egg', fpe!=null ? (fpe*1000).toFixed(0)+' g' : '—', '')+
+          statTile('Flock change', (nc.net>=0?'+':'')+nc.net+' birds', '<span class="hint">+'+nc.added+' added · −'+nc.removed+' lost/sold</span>')+
+        '</div>'+
+        (sizeTotalsR ? '<div class="grid" style="grid-template-columns:repeat(4,1fr); margin-top:12px">'+
+          EGG_SIZES.map(function(p){ return genderTile(p[1], sizeTotalsR[p[0]].toLocaleString()); }).join('')+'</div>' : '')+
+        '<div class="hint" style="margin-top:12px">Total birds now: '+totalNow.toLocaleString()+(overdueHealth>0 ? ' · '+overdueHealth+' health reminder'+(overdueHealth===1?'':'s')+' overdue' : ' · No overdue health reminders')+'</div>'+
+        '</div>'+
+        (canSeeFinance() ? '<div class="card"><div class="card-title"><h3>Financial summary</h3></div>'+
         '<div class="grid stats">'+
           statTile('Income · '+r.label, fmtMoney(income), '')+
           statTile('Expenses · '+r.label, fmtMoney(expense), '')+
           statTile(profit<0?'Deficit':'Profit', fmtMoney(Math.abs(profit)), '')+
-          statTile('Eggs produced', eggsCount.toLocaleString()+' eggs', '')+
+          statTile('Batch profitability', profitableCount+' up · '+losingCount+' down', '<span class="hint">Of '+profRows.filter(function(x){return x.hasData;}).length+' batches with cost/income data</span>')+
         '</div>'+
-        '<div class="grid stats">'+
-          statTile('Feed used', feedKg.toFixed(1)+' kg', '<span class="hint">'+fmtMoney(feedCost)+'</span>')+
-          statTile('Feed per egg', fpe!=null ? (fpe*1000).toFixed(0)+' g' : '—', '')+
-          statTile('Flock change', (nc.net>=0?'+':'')+nc.net+' birds', '<span class="hint">+'+nc.added+' added · −'+nc.removed+' lost/sold</span>')+
-          statTile('Total birds now', totalNow.toLocaleString(), overdueHealth>0 ? '<span class="hint" style="color:var(--bad)">'+overdueHealth+' health reminder'+(overdueHealth===1?'':'s')+' overdue</span>' : '<span class="hint">No overdue reminders</span>')+
+        '<div class="grid two" style="margin-top:12px">'+
+          '<div><div class="hint" style="margin-bottom:6px">Income by category</div>'+(incBreak.length?categoryBars(incBreak):'<div class="hint">None this period.</div>')+'</div>'+
+          '<div><div class="hint" style="margin-bottom:6px">Spending by category</div>'+(expBreak.length?categoryBars(expBreak):'<div class="hint">None this period.</div>')+'</div>'+
         '</div>'+
-        '<div class="card"><div class="card-title"><h3>Spending by category · '+r.label+'</h3><span class="hint num">'+fmtMoney(expense)+'</span></div>'+
-          (expBreak.length ? categoryBars(expBreak) : '<div class="empty">'+ICONS.empty+'<div>No expenses in this period.</div></div>')+
-        '</div>'+
+        '</div>' : '')+
       '</div>'+
       '<div class="card"><div class="card-title"><h3>Activity Statement</h3><span class="hint">Everything, one signed document</span></div>'+
         '<p class="hint" style="margin-top:-4px">A single itemized document — flock, eggs, feed, health, expenses, income'+(canSeeFinance()?', and Finance':'')+' — for a date range you choose, signed electronically and given a verification code so it can\'t quietly be edited afterward and passed off as genuine.</p>'+
@@ -3259,7 +3706,7 @@ var qrcode = (function(){
   // request) gets the live/finished view above.
   function openPendingSignoffFromMessage(id){
     if(!db){ toast('Needs an internet connection.'); return; }
-    if(isAdmin()){
+    if(isAdminLevel()){
       db.collection('pendingSignoffs').doc(id).get().then(function(snap){
         if(!snap.exists){ toast('That request no longer exists.'); return; }
         var doc = snap.data();
@@ -3321,7 +3768,7 @@ var qrcode = (function(){
     }).catch(function(){ toast('Could not fetch that document right now.'); });
   }
   function signoffsPanel(){
-    if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator sees this.</div></div>';
+    if(!isAdminLevel()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator sees this.</div></div>';
     if(!pendingSignoffsForAdmin.length) return '<div class="empty">'+ICONS.empty+'<div>Nothing here right now.</div></div>';
     function when(doc){ return (doc.createdAt && doc.createdAt.toDate) ? fmtDate(doc.createdAt.toDate(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : 'Just now'; }
     var pending = pendingSignoffsForAdmin.filter(function(d){ return d.status==='pending'; });
@@ -3652,7 +4099,7 @@ var qrcode = (function(){
     var entries = list.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
     var moneyPage = paginate(kind+'-log', entries);
     var rows = moneyPage.items.map(function(x){
-      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+esc(x.category)+'</span></td><td class="num">'+fmtMoney(x.amount)+'</td><td>'+esc(x.note||'—')+'</td>'+
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td><span class="pill">'+esc(x.category)+'</span></td><td class="num">'+fmtMoney(x.amount)+'</td><td>'+esc(x.note||'—')+(x.photoURL?' 📷':'')+'</td>'+
       '<td><div class="row-actions">'+
         '<button class="icon-btn" data-action="view-'+kind+'-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>'+
         '<button class="icon-btn" data-action="edit-'+kind+':'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
@@ -3684,6 +4131,7 @@ var qrcode = (function(){
         '<div class="field-row"><label>Currency</label><select class="field" name="currency">'+currencyOptions()+'</select></div>'+
       '</div>'+
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      (kind==='expense' ? attachPhotoBlockHtml('expense', x?x.id:null, x&&x.photoURL) : '')+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add '+kind)+'</button></div>'+
     '</form>';
   }
@@ -3712,7 +4160,18 @@ var qrcode = (function(){
       '</div></td></tr>';
     }).join('');
 
+    var lang = (state.settings.language)||'en';
+    var trashCount = visibleTrashItems().length;
     return (currentUser ? accountCardHTML() : guestAccountCardHTML())+
+    '<div class="card"><div class="card-title"><h3>Trash</h3><span class="hint">'+trashCount+' item'+(trashCount===1?'':'s')+' — recoverable for 30 days</span></div>'+
+      '<button class="btn" data-action="nav:trash">'+ICONS.trash+' Open Trash</button>'+
+    '</div>'+
+    '<div class="card"><div class="card-title"><h3>Language</h3><span class="hint">Covers navigation, page headers, and common buttons so far</span></div>'+
+      '<div style="display:flex; gap:10px">'+
+        '<button class="btn '+(lang==='en'?'primary':'')+'" data-action="set-language:en">English</button>'+
+        '<button class="btn '+(lang==='sw'?'primary':'')+'" data-action="set-language:sw">Kiswahili</button>'+
+      '</div>'+
+    '</div>'+
     '<div class="card">'+
       '<div class="card-title"><h3>Currencies</h3><span class="hint">Rates are set by you — there\'s no internet access to fetch live rates.</span></div>'+
       '<div class="table-wrap"><table><thead><tr><th>Code</th><th>Symbol</th><th class="num">Rate (per 1 KES)</th><th class="num">Decimals</th><th></th></tr></thead><tbody>'+currRows+'</tbody></table></div>'+
@@ -3758,7 +4217,9 @@ var qrcode = (function(){
   function jobTitleLabel(jt){ return JOB_TITLE_LABELS[jt] || jt || '—'; }
   function roleLabel(u){
     if(!u) return 'Guest';
-    return u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
+    if(u.role==='administrator') return 'Administrator';
+    if(u.role==='coadmin') return 'Co-Administrator';
+    return jobTitleLabel(u.jobTitle);
   }
   // A sensible starting draft for "About" — the obvious, generic version of
   // what each role does — so nobody's Team Directory card ever sits blank.
@@ -3767,6 +4228,7 @@ var qrcode = (function(){
   // anything of their own, that replaces this everywhere, including here.
   var DEFAULT_ABOUT_BY_ROLE = {
     administrator: 'Runs Kenokip Farm day to day — the final word on the flock, the money, and the team.',
+    coadmin: 'A second administrator on Kenokip Farm — same access as the administrator, except final say on Finance.',
     supervisor: 'Oversees daily farm operations — keeping the flock, feed, and records on track.',
     vet: 'Looks after the health of the flock — vaccinations, treatments, and checkups.',
     financial: "Manages the farm's money — recording expenses, income, and receipts.",
@@ -3774,15 +4236,24 @@ var qrcode = (function(){
   };
   function defaultAboutForRole(u){
     if(!u) return '';
-    var key = u.role==='administrator' ? 'administrator' : u.jobTitle;
+    var key = u.role==='administrator' ? 'administrator' : (u.role==='coadmin' ? 'coadmin' : u.jobTitle);
     return DEFAULT_ABOUT_BY_ROLE[key] || 'Part of the Kenokip Farm team.';
   }
   function isAdmin(){ return !!currentUser && currentUser.role==='administrator'; }
+  // Co-Administrator: a second admin-level account (see roles.js) — same
+  // access as the administrator almost everywhere (isAdminLevel() below),
+  // except Finance authority (editing/deleting entries, approving pending
+  // ones, opening/setting balances, sending M-Pesa payouts, clearing a
+  // Finance lock), which stays isAdmin()-only, and the administrator's own
+  // account, which a Co-Administrator can never edit, disable, or delete
+  // (enforced server-side in updateStaffAccount/deleteStaffAccount).
+  function isCoAdmin(){ return !!currentUser && currentUser.role==='coadmin'; }
+  function isAdminLevel(){ return isAdmin() || isCoAdmin(); }
   function isFinancialStaffUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='financial'; }
   function isSupervisorUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='supervisor'; }
   function isVetUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='vet'; }
   function isFarmhandUser(){ return !!currentUser && currentUser.role==='employee' && currentUser.jobTitle==='farmhand'; }
-  function canSeeFinance(){ return isAdmin() || isFinancialStaffUser(); }
+  function canSeeFinance(){ return isAdmin() || isCoAdmin() || isFinancialStaffUser(); }
   function canProposeFinance(){ return canSeeFinance(); }
   // Each employee only sees the pages that match their job — matches what
   // roles.js sets as custom claims and what firestore.rules enforces on the
@@ -3791,7 +4262,7 @@ var qrcode = (function(){
   // anyone not signed in (guest/demo mode) are unaffected — this only
   // narrows things down for a signed-in *employee* account.
   function sectionAllowed(key){
-    if(isAdmin() || !currentUser) return sectionAllowedUngated(key);
+    if(isAdminLevel() || !currentUser) return sectionAllowedUngated(key);
     switch(key){
       case 'finance':
       case 'reports':
@@ -3822,8 +4293,8 @@ var qrcode = (function(){
   function sectionAllowedUngated(key){
     if(key==='finance') return canSeeFinance();
     if(key==='reports') return canSeeFinance();
-    if(key==='team') return isAdmin();
-    if(key==='signoffs') return isAdmin();
+    if(key==='team') return isAdminLevel();
+    if(key==='signoffs') return isAdminLevel();
     if(key==='messages') return !!currentUser;
     if(key==='directory') return !!currentUser;
     return true;
@@ -3842,9 +4313,9 @@ var qrcode = (function(){
     } else {
       notifRowHtml = '<button class="btn" data-action="enable-notifications">Enable background urgent alerts</button>';
     }
-    return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdmin()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
+    return '<div class="card"><div class="card-title"><h3>Your account</h3><span class="role-pill '+(isAdminLevel()?'admin':'')+'">'+esc(roleLabel(currentUser))+'</span></div>'+
       '<p class="hint">Signed in as '+esc(currentUser.email||'')+'.'+
-      (idleTimeoutApplies() ? ((isAdmin()||isFinancialStaffUser())
+      (idleTimeoutApplies() ? ((isAdminLevel()||isFinancialStaffUser())
         ? ' For the safety of financial data, this account signs out automatically after 10 minutes of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.'
         : ' This account signs out automatically after 5 hours of inactivity — using the app (even in another tab) keeps you signed in, and it applies in the background too.') : '')+
       '</p>'+
@@ -3999,9 +4470,27 @@ var qrcode = (function(){
      indefinitely — they now sign out after 5 hours of inactivity instead,
      long enough to never interrupt an actual work session. */
   function idleTimeoutApplies(){ return !!currentUser; }
-  function sessionLimitMs(){ return (isAdmin() || isFinancialStaffUser()) ? SESSION_LIMIT_MS : OTHER_ROLES_SESSION_LIMIT_MS; }
-  function sessionLimitLabel(){ return (isAdmin() || isFinancialStaffUser()) ? '10 minutes' : '5 hours'; }
+  function sessionLimitMs(){ return (isAdminLevel() || isFinancialStaffUser()) ? SESSION_LIMIT_MS : OTHER_ROLES_SESSION_LIMIT_MS; }
+  function sessionLimitLabel(){ return (isAdminLevel() || isFinancialStaffUser()) ? '10 minutes' : '5 hours'; }
   function lastActivityKey(uid){ return 'kenokip-last-activity-'+uid; }
+  // Lets an already-signed-in account keep working offline past its ID
+  // token's 1-hour lifetime (see the onAuthStateChanged catch above) —
+  // only ever a fallback for a device that has successfully signed in
+  // before, never a way to sign in fresh without a network at all (Firebase
+  // has to check a password against its servers; nothing here can do that
+  // offline, and it shouldn't try to).
+  function cachedClaimsKey(uid){ return 'kenokip-cached-claims-'+uid; }
+  function cacheClaimsForOffline(uid, claims){
+    try{ localStorage.setItem(cachedClaimsKey(uid), JSON.stringify({role:claims.role||null, jobTitle:claims.jobTitle||null})); }catch(e){}
+  }
+  function readCachedClaimsForOffline(uid){
+    try{
+      var raw = localStorage.getItem(cachedClaimsKey(uid));
+      if(!raw) return null;
+      var parsed = JSON.parse(raw);
+      return parsed && parsed.role ? parsed : null;
+    }catch(e){ return null; }
+  }
   var lastActivityWriteAt = 0;
   function markSessionActivity(){
     if(!currentUser || !idleTimeoutApplies()) return;
@@ -4022,7 +4511,7 @@ var qrcode = (function(){
       var label = sessionLimitLabel();
       stopIdleTimer();
       try{ localStorage.removeItem(key); }catch(e){}
-      toast('Signed out after '+label+' of inactivity'+((isAdmin()||isFinancialStaffUser())?' — for the safety of financial data.':'.'));
+      toast('Signed out after '+label+' of inactivity'+((isAdminLevel()||isFinancialStaffUser())?' — for the safety of financial data.':'.'));
       firebase.auth().signOut();
     }
   }
@@ -4137,20 +4626,25 @@ var qrcode = (function(){
     stopFinancePortalTimer();
     guestMode = false;
     readOnly = false;
-    if(ui.section==='finance' && !canSeeFinance()) ui.section = 'overview';
-    if(ui.section==='team' && !isAdmin()) ui.section = 'overview';
+    // Always land on Overview right after signing in — simple, predictable,
+    // and it's also what makes the section-permission check just above
+    // unnecessary now (any section a role can't see would've been caught
+    // there before too, but this is the actual place the user asked for).
+    ui.section = 'overview';
+    navHistory = [];
     saveUIPref();
     if(canSeeFinance()) initFinanceSync();
     initDirectorySync();
     initMessagesSync();
     initOwnProfileSync();
-    if(isAdmin()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); }
+    if(isAdminLevel()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); }
     if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
     captureAccessLog();
     startIdleTimer();
     if(typeof Notification!=='undefined' && Notification.permission==='granted') registerForPush();
     kemAiSetVisible(true);
     render();
+    applyLaunchShortcut();
   }
   function handleSignedInUser(user, claims){
     if(claims && claims.role){ finishSignIn(user, claims); return; }
@@ -4185,7 +4679,7 @@ var qrcode = (function(){
   }
   /* ---- access log (administrator only) ---- */
   function initAdminLogsSync(){
-    if(logsSyncStarted || !db || !isAdmin()) return;
+    if(logsSyncStarted || !db || !isAdminLevel()) return;
     logsSyncStarted = true;
     db.collection('accessLogs').orderBy('at','desc').limit(200).onSnapshot(function(snap){
       accessLogs = [];
@@ -4195,7 +4689,7 @@ var qrcode = (function(){
   }
   /* ---- Finance security alerts (administrator only) ---- */
   function initSecurityEventsSync(){
-    if(securityEventsSyncStarted || !db || !isAdmin()) return;
+    if(securityEventsSyncStarted || !db || !isAdminLevel()) return;
     securityEventsSyncStarted = true;
     db.collection('securityEvents').orderBy('at','desc').limit(200).onSnapshot(function(snap){
       securityEvents = [];
@@ -4208,7 +4702,7 @@ var qrcode = (function(){
   // equality filter, sorted client-side, so this never needs a Firestore
   // composite index set up separately.
   function initPendingSignoffsAdminSync(){
-    if(pendingSignoffsAdminSyncStarted || !db || !isAdmin()) return;
+    if(pendingSignoffsAdminSyncStarted || !db || !isAdminLevel()) return;
     pendingSignoffsAdminSyncStarted = true;
     // Both statuses so a skipped request still shows up here as an FYI —
     // "approved" ones aren't included since those were the administrator's
@@ -4244,18 +4738,40 @@ var qrcode = (function(){
       '<div class="field-row"><label>Name</label><input class="field" type="text" name="name" maxlength="60" placeholder="e.g. John" required autofocus></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Email</label><input class="field" type="email" name="email" required></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Temporary password</label><input class="field" type="text" name="password" minlength="6" placeholder="At least 6 characters" required></div>'+
-      '<div class="field-row" style="margin-top:12px"><label>Role</label><select class="field" name="jobTitle">'+
+      '<div class="field-row" style="margin-top:12px"><label>Role</label><select class="field" name="roleChoice">'+
         '<option value="supervisor">Supervisor</option>'+
         '<option value="vet">Vet / Doctor</option>'+
         '<option value="financial">Financial Staff</option>'+
         '<option value="farmhand">Farmhand</option>'+
-      '</select></div>'+
+        '<option value="coadmin">Co-Administrator</option>'+
+      '</select><span class="hint">Co-Administrator gets the same access as you everywhere except Finance — there, they can add entries, but final approval stays with you.</span></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Gender</label><select class="field" name="gender">'+
         '<option value="unspecified" selected>Unspecified</option>'+
         '<option value="female">Female</option>'+
         '<option value="male">Male</option>'+
       '</select><span class="hint">Just picks their default profile icon before they upload a real photo — they can change this themselves later too.</span></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create account</button></div>'+
+    '</form>';
+  }
+  // Promote/demote an existing team member — swap between a specific
+  // employee job title and Co-Administrator. Never offered for the
+  // administrator's own row (see teamPanel), and blocked server-side too
+  // (updateStaffAccount refuses any target whose role is 'administrator')
+  // — this is what makes "can't overrun me" real, not just a hidden button.
+  function changeRoleFormHtml(uid, currentRole, currentJobTitle){
+    var cur = currentRole==='coadmin' ? 'coadmin' : (currentJobTitle||'supervisor');
+    return '<div class="modal-head"><h3>Change role</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Co-Administrator gets the same access as you everywhere except Finance — there, they can add entries, but final approval stays with you.</p>'+
+    '<form data-form="change-role">'+
+      '<input type="hidden" name="uid" value="'+esc(uid)+'">'+
+      '<div class="field-row"><label>Role</label><select class="field" name="roleChoice">'+
+        '<option value="supervisor" '+(cur==='supervisor'?'selected':'')+'>Supervisor</option>'+
+        '<option value="vet" '+(cur==='vet'?'selected':'')+'>Vet / Doctor</option>'+
+        '<option value="financial" '+(cur==='financial'?'selected':'')+'>Financial Staff</option>'+
+        '<option value="farmhand" '+(cur==='farmhand'?'selected':'')+'>Farmhand</option>'+
+        '<option value="coadmin" '+(cur==='coadmin'?'selected':'')+'>Co-Administrator</option>'+
+      '</select></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
   function changePasswordFormHtml(){
@@ -4331,25 +4847,27 @@ var qrcode = (function(){
     return '<div class="card">'+
       '<div class="card-title"><h3>Finance security</h3>'+(locked?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Locked</span>':'')+'</div>'+
       (locked
-        ? '<div class="banner bad" style="margin-bottom:12px">🔒 The Finance portal is locked after '+3+' wrong attempts in a row — nobody can get in, even with correct details, until you clear it.</div>'+
-          '<button class="btn primary" data-action="open-clear-finance-lock">Clear lock</button>'
+        ? '<div class="banner bad" style="margin-bottom:12px">🔒 The Finance portal is locked after '+3+' wrong attempts in a row — nobody can get in, even with correct details, until '+(isAdmin()?'you clear':'the administrator clears')+' it.</div>'+
+          (isAdmin() ? '<button class="btn primary" data-action="open-clear-finance-lock">Clear lock</button>' : '<p class="hint">Only the administrator can clear a Finance portal lock.</p>')
         : '<p class="hint">Locks itself automatically after 3 wrong attempts on either unlock method, and alerts you immediately (as an Urgent message + notification) every time one is wrong. Rough location below is based on IP address — genuinely useful, but only ever a clue: it\'s city-level at best, and a VPN or mobile data can throw it off.</p>')+
       (securityEvents.length ? '<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>When</th><th>Result</th><th>Method</th><th>Device</th><th>Rough location</th><th>Account</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+pagerHtml
         : '<div class="empty" style="margin-top:12px">'+ICONS.empty+'<div>No Finance unlock attempts recorded yet.</div></div>')+
     '</div>';
   }
   function teamPanel(){
-    if(!isAdmin()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
+    if(!isAdminLevel()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
     var teamSorted = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); });
     var teamPage = paginate('team-list', teamSorted);
     var rows = teamPage.items.map(function(u){
       var isSelf = u.uid === currentUser.uid;
+      var pillAdmin = u.role==='administrator' || u.role==='coadmin';
       return '<tr><td>'+esc(u.name||'—')+'</td><td>'+esc(u.email||'—')+'</td>'+
-        '<td><span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'</span></td>'+
+        '<td><span class="role-pill '+(pillAdmin?'admin':'')+'">'+esc(roleLabel(u))+'</span></td>'+
         '<td>'+(u.disabled?'<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Disabled</span>':'<span class="pill" style="background:var(--good-tint); color:var(--good)">Active</span>')+'</td>'+
         '<td><div class="row-actions">'+
           (u.role==='administrator' || isSelf ? '<span class="hint">—</span>' :
             '<button class="btn sm" data-action="open-edit-name:'+u.uid+'">Edit name &amp; gender</button>'+
+            '<button class="btn sm" data-action="open-change-role:'+u.uid+'">Change role</button>'+
             '<button class="btn sm" data-action="open-reset-password:'+u.uid+'">Reset password</button>'+
             '<button class="btn sm" data-action="toggle-staff:'+u.uid+'">'+(u.disabled?'Enable':'Disable')+'</button>'+
             '<button class="icon-btn" data-action="delete-staff:'+u.uid+'">'+ICONS.trash+'</button>')+
@@ -4382,7 +4900,7 @@ var qrcode = (function(){
       if(l.place){ loc = l.place; }
       else if(typeof l.lat==='number' && typeof l.lng==='number'){ loc = l.lat.toFixed(4)+', '+l.lng.toFixed(4); }
       else { loc = LOCATION_STATUS_LABELS[l.locationStatus] || 'Unknown'; }
-      return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(l.role==='administrator'?'Administrator':jobTitleLabel(l.jobTitle))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td><td>'+esc(l.device||'—')+'</td></tr>';
+      return '<tr><td>'+esc(l.email||'—')+'</td><td>'+esc(roleLabel({role:l.role, jobTitle:l.jobTitle}))+'</td><td>'+when+'</td><td>'+ICONS.pin+' '+esc(loc)+'</td><td>'+esc(l.device||'—')+'</td></tr>';
     }).join('');
     var logPagerHtml = accessLogs.length ? '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:10px">'+
         '<button class="btn sm" data-action="access-log-page:prev" '+(accessLogPage<=0?'disabled':'')+'>Prev</button>'+
@@ -4397,7 +4915,7 @@ var qrcode = (function(){
     // stay there.
     var missingAboutUsers = teamUsers.filter(function(u){ return u.uid!==currentUser.uid && !u.about; });
 
-    return (pending.length ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
+    return (pending.length && isAdmin() ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
         pagerHtml('team-pending-finance', pendingPage.pageCount, pendingPage.page)+
       '</div>' : '')+
@@ -4409,13 +4927,13 @@ var qrcode = (function(){
           (missingAboutUsers.length ? '<button class="btn" data-action="bulk-seed-about">Fill in starter Abouts ('+missingAboutUsers.length+' missing)</button>' : '')+
         '</div>'+
       '</div>'+
-      '<div class="card"><div class="card-title"><h3>Finance portal password</h3></div>'+
+      (isAdmin() ? '<div class="card"><div class="card-title"><h3>Finance portal password</h3></div>'+
         '<p class="hint">A separate password — not anyone\'s sign-in password — that only you set. Share it only with whoever should be able to open the Finance portal; they\'ll also need their own Finance portal authenticator code (Settings → Your account) to get in.</p>'+
         '<form data-form="set-finance-portal-password" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap">'+
           '<div class="field-row" style="max-width:220px"><label>New Finance portal password</label><input class="field" type="password" name="password" minlength="6" placeholder="At least 6 characters" required></div>'+
           '<button class="btn primary" type="submit">Save</button>'+
         '</form>'+
-      '</div>'+
+      '</div>' : '')+
       financeSecurityCardHTML()+
       '<div class="card"><div class="card-title"><h3>Access log</h3><span class="hint">'+accessLogs.length+' sign-ins, '+PAGE_SIZE+' per page — visible only to you</span></div>'+
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
@@ -4514,6 +5032,57 @@ var qrcode = (function(){
     img.onerror = function(){ URL.revokeObjectURL(url); toast('Could not read that image file.'); };
     img.src = url;
   }
+  // Same client-side resize-before-upload approach as the profile photo
+  // above, but for a Health record or Expense's own attachment — full
+  // aspect ratio kept (a receipt or a sick bird photo isn't square),
+  // capped at 1280px on the long edge so it stays quick to upload on a
+  // slow connection. Written straight onto the record in the shared farm
+  // document (mutate), same as every other field on it — no separate
+  // Cloud Function needed, since this isn't security-sensitive the way a
+  // profile/role claim is.
+  var ATTACH_ARRAY_BY_TYPE = { health:'healthRecords', expense:'expenses' };
+  function attachPhotoTo(type, id, file){
+    if(!file || !id) return;
+    if(!storage){ toast('Photo upload needs an internet connection.'); return; }
+    if(file.type.indexOf('image/')!==0){ toast('Please choose an image file.'); return; }
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var MAXDIM = 1280;
+      var scale = Math.min(1, MAXDIM/Math.max(img.naturalWidth, img.naturalHeight));
+      var w = Math.max(1,Math.round(img.naturalWidth*scale)), h = Math.max(1,Math.round(img.naturalHeight*scale));
+      var canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img, 0,0, w,h);
+      canvas.toBlob(function(blob){
+        if(!blob){ toast('Could not process that image.'); return; }
+        toast('Uploading photo…');
+        var ref = storage.ref('attachments/'+type+'/'+id+'/'+uid('photo')+'.jpg');
+        ref.put(blob, {contentType:'image/jpeg'}).then(function(){
+          return ref.getDownloadURL();
+        }).then(function(downloadURL){
+          mutate(function(s){
+            var arrName = ATTACH_ARRAY_BY_TYPE[type];
+            var rec = (s[arrName]||[]).find(function(x){return x.id===id;});
+            if(rec) rec.photoURL = downloadURL;
+          });
+          toast('Photo attached.');
+          openModal(type==='health' ? healthFormHtml(id) : moneyFormHtml('expense', id));
+        }).catch(function(err){ toast((err&&err.message) || 'Could not upload that photo — please try again.'); });
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); toast('Could not read that image file.'); };
+    img.src = url;
+  }
+  function attachPhotoBlockHtml(type, id, photoURL){
+    if(!id) return '<p class="hint" style="margin-top:12px">Save this first, then reopen it to attach a photo.</p>';
+    return '<div class="field-row" style="margin-top:12px"><label>Photo</label>'+
+      (photoURL ? '<a href="'+esc(photoURL)+'" target="_blank" rel="noopener"><img src="'+esc(photoURL)+'" style="max-width:180px; max-height:180px; border-radius:8px; display:block; margin-bottom:8px; object-fit:cover"></a>' : '')+
+      '<div style="display:flex; gap:8px">'+
+        '<label class="btn" style="margin:0">'+(photoURL?'Replace photo':'Add photo')+'<input type="file" accept="image/*" data-change="attach-photo:'+type+':'+id+'" style="display:none" '+(readOnly?'disabled':'')+'></label>'+
+        (photoURL ? '<button type="button" class="btn" data-action="remove-photo:'+type+':'+id+'" '+(readOnly?'disabled':'')+'>Remove photo</button>' : '')+
+      '</div></div>';
+  }
   // Storage URLs already carry their own unique download token, so the
   // browser never caches a stale photo under a "new" upload's URL — the
   // live users/{uid} listener (initDirectorySync) refreshes the real
@@ -4525,19 +5094,20 @@ var qrcode = (function(){
   function directoryPanel(){
     if(!currentUser) return '<div class="empty">'+ICONS.empty+'<div>Sign in to see the team directory.</div></div>';
     var roster = teamUsers.filter(function(u){ return !u.disabled; }).slice().sort(function(a,b){
-      if(a.role==='administrator' && b.role!=='administrator') return -1;
-      if(b.role==='administrator' && a.role!=='administrator') return 1;
+      var aRank = a.role==='administrator' ? 0 : (a.role==='coadmin' ? 1 : 2);
+      var bRank = b.role==='administrator' ? 0 : (b.role==='coadmin' ? 1 : 2);
+      if(aRank !== bRank) return aRank - bRank;
       return (a.name||a.email||'').localeCompare(b.name||b.email||'');
     });
     var dirPage = paginate('directory', roster);
     var cards = dirPage.items.map(function(u){
       var isSelf = currentUser && u.uid===currentUser.uid;
-      var roleTxt = u.role==='administrator' ? 'Administrator' : jobTitleLabel(u.jobTitle);
+      var roleTxt = roleLabel(u);
       return '<div class="card" style="display:flex; gap:14px; align-items:flex-start">'+
         avatarHTML(u, 56)+
         '<div style="flex:1; min-width:0">'+
           '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap"><strong>'+esc(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+'</strong>'+
-            '<span class="role-pill '+(u.role==='administrator'?'admin':'')+'">'+esc(roleTxt)+'</span>'+
+            '<span class="role-pill '+((u.role==='administrator'||u.role==='coadmin')?'admin':'')+'">'+esc(roleTxt)+'</span>'+
             (isSelf ? '<span class="hint">(you)</span>' : '')+
           '</div>'+
           (u.about ? '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(u.about)+'</p>' : '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(defaultAboutForRole(u))+'</p>')+
@@ -4793,7 +5363,7 @@ var qrcode = (function(){
         applyAll();
       };
     }
-    if(isAdmin()){
+    if(isAdminLevel()){
       db.collection('messages').orderBy('createdAt','desc').limit(300).onSnapshot(makeHandler(), function(){});
     } else {
       db.collection('messages').where('toUid','==','all').onSnapshot(makeHandler(), function(){});
@@ -4805,7 +5375,7 @@ var qrcode = (function(){
     prefill = prefill || {};
     var others = teamUsers.filter(function(u){ return currentUser && u.uid!==currentUser.uid && !u.disabled; });
     var options = others.map(function(u){
-      var label = (u.role==='administrator'?'Administrator':jobTitleLabel(u.jobTitle))+'('+(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+')';
+      var label = roleLabel(u)+'('+(u.name||(u.email?u.email.split('@')[0]:'Unnamed'))+')';
       return '<option value="'+esc(u.uid)+'"'+(prefill.to===u.uid?' selected':'')+'>'+esc(label)+'</option>';
     }).join('');
     var quoteHtml = prefill.quoteBody ? '<div class="hint" style="margin-bottom:12px; padding:8px 10px; border-left:3px solid var(--accent, #4a7); border-radius:6px; background:rgba(127,127,127,.12)">Replying to '+esc(prefill.quoteFrom||'a message')+': "'+esc(prefill.quoteBody)+'"</div>' : '';
@@ -4814,7 +5384,7 @@ var qrcode = (function(){
       quoteHtml+
       '<input type="hidden" name="replyTo" value="'+esc(prefill.replyTo||'')+'">'+
       '<div class="field-row"><label>To</label><select class="field" name="to">'+
-        (isAdmin() ? '<option value="all"'+(prefill.to==='all'?' selected':'')+'>Everyone</option>' : '')+
+        (isAdminLevel() ? '<option value="all"'+(prefill.to==='all'?' selected':'')+'>Everyone</option>' : '')+
         options+
       '</select></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Urgency</label><select class="field" name="urgency">'+
@@ -4833,6 +5403,7 @@ var qrcode = (function(){
     if(m.kind==='signoff-request') return '<span class="pill" style="background:hsl(38,75%,90%); color:hsl(30,70%,30%)">🐣 Needs your signature</span>';
     if(m.kind==='hatch') return '<span class="pill" style="background:hsl(44,80%,90%); color:hsl(38,70%,26%)">🐣 Chicks hatched</span>';
     if(m.kind==='egg-activity') return '<span class="pill" style="background:hsl(44,70%,90%); color:hsl(30,55%,28%)">🥚 Egg activity</span>';
+    if(m.kind==='digest') return '<span class="pill" style="background:hsl(200,55%,92%); color:hsl(205,60%,30%)">📊 Weekly digest</span>';
     return '';
   }
   function messageRowHtml(m){
@@ -4841,7 +5412,7 @@ var qrcode = (function(){
     var toLabel = m.toUid==='all' ? 'Everyone' : (m.toLabel || 'a team member');
     var attr = unread ? ' data-action="mark-message-read:'+m.id+'"' : '';
     var quoteBlock = m.replyToSnippet ? '<div class="hint" style="margin:6px 0; padding:6px 8px; border-left:3px solid var(--border, #ccc)">↩ '+esc(m.replyToFromLabel||'a message')+': "'+esc(m.replyToSnippet)+'"</div>' : '';
-    var canReply = currentUser && m.fromUid && m.fromUid!==currentUser.uid;
+    var canReply = currentUser && m.fromUid && m.fromUid!==currentUser.uid && m.fromUid!=='system';
     var sender = teamUsers.find(function(u){ return u.uid===m.fromUid; });
     return '<div class="message-row'+(unread?' unread':'')+'"'+attr+'>'+
       avatarHTML(sender || {name:m.fromLabel}, 38)+
@@ -4859,7 +5430,7 @@ var qrcode = (function(){
   }
   function messagesPanel(){
     if(!currentUser) return '<div class="empty">'+ICONS.empty+'<div>Sign in to use Messages.</div></div>';
-    var showAll = isAdmin() && messagesViewAll;
+    var showAll = isAdminLevel() && messagesViewAll;
     var list = showAll ? messages : messages.filter(function(m){ return isMessageForMe(m) || m.fromUid===currentUser.uid; });
     var groups = [['urgent','Urgent'],['important','Important'],['normal','Normal']];
     var sectionsHtml = groups.map(function(g){
@@ -4875,7 +5446,7 @@ var qrcode = (function(){
     }).join('');
     return '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px">'+
         '<button class="btn primary" data-action="open-compose-message">'+ICONS.plus+'New message</button>'+
-        (isAdmin() ? '<button class="btn" data-action="toggle-messages-view">'+(showAll?'Show my messages':'Show all team messages')+'</button>' : '')+
+        (isAdminLevel() ? '<button class="btn" data-action="toggle-messages-view">'+(showAll?'Show my messages':'Show all team messages')+'</button>' : '')+
       '</div>'+
       (sectionsHtml || '<div class="empty">'+ICONS.empty+'<div>No messages yet.</div></div>');
   }
@@ -4900,7 +5471,7 @@ var qrcode = (function(){
     if(!financePortalUnlocked) return '';
     var actions = currencySelectHTML();
     if(isAdmin()) actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
-    if(mpesaEnabled && (isAdmin() || isFinancialStaffUser())) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
+    if(mpesaEnabled && canProposeFinance()) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
     if(mpesaEnabled && isAdmin()) actions += '<button class="btn" data-action="open-mpesa-withdraw">Send via M-Pesa</button>';
     actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'New transaction');
     return actions;
@@ -5218,22 +5789,23 @@ var qrcode = (function(){
   }
 
   var SECTIONS = {
-    overview:{ topbar:function(){ return topbarHTML('Overview','How the farm is doing', periodSegment('overview')+currencySelectHTML(), PICS.overview); }, panel:overviewPanel },
-    flock:{ topbar:function(){ return topbarHTML('Flock','Current inventory by age and gender', '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), PICS.flockNav); }, panel:flockPanel },
-    eggs:{ topbar:function(){ return topbarHTML('Eggs','Daily production, tallied up', addBtn('open-add-egg','Log eggs'), PICS.eggs); }, panel:eggsPanel },
-    feed:{ topbar:function(){ return topbarHTML('Feed','Consumption, cost, and feed-per-egg', addBtn('open-add-feed','Log feed'), PICS.feed); }, panel:feedPanel },
-    health:{ topbar:function(){ return topbarHTML('Health','Vaccinations, treatments &amp; reminders', addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
-    reports:{ topbar:function(){ return topbarHTML('Reports','Print or export a period summary', '', PICS.reports); }, panel:reportsPanel },
-    expenses:{ topbar:function(){ return topbarHTML('Expenses','What you’re spending, by category', currencySelectHTML()+addBtn('open-add-expense','Add expense'), PICS.expenses); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
-    income:{ topbar:function(){ return topbarHTML('Income','Money coming in, by category', currencySelectHTML()+addBtn('open-add-income','Add income'), PICS.income); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
-    customers:{ topbar:function(){ return topbarHTML('Customers','Buyers, repeat and one-off', addBtn('open-add-customer','Add customer'), PICS.customers); }, panel:customersPanel },
-    finance:{ topbar:function(){ return topbarHTML('Finance','Your poultry-only bank account', financeTopbarActions(), PICS.finance); }, panel:financePanel },
-    about:{ topbar:function(){ return topbarHTML('About','The story behind Kenokip Farm', isAdmin() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : '', PICS.about); }, panel:aboutPanel },
-    settings:{ topbar:function(){ return topbarHTML('Settings','Currencies, categories & backup', readOnlyBadge(), PICS.settings); }, panel:settingsPanel },
-    team:{ topbar:function(){ return topbarHTML('Team','Accounts, approvals & access log', '', PICS.team); }, panel:teamPanel },
-    messages:{ topbar:function(){ return topbarHTML('Messages','Talk to the team', '', PICS.messages); }, panel:messagesPanel },
-    signoffs:{ topbar:function(){ return topbarHTML('Pending signatures','Documents waiting on your signature', '', PICS.signoffs); }, panel:signoffsPanel },
-    directory:{ topbar:function(){ return topbarHTML('Team Directory','Everyone on the farm, in one place', '', PICS.directory); }, panel:directoryPanel }
+    overview:{ topbar:function(){ return topbarHTML(t('title.overview','Overview'),t('sub.overview','How the farm is doing'), periodSegment('overview')+currencySelectHTML(), PICS.overview); }, panel:overviewPanel },
+    flock:{ topbar:function(){ return topbarHTML(t('title.flock','Flock'),t('sub.flock','Current inventory by age and gender'), '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), PICS.flockNav); }, panel:flockPanel },
+    eggs:{ topbar:function(){ return topbarHTML(t('title.eggs','Eggs'),t('sub.eggs','Daily production, tallied up'), addBtn('open-add-egg','Log eggs'), PICS.eggs); }, panel:eggsPanel },
+    feed:{ topbar:function(){ return topbarHTML(t('title.feed','Feed'),t('sub.feed','Consumption, cost, and feed-per-egg'), addBtn('open-add-feed','Log feed'), PICS.feed); }, panel:feedPanel },
+    health:{ topbar:function(){ return topbarHTML(t('title.health','Health'),t('sub.health','Vaccinations, treatments &amp; reminders'), addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
+    reports:{ topbar:function(){ return topbarHTML(t('title.reports','Reports'),t('sub.reports','Print or export a period summary'), '', PICS.reports); }, panel:reportsPanel },
+    expenses:{ topbar:function(){ return topbarHTML(t('title.expenses','Expenses'),t('sub.expenses','What you’re spending, by category'), currencySelectHTML()+addBtn('open-add-expense','Add expense'), PICS.expenses); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
+    income:{ topbar:function(){ return topbarHTML(t('title.income','Income'),t('sub.income','Money coming in, by category'), currencySelectHTML()+addBtn('open-add-income','Add income'), PICS.income); }, panel:function(){ return moneyBreakdownPanel(state.incomes, state.settings.incomeCategories, 'income'); } },
+    customers:{ topbar:function(){ return topbarHTML(t('title.customers','Customers'),t('sub.customers','Buyers, repeat and one-off'), addBtn('open-add-customer','Add customer'), PICS.customers); }, panel:customersPanel },
+    finance:{ topbar:function(){ return topbarHTML(t('title.finance','Finance'),t('sub.finance','Your poultry-only bank account'), financeTopbarActions(), PICS.finance); }, panel:financePanel },
+    about:{ topbar:function(){ return topbarHTML(t('title.about','About'),t('sub.about','The story behind Kenokip Farm'), isAdminLevel() ? '<button class="btn" data-action="open-edit-about">'+ICONS.edit+'Edit</button>' : '', PICS.about); }, panel:aboutPanel },
+    settings:{ topbar:function(){ return topbarHTML(t('title.settings','Settings'),t('sub.settings','Currencies, categories & backup'), readOnlyBadge(), PICS.settings); }, panel:settingsPanel },
+    trash:{ topbar:function(){ return topbarHTML('Trash','Deleted records — recoverable for 30 days', '', PICS.trash); }, panel:trashPanel },
+    team:{ topbar:function(){ return topbarHTML(t('title.team','Team'),t('sub.team','Accounts, approvals & access log'), '', PICS.team); }, panel:teamPanel },
+    messages:{ topbar:function(){ return topbarHTML(t('title.messages','Messages'),t('sub.messages','Talk to the team'), '', PICS.messages); }, panel:messagesPanel },
+    signoffs:{ topbar:function(){ return topbarHTML(t('title.signoffs','Pending signatures'),t('sub.signoffs','Documents waiting on your signature'), '', PICS.signoffs); }, panel:signoffsPanel },
+    directory:{ topbar:function(){ return topbarHTML(t('title.directory','Team Directory'),t('sub.directory','Everyone on the farm, in one place'), '', PICS.directory); }, panel:directoryPanel }
   };
   // Plain display names for each section key — used by voice control's
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
@@ -5331,7 +5903,7 @@ var qrcode = (function(){
         });
       });
     }
-    if(isAdmin()){
+    if(isAdminLevel()){
       teamUsers.forEach(function(u){
         idx.push({
           cat:'Team', title:u.name||u.email||'Unnamed', sub:roleLabel(u)+(u.email?' — '+u.email:''),
@@ -5357,7 +5929,7 @@ var qrcode = (function(){
     return out;
   }
   function gsResultsHtml(results, query){
-    if(!query.trim()) return '<div class="gs-hint">Type to search flock, eggs, feed, health, money, and customers'+(isAdmin()?', plus Team':'')+'. Or tap the mic and just say it.</div>';
+    if(!query.trim()) return '<div class="gs-hint">Type to search flock, eggs, feed, health, money, and customers'+(isAdminLevel()?', plus Team':'')+'. Or tap the mic and just say it.</div>';
     if(!results.length) return '<div class="gs-empty">No matches for "'+esc(query)+'".</div>';
     var lastCat = null, html = '';
     results.forEach(function(item, i){
@@ -5516,7 +6088,10 @@ var qrcode = (function(){
     if(!root) return;
     var html;
     if(!kemAiMessages.length){
-      html = '<div class="kemai-intro">Hi, I\'m Kem — ask me about your farm\'s numbers, or how to do something in the app.</div>'+kemAiSuggestionsHtml();
+      var proactive = kemAiProactiveInsights();
+      var proactiveHtml = proactive.length ? '<div class="kemai-msg assistant">Hi, I\'m Kem. Before you ask — a couple of things I noticed:<br><br>'+
+        proactive.map(function(i){ return i.icon+' '+esc(i.text); }).join('<br><br>')+'</div>' : '';
+      html = proactiveHtml+'<div class="kemai-intro">'+(proactive.length?'Ask me anything else about your numbers, or how to do something in the app.':'Hi, I\'m Kem — ask me about your farm\'s numbers, or how to do something in the app.')+'</div>'+kemAiSuggestionsHtml();
     } else {
       html = kemAiMessages.map(function(m){ return '<div class="kemai-msg '+(m.role==='user'?'user':'assistant')+'">'+esc(m.text)+'</div>'; }).join('');
     }
@@ -5582,8 +6157,9 @@ var qrcode = (function(){
        plain "how many eggs" still falls through to the number below. ---- */
     if(/\badd\b.*\b(bird|flock|chick|hen|rooster)\b|\bnew batch\b/.test(q)) return 'Go to Flock, then tap "Add birds" (or the + on a Chicks/Growers/Layers card) — enter how many, their gender, and where they came from.';
     if(/\b(sold|sell|lost|died|predator|cull)\b.*\b(bird|flock|hen)\b|\brecord loss\b/.test(q)) return 'On the Flock page, find the batch\'s row and tap "Record loss" (or "Record loss or sale" next to it) — pick the reason, how many, and for a sale, the buyer and amount.';
-    if(/\b(log|add|record)\b.*\begg/.test(q)) return 'Go to Eggs and tap "Log eggs" — enter the date and how many were collected.';
+    if(/\b(log|add|record)\b.*\begg/.test(q)) return 'Go to Eggs and tap "Log eggs" — enter the date and how many were collected. Tick "Grade by size" if you want to break that down into small/medium/large/jumbo instead of one flat number.';
     if(/\b(log|add|record)\b.*\bfeed/.test(q)) return 'Go to Feed and tap "Log feed" — enter the type, quantity in kg, and cost.';
+    if(/\brestock\b.*\bfeed\b|\bfeed\b.*\bstock\b.*\bhow\b/.test(q)) return 'Go to Feed and tap "Restock" — enter how much you bought, and it\'s added to what you have on hand. The app then tells you roughly how many days that\'ll last based on your recent usage.';
     if(/\b(add|record)\b.*\bhealth|\bvaccinat.*\bhow\b|\b(log|record)\b.*\btreatment/.test(q)) return 'Go to Health and tap "Add record" — pick vaccination, treatment, checkup, or illness, which batch it\'s for, and (optionally) a follow-up reminder date.';
     if(/\b(add|record)\b.*\bexpense/.test(q)) return 'Go to Expenses and tap "Add expense" — pick a category, amount, date, and an optional note.';
     if(/\b(add|record)\b.*\bincome/.test(q)) return 'Go to Income and tap "Add income" — pick a category, amount, date, and an optional note.';
@@ -5594,12 +6170,12 @@ var qrcode = (function(){
     if(/\bsearch box\b|\bhow.*search\b/.test(q)) return 'The search box above every page searches flock, eggs, feed, health, expenses, income, and customers as you type (plus Finance and Team if your account can see those) — tap a result to jump straight to it.';
     if(/\bvoice\b/.test(q)) return 'Tap the mic in the search box and say something like "open eggs" to jump to a page, or just say what you\'re looking for and it searches for it. Needs Chrome, Edge, or Safari.';
     if(/\bchange.*password\b|\breset.*password\b/.test(q)) return 'From Settings → Your account, tap "Change password". If you\'re signed out and can\'t remember it, use "Forgot password?" on the sign-in screen instead.';
-    if(/\badd\b.*\b(team member|staff|employee)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('Team'); return 'From Team, tap "Add team member" — set their name, email, a temporary password, and role (Supervisor, Vet, Financial Staff, or Farmhand), then share the login with them directly.'; }
+    if(/\badd\b.*\b(team member|staff|employee)\b/.test(q)){ if(!isAdminLevel()) return kemAiRestricted('Team'); return 'From Team, tap "Add team member" — set their name, email, a temporary password, and role (Supervisor, Vet, Financial Staff, Farmhand, or Co-Administrator), then share the login with them directly.'; }
     if(/\bnotification\b|\bpush\b|\balert\b/.test(q)) return 'From Settings → Your account, tap "Enable background urgent alerts" — that lets an Urgent message pop up on this device even when the app is in the background.';
     if(/\bcurrency\b/.test(q)) return 'From Settings, pick your display currency — everything already recorded converts automatically, nothing needs re-entering.';
     if(/\bbackup\b|\bexport\b/.test(q)) return 'Settings has a backup/export option for your records. Ask an administrator if you\'re not sure where your farm\'s backups are kept.';
-    if(/\bsecurity log\b|\baccess log\b|\bwho.*(logged in|accessed)\b/.test(q)){ if(!isAdmin()) return kemAiRestricted('the security and access logs'); return 'Team → Access log shows every sign-in, and Team → Finance security shows every Finance unlock attempt with device and rough location.'; }
-    if(/\babout page\b/.test(q)) return 'The About page tells your farm\'s story — administrators can edit it with the pencil icon at the top of that page.';
+    if(/\bsecurity log\b|\baccess log\b|\bwho.*(logged in|accessed)\b/.test(q)){ if(!isAdminLevel()) return kemAiRestricted('the security and access logs'); return 'Team → Access log shows every sign-in, and Team → Finance security shows every Finance unlock attempt with device and rough location.'; }
+    if(/\babout page\b/.test(q)) return 'The About page tells your farm\'s story — the administrator or co-administrator can edit it with the pencil icon at the top of that page.';
 
     /* ---- live numbers, worked out fresh from state every time ---- */
     if(/\begg/.test(q)){
@@ -5615,6 +6191,11 @@ var qrcode = (function(){
       if(/\bhen/.test(q)) return (inv.chick.female+inv.grower.female+inv.layer.female)+" hens on the farm right now.";
       if(/\brooster/.test(q)) return (inv.chick.male+inv.grower.male+inv.layer.male)+" roosters on the farm right now.";
       return totalNow.toLocaleString()+" birds on the farm right now, across "+state.flock.length+" recorded batch"+(state.flock.length===1?'':'es')+".";
+    }
+    if(/\bstock\b|\bon hand\b|\brunning (out|low)\b/.test(q) && /\bfeed\b/.test(q)){
+      var fsi = feedStockInfo();
+      if(!fsi.started) return "You haven't started tracking feed stock yet — tap Restock on the Feed page the first time you buy feed.";
+      return fsi.onHandKg.toFixed(1)+' kg of feed on hand'+(fsi.daysLeft!=null?', about '+Math.max(0,Math.round(fsi.daysLeft))+' day'+(Math.round(fsi.daysLeft)===1?'':'s')+' left at your recent usage rate':'')+(fsi.low?' — that\'s at or below your low-stock warning level.':'.');
     }
     if(/\bfeed\b/.test(q)){
       var r2 = /\bthis month\b|\bmonth\b/.test(q) ? getRange('month') : getRange('week');
@@ -5652,7 +6233,7 @@ var qrcode = (function(){
       return "Your Finance balance is "+financeMoneyDisplay(financeBalance())+(financeRevealed?'':' (tap the eye icon on the Finance page to reveal the exact figure).');
     }
     if(/\bteam\b|\bstaff\b|\bemployee/.test(q) && /\bhow many\b|\bcount\b/.test(q)){
-      if(!isAdmin()) return kemAiRestricted('Team');
+      if(!isAdminLevel()) return kemAiRestricted('Team');
       return teamUsers.length+" team account"+(teamUsers.length===1?'':'s')+" set up.";
     }
 
@@ -5662,7 +6243,11 @@ var qrcode = (function(){
   /* ============================= MODAL / TOAST ============================= */
   function openModal(html){
     var root = document.getElementById('modal-root');
-    root.innerHTML = '<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true">'+html+'</div></div>';
+    // Runs a light Kiswahili pass over common button/label text only — see
+    // the comment above the I18N/COMMON_SW declarations for why this is
+    // scoped to modal content (mostly static labels) rather than the
+    // data-bearing panels (which can contain a farmer's own note text).
+    root.innerHTML = '<div class="modal-backdrop"><div class="modal" role="dialog" aria-modal="true">'+swTranslateFragment(html)+'</div></div>';
     var first = root.querySelector('input,select,textarea') || root.querySelector('button');
     if(first) first.focus();
   }
@@ -5794,9 +6379,29 @@ var qrcode = (function(){
               return;
             }
             user.getIdTokenResult(false).then(function(res){
+              cacheClaimsForOffline(user.uid, res.claims || {});
+              offlineSessionActive = false;
               handleSignedInUser(user, res.claims || {});
-            }).catch(function(){
-              firebase.auth().signOut();
+            }).catch(function(err){
+              // A cached (already-signed-in) session hitting this on a
+              // network hiccup used to get silently signed out — genuinely
+              // offline is exactly when you most need the app to still
+              // open. If we have this account's role/jobTitle cached from
+              // a previous successful check, use that instead of the
+              // network round-trip getIdTokenResult() needs, and show a
+              // small banner rather than pretending everything's normal.
+              // Anything that ISN'T a plain connectivity problem (a
+              // revoked/invalid token, a disabled account) still signs out
+              // as before — that's a real "you're not allowed in" case,
+              // not a network one.
+              var offline = !navigator.onLine || (err && err.code==='auth/network-request-failed');
+              var cached = offline ? readCachedClaimsForOffline(user.uid) : null;
+              if(cached){
+                offlineSessionActive = true;
+                handleSignedInUser(user, cached);
+              } else {
+                firebase.auth().signOut();
+              }
             });
           });
         });
@@ -5857,7 +6462,7 @@ var qrcode = (function(){
     var parts = action.split(':');
     var verb = parts[0], a1 = parts[1], a2 = parts[2];
     switch(verb){
-      case 'nav': ui.section = a1; saveUIPref(); render(); break;
+      case 'nav': goToSection(a1); break;
       // Phone tab bar only: tapping a group tab (Farm Records, Money,
       // Team) jumps to whichever of its sections was open last, or its
       // first allowed one if none was — the actual page never becomes a
@@ -5867,26 +6472,37 @@ var qrcode = (function(){
         if(navGroup){
           var navKids = navGroup.children.filter(function(c){ return sectionAllowed(c.key); });
           if(navKids.length && !navKids.some(function(c){ return c.key===ui.section; })){
-            ui.section = navKids[0].key; saveUIPref();
+            goToSection(navKids[0].key);
+            break;
           }
         }
         render();
         break;
       }
+      // The back arrow and "Back to homepage" button in the topbar (see
+      // navControlsHTML) — not shown at all while already on Overview.
+      case 'nav-back': goBack(); break;
+      case 'nav-home': goToSection('overview'); break;
       case 'period': ui.periods[a1] = a2; render(); break;
       case 'pager-prev': setPageFor(a1, pageFor(a1)-1); render(); break;
       case 'pager-next': setPageFor(a1, pageFor(a1)+1); render(); break;
       case 'close-modal': closeModal(); break;
       case 'open-add-egg': openModal(eggFormHtml()); break;
       case 'edit-egg': openModal(eggFormHtml(a1)); break;
-      case 'delete-egg': confirmModal('Delete this entry? This can\'t be undone.', function(){ mutate(function(s){ s.eggs = s.eggs.filter(function(x){return x.id!==a1;}); }); }); break;
+      case 'delete-egg': confirmModal('Delete this entry? You can restore it from Trash for 30 days.', function(){ mutate(function(s){ var x=s.eggs.find(function(i){return i.id===a1;}); if(x) trashPush(s,'egg',x); s.eggs = s.eggs.filter(function(x){return x.id!==a1;}); }); }); break;
       case 'open-add-eggloss': openModal(eggLossFormHtml()); break;
       case 'edit-eggloss': openModal(eggLossFormHtml(a1)); break;
       case 'delete-eggloss':
-        confirmModal('Delete this entry? This can\'t be undone.', function(){
+        confirmModal('Delete this entry? You can restore it from Trash for 30 days.', function(){
           mutate(function(s){
             var x = (s.eggLosses||[]).find(function(i){return i.id===a1;});
-            if(x && x.linkedIncomeId) s.incomes = s.incomes.filter(function(i){return i.id!==x.linkedIncomeId;});
+            var linked = [];
+            if(x && x.linkedIncomeId){
+              var linkedInc = s.incomes.find(function(i){return i.id===x.linkedIncomeId;});
+              if(linkedInc) linked.push({arr:'incomes', record:linkedInc});
+              s.incomes = s.incomes.filter(function(i){return i.id!==x.linkedIncomeId;});
+            }
+            if(x) trashPush(s,'eggloss',x,linked);
             s.eggLosses = s.eggLosses.filter(function(i){return i.id!==a1;});
           });
         });
@@ -5919,10 +6535,25 @@ var qrcode = (function(){
       case 'open-add-flock': openModal(flockFormHtml(null, a1)); break;
       case 'edit-flock': openModal(flockFormHtml(a1)); break;
       case 'delete-flock':
-        confirmModal('Delete this batch and its history? This cannot be undone.', function(){
+        confirmModal('Delete this batch and its history? You can restore it from Trash for 30 days.', function(){
           mutate(function(s){
             var b = s.flock.find(function(x){return x.id===a1;});
-            if(b) (b.removals||[]).forEach(function(r){ if(r.linkedIncomeId) s.incomes = s.incomes.filter(function(i){return i.id!==r.linkedIncomeId;}); });
+            var linked = [];
+            if(b){
+              (b.removals||[]).forEach(function(r){
+                if(r.linkedIncomeId){
+                  var li = s.incomes.find(function(i){return i.id===r.linkedIncomeId;});
+                  if(li) linked.push({arr:'incomes', record:li});
+                  s.incomes = s.incomes.filter(function(i){return i.id!==r.linkedIncomeId;});
+                }
+              });
+              if(b.linkedAcqExpenseId){
+                var le = s.expenses.find(function(x){return x.id===b.linkedAcqExpenseId;});
+                if(le) linked.push({arr:'expenses', record:le});
+                s.expenses = s.expenses.filter(function(x){return x.id!==b.linkedAcqExpenseId;});
+              }
+              trashPush(s,'flock',b,linked);
+            }
             s.flock = s.flock.filter(function(x){return x.id!==a1;});
           });
         });
@@ -5952,12 +6583,22 @@ var qrcode = (function(){
       case 'delete-brooding': {
         var delBrood = (state.broodings||[]).find(function(x){return x.id===a1;});
         var delMsg = (delBrood && delBrood.chickBatchId) ? 'Delete this brooding record? This will also remove the chicks batch it added to the flock.' : 'Delete this brooding record?';
-        confirmModal(delMsg, function(){
+        confirmModal(delMsg+' You can restore it from Trash for 30 days.', function(){
           mutate(function(s){
             var brood = (s.broodings||[]).find(function(x){return x.id===a1;});
+            var linked = [];
             if(brood){
-              if(brood.eggLossId) s.eggLosses = (s.eggLosses||[]).filter(function(x){return x.id!==brood.eggLossId;});
-              if(brood.chickBatchId) s.flock = s.flock.filter(function(x){return x.id!==brood.chickBatchId;});
+              if(brood.eggLossId){
+                var lel = (s.eggLosses||[]).find(function(x){return x.id===brood.eggLossId;});
+                if(lel) linked.push({arr:'eggLosses', record:lel});
+                s.eggLosses = (s.eggLosses||[]).filter(function(x){return x.id!==brood.eggLossId;});
+              }
+              if(brood.chickBatchId){
+                var lfb = s.flock.find(function(x){return x.id===brood.chickBatchId;});
+                if(lfb) linked.push({arr:'flock', record:lfb});
+                s.flock = s.flock.filter(function(x){return x.id!==brood.chickBatchId;});
+              }
+              trashPush(s,'brooding',brood,linked);
             }
             s.broodings = (s.broodings||[]).filter(function(x){return x.id!==a1;});
           });
@@ -5966,11 +6607,22 @@ var qrcode = (function(){
       }
       case 'open-add-feed': openModal(feedFormHtml()); break;
       case 'edit-feed': openModal(feedFormHtml(a1)); break;
+      case 'open-restock-feed': openModal(feedStockFormHtml()); break;
       case 'delete-feed':
-        confirmModal('Delete this feed entry? This can\'t be undone.', function(){
+        confirmModal('Delete this feed entry? You can restore it from Trash for 30 days.', function(){
           mutate(function(s){
             var fx = (s.feedLogs||[]).find(function(x){return x.id===a1;});
-            if(fx && fx.linkedExpenseId) s.expenses = s.expenses.filter(function(x){return x.id!==fx.linkedExpenseId;});
+            var linked = [];
+            if(fx && fx.linkedExpenseId){
+              var lfe = s.expenses.find(function(x){return x.id===fx.linkedExpenseId;});
+              if(lfe) linked.push({arr:'expenses', record:lfe});
+              s.expenses = s.expenses.filter(function(x){return x.id!==fx.linkedExpenseId;});
+            }
+            if(fx){
+              s.feedStock = s.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+              s.feedStock.onHandKg = (s.feedStock.onHandKg||0) + (fx.quantityKg||0);
+              trashPush(s,'feed',fx,linked);
+            }
             s.feedLogs = (s.feedLogs||[]).filter(function(x){return x.id!==a1;});
           });
         });
@@ -5978,23 +6630,23 @@ var qrcode = (function(){
       case 'open-add-health': openModal(healthFormHtml()); break;
       case 'edit-health': openModal(healthFormHtml(a1)); break;
       case 'delete-health':
-        confirmModal('Delete this health record? This can\'t be undone.', function(){ mutate(function(s){ s.healthRecords = (s.healthRecords||[]).filter(function(x){return x.id!==a1;}); }); });
+        confirmModal('Delete this health record? You can restore it from Trash for 30 days.', function(){ mutate(function(s){ var x=(s.healthRecords||[]).find(function(i){return i.id===a1;}); if(x) trashPush(s,'health',x); s.healthRecords = (s.healthRecords||[]).filter(function(x){return x.id!==a1;}); }); });
         break;
       case 'open-add-customer': openModal(customerFormHtml()); break;
       case 'edit-customer': openModal(customerFormHtml(a1)); break;
       case 'delete-customer':
-        confirmModal('Delete this customer? Their past sales and receipts are unaffected — this only removes them from the directory.', function(){
-          mutate(function(s){ s.customers = (s.customers||[]).filter(function(c){return c.id!==a1;}); });
+        confirmModal('Delete this customer? Their past sales and receipts are unaffected — this only removes them from the directory. You can restore them from Trash for 30 days.', function(){
+          mutate(function(s){ var x=(s.customers||[]).find(function(i){return i.id===a1;}); if(x) trashPush(s,'customer',x); s.customers = (s.customers||[]).filter(function(c){return c.id!==a1;}); });
         });
         break;
       case 'open-add-expense': openModal(moneyFormHtml('expense')); break;
       case 'edit-expense': openModal(moneyFormHtml('expense',a1)); break;
-      case 'delete-expense': confirmModal('Delete this expense? This can\'t be undone.', function(){ mutate(function(s){ s.expenses = s.expenses.filter(function(x){return x.id!==a1;}); }); }); break;
+      case 'delete-expense': confirmModal('Delete this expense? You can restore it from Trash for 30 days.', function(){ mutate(function(s){ var x=s.expenses.find(function(i){return i.id===a1;}); if(x) trashPush(s,'expense',x); s.expenses = s.expenses.filter(function(x){return x.id!==a1;}); }); }); break;
       case 'open-add-income': openModal(moneyFormHtml('income')); break;
       case 'edit-income': openModal(moneyFormHtml('income',a1)); break;
-      case 'delete-income': confirmModal('Delete this income record? This can\'t be undone.', function(){ mutate(function(s){ s.incomes = s.incomes.filter(function(x){return x.id!==a1;}); }); }); break;
+      case 'delete-income': confirmModal('Delete this income record? You can restore it from Trash for 30 days.', function(){ mutate(function(s){ var x=s.incomes.find(function(i){return i.id===a1;}); if(x) trashPush(s,'income',x); s.incomes = s.incomes.filter(function(x){return x.id!==a1;}); }); }); break;
       case 'open-edit-about':
-        if(!isAdmin()){ toast('Only the administrator can edit this.'); break; }
+        if(!isAdminLevel()){ toast('Only the administrator can edit this.'); break; }
         openModal(aboutFormHtml());
         break;
       case 'open-add-currency': openModal(currencyFormHtml()); break;
@@ -6016,6 +6668,26 @@ var qrcode = (function(){
         });
         break;
       }
+      case 'remove-photo': {
+        var rpType=a1, rpId=a2;
+        var rpArrName = ATTACH_ARRAY_BY_TYPE[rpType];
+        var rpRec = rpArrName ? (state[rpArrName]||[]).find(function(x){return x.id===rpId;}) : null;
+        var rpOldURL = rpRec && rpRec.photoURL;
+        mutate(function(s){
+          var rec = (s[rpArrName]||[]).find(function(x){return x.id===rpId;});
+          if(rec) rec.photoURL = null;
+        });
+        if(storage && rpOldURL){ try{ storage.refFromURL(rpOldURL).delete().catch(function(){}); }catch(e){} }
+        openModal(rpType==='health' ? healthFormHtml(rpId) : moneyFormHtml('expense', rpId));
+        break;
+      }
+      case 'restore-trash': restoreTrashItem(a1); break;
+      case 'purge-trash':
+        confirmModal('Delete this forever? This can\'t be undone.', function(){ purgeTrashItem(a1); });
+        break;
+      case 'set-language':
+        mutate(function(s){ s.settings.language = (a1==='sw') ? 'sw' : 'en'; });
+        break;
       case 'export-backup': doExportBackup(); break;
       case 'export-report-csv': exportReportCSV(getRange(ui.periods.reports)); break;
       case 'print-report': window.print(); break;
@@ -6032,7 +6704,7 @@ var qrcode = (function(){
       case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-forgot': authGateMode = 'forgot'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-back': authGateMode = 'welcome'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
-      case 'auth-gate-guest': guestMode = true; readOnly = true; render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
+      case 'auth-gate-guest': guestMode = true; readOnly = true; ui.section = 'overview'; navHistory = []; saveUIPref(); render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
       case 'open-add-finance':
         if(!canProposeFinance()){ toast('Sign in as the administrator or financial staff to add Finance entries.'); break; }
         openModal(financeFormHtml());
@@ -6052,7 +6724,7 @@ var qrcode = (function(){
         openModal(openingBalanceFormHtml());
         break;
       case 'open-mpesa-deposit':
-        if(!isAdmin() && !isFinancialStaffUser()){ toast('Only the administrator or financial staff can start M-Pesa deposits.'); break; }
+        if(!canProposeFinance()){ toast('Only the administrator, co-administrator, or financial staff can start M-Pesa deposits.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
         openModal(mpesaDepositFormHtml());
         break;
@@ -6108,11 +6780,11 @@ var qrcode = (function(){
         render();
         break;
       case 'open-add-staff':
-        if(!isAdmin()){ toast('Only the administrator can do this.'); break; }
+        if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
         openModal(staffFormHtml());
         break;
       case 'bulk-seed-about': {
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         var seedTargets = teamUsers.filter(function(u){ return u.uid!==currentUser.uid && !u.about; });
         if(!seedTargets.length){ toast('Everyone already has an About.'); break; }
         toast('Saving starter Abouts…');
@@ -6128,17 +6800,25 @@ var qrcode = (function(){
         openModal(changePasswordFormHtml());
         break;
       case 'open-reset-password': {
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         var resetUser = teamUsers.find(function(x){ return x.uid===a1; });
         if(!resetUser) break;
         openModal(resetStaffPasswordFormHtml(a1, resetUser.email));
         break;
       }
       case 'open-edit-name': {
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         var editNameUser = teamUsers.find(function(x){ return x.uid===a1; });
         if(!editNameUser) break;
         openModal(editStaffNameFormHtml(a1, editNameUser.name, editNameUser.gender));
+        break;
+      }
+      case 'open-change-role': {
+        if(!isAdminLevel()) break;
+        var changeRoleUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!changeRoleUser) break;
+        if(changeRoleUser.role==='administrator'){ toast("The administrator's account can't be changed here."); break; }
+        openModal(changeRoleFormHtml(a1, changeRoleUser.role, changeRoleUser.jobTitle));
         break;
       }
       case 'enable-notifications':
@@ -6150,7 +6830,7 @@ var qrcode = (function(){
         });
         break;
       case 'toggle-staff': {
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         var staffUser = teamUsers.find(function(x){ return x.uid===a1; });
         if(!staffUser) break;
         var nextDisabled = !staffUser.disabled;
@@ -6160,7 +6840,7 @@ var qrcode = (function(){
         break;
       }
       case 'delete-staff':
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         confirmModal('Remove this team member\'s account? They will no longer be able to sign in.', function(){
           firebase.functions().httpsCallable('deleteStaffAccount')({uid:a1}).then(function(){ toast('Account removed.'); }).catch(function(err){ toast((err&&err.message)||'Could not remove that account.'); });
         }, {confirmLabel:'Remove'});
@@ -6183,7 +6863,7 @@ var qrcode = (function(){
         openModal(composeMessageFormHtml());
         break;
       case 'toggle-messages-view':
-        if(!isAdmin()) break;
+        if(!isAdminLevel()) break;
         messagesViewAll = !messagesViewAll;
         render();
         break;
@@ -6214,7 +6894,33 @@ var qrcode = (function(){
       default: break;
     }
   }
+  function eggSizeFieldsSum(){
+    var total = 0;
+    EGG_SIZES.forEach(function(p){ var i = document.querySelector('[name="size_'+p[0]+'"]'); if(i) total += Math.max(0, Number(i.value||0)); });
+    return total;
+  }
   function handleChange(name, el){
+    if(name.indexOf('attach-photo:')===0){
+      var apParts = name.split(':');
+      attachPhotoTo(apParts[1], apParts[2], el.files[0]);
+      el.value = '';
+      return;
+    }
+    if(name==='egg-grade-toggle'){
+      var fields = document.getElementById('egg-size-fields');
+      var totalInput = document.getElementById('egg-total-input');
+      if(fields) fields.style.display = el.checked ? 'grid' : 'none';
+      if(totalInput){
+        totalInput.readOnly = el.checked;
+        if(el.checked) totalInput.value = eggSizeFieldsSum();
+      }
+      return;
+    }
+    if(name==='egg-size-input'){
+      var totalInput2 = document.getElementById('egg-total-input');
+      if(totalInput2) totalInput2.value = eggSizeFieldsSum();
+      return;
+    }
     if(name==='removal-reason'){
       var sf = document.getElementById('sale-fields');
       if(sf) sf.style.display = el.value==='sold' ? 'grid' : 'none';
@@ -6249,14 +6955,20 @@ var qrcode = (function(){
 
     if(name==='egg'){
       var id = val('id') || null;
-      var total = Math.max(0, Number(val('eggs')||0));
+      var graded = document.getElementById('egg-grade-toggle') ? document.getElementById('egg-grade-toggle').checked : false;
+      var sizes = null;
+      if(graded){
+        sizes = {};
+        EGG_SIZES.forEach(function(p){ sizes[p[0]] = Math.max(0, Number(val('size_'+p[0])||0)); });
+      }
+      var total = graded ? EGG_SIZES.reduce(function(a,p){ return a+(sizes[p[0]]||0); },0) : Math.max(0, Number(val('eggs')||0));
       var date = val('date'), note = val('note') || '';
       mutate(function(s){
-        if(id){ var e = s.eggs.find(function(x){return x.id===id;}); if(e){ e.date=date; e.total=total; e.note=note; } }
+        if(id){ var e = s.eggs.find(function(x){return x.id===id;}); if(e){ e.date=date; e.total=total; e.note=note; e.sizes=sizes; } }
         else {
           var existing = s.eggs.find(function(x){return x.date===date;});
-          if(existing){ existing.total=total; existing.note=note; }
-          else s.eggs.push({id:uid('egg'), date:date, total:total, note:note});
+          if(existing){ existing.total=total; existing.note=note; existing.sizes=sizes; }
+          else s.eggs.push({id:uid('egg'), date:date, total:total, note:note, sizes:sizes});
         }
       });
       closeModal(); toast('Egg log saved.');
@@ -6306,9 +7018,31 @@ var qrcode = (function(){
       var dateAdded = val('dateAdded'), ageWeeksV = Math.max(0, Number(val('ageWeeks')||0));
       var birthDate = toISO(addDays(parseISO(dateAdded), -ageWeeksV*7));
       var source = val('source') || '';
+      var acqCostRaw = Number(val('acquisitionCost')||0), acqCurrency = val('acqCurrency');
+      var autoVaccinate = !fid && val('autoVaccinate')==='1';
       mutate(function(s){
-        if(fid){ var b = s.flock.find(function(x){return x.id===fid;}); if(b){ b.gender=gender; b.count=count; b.dateAdded=dateAdded; b.birthDate=birthDate; b.source=source; } }
-        else s.flock.push({id:uid('batch'), gender:gender, count:count, dateAdded:dateAdded, birthDate:birthDate, source:source, removals:[]});
+        var acqCost = acqCostRaw>0 ? fromCurrency(acqCostRaw, acqCurrency) : 0;
+        var b, isNew = !fid;
+        if(fid){ b = s.flock.find(function(x){return x.id===fid;}); if(b){ b.gender=gender; b.count=count; b.dateAdded=dateAdded; b.birthDate=birthDate; b.source=source; } }
+        else { b = {id:uid('batch'), gender:gender, count:count, dateAdded:dateAdded, birthDate:birthDate, source:source, removals:[]}; s.flock.push(b); }
+        if(!b) return;
+        if(isNew && autoVaccinate) queueVaccinationSchedule(s, b.id, birthDate);
+        b.acquisitionCost = acqCost;
+        s.expenses = s.expenses || [];
+        // Same linked-expense pattern as feed logging — one Expense entry
+        // stays in sync with this field, never entered twice.
+        if(acqCost>0){
+          var linkedExp = b.linkedAcqExpenseId ? s.expenses.find(function(x){return x.id===b.linkedAcqExpenseId;}) : null;
+          if(linkedExp){ linkedExp.date=dateAdded; linkedExp.amount=acqCost; linkedExp.note='Acquired batch: '+genderLabel(gender)+(gender!=='unsexed'?'s':'')+(source?' — '+source:''); }
+          else {
+            var newExp = {id:uid('exp'), date:dateAdded, category:'Chicks / Restocking', amount:acqCost, note:'Acquired batch: '+genderLabel(gender)+(gender!=='unsexed'?'s':'')+(source?' — '+source:'')};
+            s.expenses.push(newExp);
+            b.linkedAcqExpenseId = newExp.id;
+          }
+        } else if(b.linkedAcqExpenseId){
+          s.expenses = s.expenses.filter(function(x){return x.id!==b.linkedAcqExpenseId;});
+          b.linkedAcqExpenseId = null;
+        }
       });
       closeModal(); toast(fid?'Batch updated.':'Batch added.');
       return;
@@ -6461,7 +7195,7 @@ var qrcode = (function(){
       return;
     }
     if(name==='about'){
-      if(!isAdmin()){ toast('Only the administrator can edit this.'); return; }
+      if(!isAdminLevel()){ toast('Only the administrator can edit this.'); return; }
       var aboutBio = (val('bio')||'').trim(), aboutMission = (val('mission')||'').trim(), aboutVision = (val('vision')||'').trim();
       mutate(function(s){
         s.settings.about = { bio: aboutBio, mission: aboutMission, vision: aboutVision };
@@ -6493,14 +7227,19 @@ var qrcode = (function(){
         var fcost = fcostRaw>0 ? fromCurrency(fcostRaw, fcurrency) : 0;
         s.feedLogs = s.feedLogs || [];
         s.expenses = s.expenses || [];
-        var entry;
-        if(fid){ entry = s.feedLogs.find(function(x){return x.id===fid;}); }
+        s.feedStock = s.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+        var entry, prevQty = 0;
+        if(fid){ entry = s.feedLogs.find(function(x){return x.id===fid;}); if(entry) prevQty = entry.quantityKg||0; }
         if(!entry){
           entry = {id:uid('feed'), feedType:feedType, date:fdate, quantityKg:qtyKg, cost:fcost, note:fnote, recordedByRole: roleLabel(currentUser)};
           s.feedLogs.push(entry);
         } else {
           entry.feedType = feedType; entry.date = fdate; entry.quantityKg = qtyKg; entry.cost = fcost; entry.note = fnote;
         }
+        // Usage draws down stock on hand — a new entry subtracts its full
+        // quantity, editing one only subtracts the change since last save,
+        // so re-saving the same entry twice never double-counts.
+        s.feedStock.onHandKg = (s.feedStock.onHandKg||0) - (qtyKg - prevQty);
         // Keep a linked Expense entry (category "Feed") in sync with the cost
         // on this feed log, so it's never entered twice — editing or zeroing
         // the cost here updates/removes the Expense automatically.
@@ -6518,6 +7257,28 @@ var qrcode = (function(){
         }
       });
       closeModal(); toast(fid ? 'Feed entry updated.' : 'Feed logged.');
+      return;
+    }
+    if(name==='feed-stock'){
+      var rsQty = Math.max(0, Number(val('quantityKg')||0));
+      var rsType = val('feedType') || 'Other', rsDate = val('date') || todayISO(), rsNote = val('note')||'';
+      var rsCurrency = val('currency'), rsCostRaw = Number(val('cost')||0);
+      var rsLowStock = Math.max(0, Number(val('lowStockKg')||0));
+      if(rsQty<=0){ toast('Enter how much feed you added.'); return; }
+      mutate(function(s){
+        var rsCost = rsCostRaw>0 ? fromCurrency(rsCostRaw, rsCurrency) : 0;
+        s.feedStock = s.feedStock || {onHandKg:0, lowStockKg:20, restocks:[]};
+        s.feedStock.onHandKg = (s.feedStock.onHandKg||0) + rsQty;
+        s.feedStock.lowStockKg = rsLowStock;
+        s.feedStock.restocks = s.feedStock.restocks || [];
+        var rec = {id:uid('restock'), date:rsDate, feedType:rsType, quantityKg:rsQty, cost:rsCost, note:rsNote, recordedByRole: roleLabel(currentUser)};
+        s.feedStock.restocks.push(rec);
+        if(rsCost>0){
+          s.expenses = s.expenses || [];
+          s.expenses.push({id:uid('exp'), date:rsDate, category:'Feed', amount:rsCost, note:'Feed restock: '+rsType+(rsNote?' — '+rsNote:''), linkedRestockId: rec.id});
+        }
+      });
+      closeModal(); toast('Stock updated.');
       return;
     }
     if(name==='health'){
@@ -6623,7 +7384,17 @@ var qrcode = (function(){
       firebase.auth().signInWithEmailAndPassword(sgEmail, sgPassword).then(function(){
         authGateError = '';
       }).catch(function(err){
-        authGateError = 'Sign-in failed — ' + (err && err.code==='auth/invalid-credential' ? 'check your email and password.' : (err && err.code==='auth/user-disabled' ? 'this account has been disabled.' : (err && err.message) || 'please try again.'));
+        // Signing in for the very first time on a device genuinely can't
+        // work offline — Firebase has to check the password against its
+        // own servers, there's no way around that safely. Once it's
+        // succeeded here at least once, THAT'S when this device can keep
+        // working offline afterward (see cacheClaimsForOffline /
+        // onAuthStateChanged) — so this message is honest about the one
+        // case that's a hard limit, not a bug.
+        var isNetworkErr = !navigator.onLine || (err && err.code==='auth/network-request-failed');
+        authGateError = isNetworkErr
+          ? 'Couldn\'t sign in — no internet connection. Signing in for the first time on this device needs one; after that, this device can stay signed in offline.'
+          : 'Sign-in failed — ' + (err && err.code==='auth/invalid-credential' ? 'check your email and password.' : (err && err.code==='auth/user-disabled' ? 'this account has been disabled.' : (err && err.message) || 'please try again.'));
         authGateMode = 'signin';
         updateAuthGate();
       });
@@ -6647,15 +7418,30 @@ var qrcode = (function(){
       return;
     }
     if(name==='add-staff'){
-      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
-      var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sJobTitle = val('jobTitle'), sGender = val('gender')||'unspecified';
+      if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
+      var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sRoleChoice = val('roleChoice'), sGender = val('gender')||'unspecified';
+      var sIsCoAdmin = sRoleChoice === 'coadmin';
+      var sJobTitle = sIsCoAdmin ? null : sRoleChoice;
       // Saved as real data from the moment the account exists (the obvious
       // one-liner for their role) — not just shown until they write their
       // own — so it's already there for the whole team to see right away.
-      var sAbout = defaultAboutForRole({role:'employee', jobTitle:sJobTitle});
-      firebase.functions().httpsCallable('createStaffAccount')({name:sName, email:sEmail, password:sPassword, jobTitle:sJobTitle, gender:sGender, about:sAbout}).then(function(){
+      var sAbout = defaultAboutForRole(sIsCoAdmin ? {role:'coadmin'} : {role:'employee', jobTitle:sJobTitle});
+      var sPayload = {name:sName, email:sEmail, password:sPassword, gender:sGender, about:sAbout, role: sIsCoAdmin ? 'coadmin' : 'employee'};
+      if(!sIsCoAdmin) sPayload.jobTitle = sJobTitle;
+      firebase.functions().httpsCallable('createStaffAccount')(sPayload).then(function(){
         closeModal(); toast('Account created — share the email and password with them.');
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
+      return;
+    }
+    if(name==='change-role'){
+      if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
+      var crUid = val('uid'), crRoleChoice = val('roleChoice');
+      var crIsCoAdmin = crRoleChoice === 'coadmin';
+      var crPayload = { uid: crUid, role: crIsCoAdmin ? 'coadmin' : 'employee' };
+      if(!crIsCoAdmin) crPayload.jobTitle = crRoleChoice;
+      firebase.functions().httpsCallable('updateStaffAccount')(crPayload).then(function(){
+        closeModal(); toast('Role updated.');
+      }).catch(function(err){ toast((err&&err.message)||'Could not update that account.'); });
       return;
     }
     if(name==='update-own-name'){
@@ -6681,7 +7467,7 @@ var qrcode = (function(){
       var toVal = val('to'), msgUrgency = val('urgency')||'normal', msgBody = (val('body')||'').trim();
       var msgReplyTo = (val('replyTo')||'').trim();
       if(!msgBody){ toast('Write a message first.'); return; }
-      if(toVal==='all' && !isAdmin()){ toast('Only the administrator can message everyone.'); return; }
+      if(toVal==='all' && !isAdminLevel()){ toast('Only the administrator can message everyone.'); return; }
       if(!toVal){ toast('Choose who to send this to.'); return; }
       var msgPayload = {to:toVal, body:msgBody, urgency:msgUrgency};
       if(msgReplyTo) msgPayload.replyTo = msgReplyTo;
@@ -6691,7 +7477,7 @@ var qrcode = (function(){
       return;
     }
     if(name==='edit-staff-name'){
-      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
       var enUid = val('uid'), enName = (val('name')||'').trim(), enGender = val('gender')||'unspecified';
       if(!enName){ toast('Enter a name.'); return; }
       firebase.functions().httpsCallable('updateStaffAccount')({uid:enUid, name:enName, gender:enGender}).then(function(){
@@ -6721,7 +7507,7 @@ var qrcode = (function(){
       return;
     }
     if(name==='reset-staff-password'){
-      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
       var rUid = val('uid'), rPassword = val('password')||'';
       if(rPassword.length<6){ toast('Password needs at least 6 characters.'); return; }
       firebase.functions().httpsCallable('updateStaffAccount')({uid:rUid, password:rPassword}).then(function(){
@@ -6730,7 +7516,7 @@ var qrcode = (function(){
       return;
     }
     if(name==='mpesa-deposit'){
-      if(!isAdmin() && !isFinancialStaffUser()){ toast('Only the administrator or financial staff can start M-Pesa deposits.'); return; }
+      if(!canProposeFinance()){ toast('Only the administrator, co-administrator, or financial staff can start M-Pesa deposits.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
       var mAmount = Number(val('amount')||0), mPhone = (val('phone')||'').trim();
       var submitBtn = document.getElementById('mpesa-deposit-submit');
@@ -6869,6 +7655,13 @@ var qrcode = (function(){
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
   var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{} };
+  // Where you've been, so the back arrow (see navControlsHTML) has
+  // somewhere to go — a plain stack of previously-visited section keys,
+  // most recent last. In-memory only (a reload starting fresh is normal
+  // for a "back" history — browsers do the same). Capped so it can't grow
+  // without bound over a long session.
+  var navHistory = [];
+  var NAV_HISTORY_MAX = 30;
   var syncStatus = 'idle';
   var readOnly = false;
   var localMode = false;
@@ -6878,6 +7671,7 @@ var qrcode = (function(){
   var storage = null; // Firebase Storage — only used for profile photo uploads (see uploadProfilePhoto)
   var currentUser = null; // null (signed out) or { uid, email, role, jobTitle, name, totpEnrolled, portalTotpEnrolled }
   var guestMode = false;
+  var offlineSessionActive = false; // true only when signed in from cached claims while offline — see onAuthStateChanged
   var financeRevealed = false; // masked by default — cleared back to false on every fresh page load
   var mpesaEnabled = false;
   var financeSyncStarted = false;

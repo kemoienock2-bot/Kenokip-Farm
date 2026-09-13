@@ -1,6 +1,227 @@
 # Setting up logins, roles, and Finance approvals
 
-> **Update (latest):** Reorganized the navigation into groups — Farm
+> **Update (latest): Co-Administrator.** You can now add a second
+> admin-level account — a **Co-Administrator** — from Team → "Add team
+> member" (or promote an existing team member from their row's new "Change
+> role" button). This needs a Cloud Functions deploy **and** a Firestore
+> rules deploy **and** a git push:
+> ```
+> firebase deploy --only functions
+> firebase deploy --only firestore:rules
+> git add .
+> git commit -m "Add Co-Administrator role"
+> git push
+> ```
+>
+> **Same access as you, almost everywhere.** A Co-Administrator can manage
+> the team (add, edit, change roles, disable, delete anyone except you),
+> see and act on everything you can in Team (access log, Finance security
+> log, pending signature requests), broadcast messages to everyone, and
+> edit the About page — the same pages and buttons you see, under the same
+> conditions.
+>
+> **Except Finance — there, you're still the final word.** A
+> Co-Administrator can add Finance entries: a deposit counts right away
+> (same as a Financial Staff deposit), but a withdrawal is saved as
+> "pending" and waits for your approval, exactly like Financial Staff
+> today. Editing or deleting an existing Finance entry, setting the
+> opening balance, approving a pending entry, sending money out via
+> M-Pesa, and clearing a locked Finance portal all stay yours alone — a
+> Co-Administrator never gets those buttons, and the server refuses those
+> calls even if asked directly.
+>
+> **Can't overrun you.** However a Co-Administrator got their access —
+> including another Co-Administrator's doing — your own account can never
+> be edited, disabled, or deleted from the Team page or from anywhere
+> else in the app. This is enforced on the server, not just hidden in the
+> interface, so it holds even against a tampered or out-of-date copy of
+> the app.
+>
+> After deploying, please try: from Team, add a new team member and pick
+> "Co-Administrator" as their role, or use "Change role" on an existing
+> team member's row; sign in as that account and confirm Team, Access log,
+> Finance security, and Pending signatures are all visible and usable, and
+> that adding a Finance withdrawal shows "sent for the administrator's
+> approval" (a deposit should go through right away); confirm that
+> account has no Edit/Reset/Change role/Disable/Delete buttons on your own
+> row in Team; and, signed in as yourself, approve that pending withdrawal
+> from Team → "Pending Finance approvals."
+
+> **Earlier update:** Batch 3 (the last batch) of the "what's missing"
+> ideas — a 30-day recoverable Trash for deleted records; photo
+> attachments on Health records and Expenses; and a properly branded
+> Monthly Report. This needs **both** a storage rules deploy **and** a git
+> push:
+> ```
+> firebase deploy --only storage
+> git add .
+> git commit -m "Trash/undo, photo attachments, branded monthly report"
+> git push
+> ```
+>
+> **Trash (30-day undo).** Deleting an egg entry, feed entry, health
+> record, expense, income, customer, flock batch, or brooding record no
+> longer removes it right away — it moves to a new Trash page (Settings →
+> Trash) for 30 days, where you can Restore it (put back exactly as it
+> was, including anything linked to it, like a feed entry's Expense) or
+> delete it forever. After 30 days it's cleared out automatically. A
+> farmhand or other non-admin role only sees trashed items from pages they
+> could already see — deleting an Expense doesn't suddenly show up to
+> someone who can't see Expenses. This is separate from the existing
+> "History"/undo on individual flock losses and sales, which still works
+> the same as before.
+>
+> **Photo attachments.** Editing a Health record or an Expense (tap the
+> pencil icon on an existing one) now has an "Add photo" button — a sick
+> bird, a receipt, whatever's useful. New entries need to be saved once
+> first, then reopened to attach a photo (a photo needs something to
+> attach itself to). A small 📷 shows next to any entry that has one.
+>
+> **Branded Monthly Report.** The Reports page's "Print / Save as PDF" is
+> now a properly branded report — the farm's logo and a colored header
+> band, a clear Production summary (eggs, including a size breakdown if
+> you've been grading them, feed, flock changes, health) and — for
+> administrator/Financial Staff — a Financial summary (income, expenses,
+> profit, and how many flock batches are profitable vs. not). It still
+> uses your browser's own "Print → Save as PDF" — no separate download
+> button was needed for that part.
+>
+> After deploying, please try: delete something small (an expense, say)
+> and check Settings → Trash to restore it; open an existing Health record
+> or Expense and attach a photo; and open Reports and use "Print / Save as
+> PDF" to see the new branded layout (choose "Save as PDF" instead of a
+> real printer in the dialog that pops up).
+
+> **Earlier update:** Batch 2 of the "what's missing" ideas — a standard
+> vaccination schedule that can auto-add Health reminders when you add a
+> day-old chick batch; grading eggs by size (small/medium/large/jumbo)
+> instead of one flat number; and a Kiswahili toggle. Front-end only:
+> ```
+> git add .
+> git commit -m "Vaccination schedule template, egg grading by size, Kiswahili toggle"
+> git push
+> ```
+>
+> **Vaccination schedule template.** The "Add birds" form has a new
+> checkbox — checked by default for day-old chicks — that queues up the
+> standard schedule (Marek's, Newcastle, Gumboro, Fowl pox, Fowl typhoid,
+> and more, at the usual ages) as ordinary Health reminders for that
+> batch, dated from when it was acquired. Each one shows up on the Health
+> page like any manually-added reminder, and can be edited or deleted
+> individually — it's a starting point based on common Kenyan smallholder
+> practice, not veterinary advice specific to your farm.
+>
+> **Egg grading by size.** "Log eggs" now has a "Grade by size" checkbox —
+> tick it to enter small/medium/large/jumbo counts instead of one flat
+> number (they add up to the total automatically). The Eggs page shows
+> each graded entry's breakdown and an all-time "By size" summary card.
+> Entries without grading work exactly as before.
+>
+> **Kiswahili toggle.** Settings → Language now has an English/Kiswahili
+> switch. This first pass covers navigation, page headers, the Overview
+> greeting, and the common buttons repeated across every form (Cancel,
+> Save, Close, Sign in/out, Back to homepage, and similar) — enough that
+> switching it is immediately obvious everywhere in the app. Deeper text
+> (Kem AI's answers, individual field labels) stays in English for now;
+> tell me which screens matter most and I can extend it there next.
+>
+> After deploying, please try: add a day-old chick batch and check Health
+> for the new vaccination reminders; log eggs with "Grade by size" ticked
+> and confirm the sizes add up correctly; and flip Settings → Language to
+> Kiswahili to see the sidebar, page headers, and buttons switch over.
+
+> **Earlier update:** The first four of the ten "what's missing" ideas —
+> Kem AI now proactively points out things worth knowing (egg trend, feed
+> cost trend, feed running low, an unprofitable batch) instead of waiting
+> to be asked; feed stock on hand is now tracked with a low-stock warning;
+> each flock batch shows an estimated profit/loss; and a weekly digest
+> push goes out every Monday morning. This needs **both** a functions
+> deploy **and** a git push:
+> ```
+> firebase deploy --only functions
+> git add .
+> git commit -m "Kem AI proactive insights, feed stock tracking, batch profitability, weekly digest push"
+> git push
+> ```
+>
+> **Kem AI proactive insights.** Opening Kem AI (or the Overview page, in
+> a new "Kem AI noticed" card) now shows a short list of things worked out
+> fresh from your own numbers — e.g. "Egg production is down 15% vs last
+> week", "Feed cost per egg is up 12% vs last month", "You're due to
+> restock feed in about 3 days", or "1 flock batch is currently costing
+> more than it has earned back". Each one only shows up when it's actually
+> a notable change — a small day-to-day wobble won't show anything.
+>
+> **Feed stock tracking.** The Feed page now has a "Feed stock on hand"
+> card with a **Restock** button — tap it the first time you buy feed to
+> start tracking it. Every "Log feed" entry (which is now usage, same as
+> before) automatically draws down the stock on hand. Set your low-stock
+> warning level (in kg) right there in the Restock form; once you're at or
+> below it, you'll see a warning banner and Kem AI will mention it.
+>
+> **Batch profitability.** The "Add birds" form has a new optional "Cost
+> to acquire" field. Once you use it, the Flock page shows a new "Batch
+> profitability" card (administrator/Financial Staff only, same as other
+> money figures) comparing each batch's cost (what you paid for it, plus
+> its estimated share of the feed bill, split by how many birds it's had
+> and for how long) against what it's earned back in bird sales. This is
+> an estimate, not exact accounting — egg income isn't tracked per batch
+> anywhere in the app, so it isn't included here.
+>
+> **Weekly digest push.** Every Monday morning (7am, Nairobi time),
+> everyone gets a push notification and a message summarizing last week —
+> total eggs, income, and expenses — the same way an Urgent message
+> arrives, even with the app closed. It skips sending if literally nothing
+> was recorded that week.
+>
+> After deploying, please try: add a birds batch with a "Cost to acquire"
+> and check Flock for the new profitability card; tap Restock on the Feed
+> page and confirm the stock number appears and then drops after logging
+> feed usage; and open Kem AI or Overview to see if anything shows up
+> under "Kem AI noticed" (it's normal to see nothing if there's no notable
+> change yet). The weekly digest push itself you'll only see on the next
+> Monday morning it runs.
+
+> **Earlier update:** A back arrow + "Back to homepage" button on every
+> page; signing in (or continuing as Guest) always lands on Overview now;
+> a device that's already signed in can keep working offline instead of
+> getting silently signed out; and two home-screen shortcuts ("Log eggs",
+> "Log feed") for jumping straight to logging something. This is front-end
+> only:
+> ```
+> git add .
+> git commit -m "Back/home navigation, always land on Overview after sign-in, offline session resilience, home-screen shortcuts"
+> git push
+> ```
+>
+> **Back arrow + "Back to homepage."** Every page except Overview itself
+> now shows a small back arrow (goes to whatever page you were on before)
+> and a "Back to homepage" button, right above the page's title.
+>
+> **Sign-in always lands on Overview.** Signing in, or tapping "Continue
+> as Guest", now always opens on Overview — no more sometimes landing back
+> on whatever page you happened to be on when you last signed out.
+>
+> **Offline resilience for an already-signed-in device.** Firebase has to
+> check a password against its own servers, so signing in for the very
+> first time on a device still genuinely needs an internet connection —
+> that part can't change, and the sign-in screen now says so plainly
+> rather than showing a confusing error. But a device that's already
+> signed in used to sometimes get silently signed out if its hourly
+> security check happened while offline; it now keeps working instead,
+> using its last known role, with a small banner saying it's offline.
+>
+> **Two home-screen shortcuts.** Long-press (or right-click, on desktop)
+> the app's icon after it's installed to see "Log eggs" and "Log feed" —
+> each jumps straight to that page with the Add form already open.
+>
+> After deploying, please try: open any page other than Overview and
+> confirm the back arrow and "Back to homepage" button both work; sign out
+> and back in and confirm you land on Overview; and if the app is
+> installed on your phone, long-press its icon to see the two new
+> shortcuts.
+
+> **Earlier update:** Reorganized the navigation into groups — Farm
 > Records (Flock, Eggs, Feed, Health), Money (Income, Expenses, Finance,
 > Reports), and Team (Team, Team Directory, Messages, Pending signatures)
 > — and completely replaced the phone navigation with a proper bottom tab

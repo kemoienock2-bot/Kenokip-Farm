@@ -48,6 +48,9 @@ const RECEIPT_SIGNING_SECRET = defineSecret('RECEIPT_SIGNING_SECRET');
 const receipts = require('./receipts')(admin, db, RECEIPT_SIGNING_SECRET);
 Object.assign(exports, receipts.triggers);
 
+// Weekly digest push (eggs/income/expenses totals) — see digest.js.
+Object.assign(exports, require('./digest')(admin, db));
+
 const MPESA_CONSUMER_KEY = defineSecret('MPESA_CONSUMER_KEY');
 const MPESA_CONSUMER_SECRET = defineSecret('MPESA_CONSUMER_SECRET');
 const MPESA_SHORTCODE = defineSecret('MPESA_SHORTCODE');
