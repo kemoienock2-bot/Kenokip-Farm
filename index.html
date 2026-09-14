@@ -4638,6 +4638,7 @@ var qrcode = (function(){
     initMessagesSync();
     initOwnProfileSync();
     if(isAdminLevel()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); }
+    if(isAdminLevel() && mpesaEnabled) initMpesaQueriesSync();
     if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
     captureAccessLog();
     startIdleTimer();
@@ -4696,6 +4697,20 @@ var qrcode = (function(){
       snap.forEach(function(doc){ securityEvents.push(Object.assign({id:doc.id}, doc.data())); });
       if(ui.section==='team') render();
     }, function(){});
+  }
+  /* ---- Account Balance / Transaction Status results (administrator/co-admin only) ---- */
+  function initMpesaQueriesSync(){
+    if(mpesaQueriesSyncStarted || !db || !isAdminLevel()) return;
+    mpesaQueriesSyncStarted = true;
+    db.collection('mpesaQueries').orderBy('requestedAt','desc').limit(20).onSnapshot(function(snap){
+      mpesaQueries = [];
+      snap.forEach(function(doc){ mpesaQueries.push(Object.assign({id:doc.id}, doc.data())); });
+      if(ui.section==='finance') render();
+    }, function(){ /* a failure here just leaves the last-known results showing */ });
+  }
+  function latestMpesaQuery(type){
+    for(var i=0;i<mpesaQueries.length;i++){ if(mpesaQueries[i].type===type) return mpesaQueries[i]; }
+    return null;
   }
   // Every receipt currently waiting on the administrator's signature (see
   // the "Pending signatures" section and signAndPreviewReceipt) — a single
@@ -5522,6 +5537,7 @@ var qrcode = (function(){
       statTile('In this month', (revealed?fmtMoney(inThisMonth):maskMoneyDisplay(inThisMonth)), '')+
       statTile('Out this month', (revealed?fmtMoney(outThisMonth):maskMoneyDisplay(outThisMonth)), '')+
     '</div>'+
+    mpesaToolsCardHTML()+
     '<div class="card"><div class="card-title"><h3>Transactions</h3><span class="hint">'+txns.length+' recorded'+(f.openingDate?' · opening balance set '+fmtDate(parseISO(f.openingDate)):'')+'</span></div>'+
       '<div class="table-wrap">'+
       (txns.length ? '<table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
@@ -5688,6 +5704,67 @@ var qrcode = (function(){
       '<div class="field-row" style="margin-top:12px"><label>Authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn danger" type="submit" id="mpesa-withdraw-submit">Send</button></div>'+
     '</form>';
+  }
+  // M-Pesa's real Account Balance / Transaction Status answers arrive a few
+  // seconds after being requested (see checkAccountBalance /
+  // checkTransactionStatus in functions/index.js) — this card just shows
+  // whatever the mpesaQueries listener currently has, live, rather than
+  // needing its own polling.
+  function mpesaToolsCardHTML(){
+    if(!mpesaEnabled) return '';
+    var showBalanceStatus = isAdminLevel();
+    var showQR = canProposeFinance();
+    if(!showBalanceStatus && !showQR) return '';
+    var balanceHTML = '';
+    if(showBalanceStatus){
+      var bq = latestMpesaQuery('balance');
+      var body = '<div class="hint">Not checked yet.</div>';
+      if(bq){
+        if(bq.status==='pending') body = '<div class="hint">Checking with Safaricom…</div>';
+        else if(bq.status==='failed') body = '<div class="hint">Could not get the balance — '+esc(bq.resultDesc||'try again')+'.</div>';
+        else body = '<div style="font-size:1.1em;font-weight:600">'+esc(bq.workingAccountCurrency||'KES')+' '+esc(bq.workingAccountBalance||'—')+'</div>'+
+          '<div class="hint">Working Account'+(bq.completedAt?' · checked '+fmtDate(new Date(bq.completedAt)):'')+'</div>';
+      }
+      balanceHTML = '<div style="margin-bottom:14px"><div class="row-actions" style="justify-content:space-between;margin-bottom:6px"><strong>M-Pesa account balance</strong><button class="btn" data-action="mpesa-check-balance">Check now</button></div>'+body+'</div>';
+    }
+    var statusHTML = '';
+    if(showBalanceStatus){
+      var checks = mpesaQueries.filter(function(q){ return q.type==='txnstatus'; }).slice(0,5);
+      var rowsHtml = checks.length ? '<div class="table-wrap"><table><thead><tr><th>Receipt</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>'+
+        checks.map(function(q){
+          var statusText = q.status==='pending' ? 'Checking…' : (q.status==='failed' ? esc(q.resultDesc||'Failed') : esc(q.transactionStatus||'—'));
+          return '<tr><td>'+esc(q.transactionId||'—')+'</td><td>'+statusText+'</td><td class="num">'+(q.amount?fmtMoney(Number(q.amount)):'—')+'</td></tr>';
+        }).join('')+'</tbody></table></div>' : '<div class="hint">No transactions checked yet.</div>';
+      statusHTML = '<div style="margin-bottom:14px"><div class="row-actions" style="justify-content:space-between;margin-bottom:6px"><strong>Transaction status</strong><button class="btn" data-action="open-mpesa-txnstatus">Check a receipt</button></div>'+rowsHtml+'</div>';
+    }
+    var qrHTML = '';
+    if(showQR){
+      qrHTML = '<div><div class="row-actions" style="justify-content:space-between;margin-bottom:6px"><strong>Payment QR code</strong><button class="btn" data-action="open-mpesa-qr">Generate</button></div>'+
+        '<div class="hint">Let a customer scan and pay straight from their own M-Pesa app — no till number to read out.</div></div>';
+    }
+    return '<div class="card"><div class="card-title"><h3>M-Pesa tools</h3></div>'+balanceHTML+statusHTML+qrHTML+'</div>';
+  }
+  function mpesaTxnStatusFormHtml(){
+    return '<div class="modal-head"><h3>Check transaction status</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Enter the M-Pesa receipt code (from an SMS confirmation or a customer\'s screenshot) — Safaricom will report its current status here in a few seconds.</p>'+
+    '<form data-form="mpesa-txnstatus">'+
+      '<div class="field-row"><label>Receipt code</label><input class="field" type="text" name="transactionId" placeholder="OEI2AK4Q16" required autofocus style="text-transform:uppercase"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-txnstatus-submit">Check</button></div>'+
+    '</form>';
+  }
+  function mpesaQRFormHtml(){
+    return '<div class="modal-head"><h3>Generate payment QR code</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Shows a code a customer scans in their own M-Pesa app to pay this till directly. Leave the amount blank to let them type their own.</p>'+
+    '<form data-form="mpesa-qr">'+
+      '<div class="field-row"><label>Amount (KES, optional)</label><input class="field" type="number" min="0" step="1" name="amount" placeholder="Leave blank for any amount" autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-qr-submit">Generate</button></div>'+
+    '</form>';
+  }
+  function mpesaQRResultHtml(qrCode){
+    return '<div class="modal-head"><h3>Scan to pay Kenokip Farm</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<div style="text-align:center"><img src="data:image/png;base64,'+qrCode+'" alt="M-Pesa payment QR code" style="max-width:100%;width:260px;height:260px;border-radius:8px;background:#fff;padding:8px"></div>'+
+    '<p class="hint" style="text-align:center;margin-top:10px">In M-Pesa: Lipa na M-Pesa → Scan QR.</p>'+
+    '<div class="modal-foot"><button type="button" class="btn primary" data-action="close-modal">Done</button></div>';
   }
   function financeRevealFormHtml(){
     return '<div class="modal-head"><h3>Show amounts</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
@@ -6734,6 +6811,22 @@ var qrcode = (function(){
         if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
         openModal(mpesaWithdrawFormHtml());
         break;
+      case 'mpesa-check-balance':
+        if(!isAdminLevel()){ toast('Only the administrator or co-administrator can check the M-Pesa balance.'); break; }
+        if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        toast('Checking with Safaricom…');
+        firebase.functions().httpsCallable('checkAccountBalance')().catch(function(err){ toast((err&&err.message)||'Could not check the balance.'); });
+        break;
+      case 'open-mpesa-txnstatus':
+        if(!isAdminLevel()){ toast('Only the administrator or co-administrator can check a transaction.'); break; }
+        if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        openModal(mpesaTxnStatusFormHtml());
+        break;
+      case 'open-mpesa-qr':
+        if(!canProposeFinance()){ toast('Only the administrator, co-administrator, or financial staff can generate a payment QR code.'); break; }
+        if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        openModal(mpesaQRFormHtml());
+        break;
       case 'open-authapp-setup':
         if(!canSeeFinance()){ toast('Not available for your account.'); break; }
         firebase.functions().httpsCallable('startTotpEnrollment')().then(function(res){
@@ -7546,6 +7639,33 @@ var qrcode = (function(){
       });
       return;
     }
+    if(name==='mpesa-txnstatus'){
+      if(!isAdminLevel()){ toast('Only the administrator or co-administrator can check a transaction.'); return; }
+      var txnId = (val('transactionId')||'').trim().toUpperCase();
+      var tsBtn = document.getElementById('mpesa-txnstatus-submit');
+      if(tsBtn){ tsBtn.disabled = true; tsBtn.textContent = 'Checking…'; }
+      firebase.functions().httpsCallable('checkTransactionStatus')({ transactionId: txnId }).then(function(){
+        closeModal();
+        toast('Checking with Safaricom — the result will show up on the Finance page in a few seconds.');
+      }).catch(function(err){
+        if(tsBtn){ tsBtn.disabled = false; tsBtn.textContent = 'Check'; }
+        toast((err && err.message) || 'Could not check that transaction.');
+      });
+      return;
+    }
+    if(name==='mpesa-qr'){
+      if(!canProposeFinance()){ toast('Only the administrator, co-administrator, or financial staff can generate a payment QR code.'); return; }
+      var qrAmount = Number(val('amount')||0);
+      var qrBtn = document.getElementById('mpesa-qr-submit');
+      if(qrBtn){ qrBtn.disabled = true; qrBtn.textContent = 'Generating…'; }
+      firebase.functions().httpsCallable('generateDynamicQR')({ amount: qrAmount }).then(function(res){
+        openModal(mpesaQRResultHtml(res.data.qrCode));
+      }).catch(function(err){
+        if(qrBtn){ qrBtn.disabled = false; qrBtn.textContent = 'Generate'; }
+        toast((err && err.message) || 'Could not generate the QR code.');
+      });
+      return;
+    }
     if(name==='confirm-authapp'){
       if(!canSeeFinance()){ toast('Not available for your account.'); return; }
       var setupCode = (val('code')||'').trim();
@@ -7678,6 +7798,8 @@ var qrcode = (function(){
   var directorySyncStarted = false;
   var logsSyncStarted = false;
   var securityEventsSyncStarted = false;
+  var mpesaQueriesSyncStarted = false;
+  var mpesaQueries = []; // Account Balance / Transaction Status check results, newest first
   var messagesSyncStarted = false;
   var teamUsers = [];
   // Two-person receipt co-signing (see signAndPreviewReceipt) — the

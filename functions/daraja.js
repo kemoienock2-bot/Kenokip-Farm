@@ -150,4 +150,102 @@ async function b2cSend({ env, consumerKey, consumerSecret, shortcode, initiatorN
   return data;
 }
 
-module.exports = { getAccessToken, stkPush, registerC2BUrls, baseUrl, buildSecurityCredential, b2cSend };
+// Account Balance: asks Safaricom what's currently sitting in the till/
+// paybill's own M-Pesa working account. Uses the same Initiator identity +
+// encrypted SecurityCredential as B2C (it's an "Initiator API", not a
+// customer-facing one) — there's no separate approval needed beyond having
+// B2C/Initiator credentials set up already. Like B2C, the answer doesn't
+// come back in this response — Safaricom calls resultUrl a few seconds
+// later with the actual figures (see mpesaAccountBalanceResult in
+// index.js).
+async function accountBalanceQuery({ env, consumerKey, consumerSecret, shortcode, initiatorName, securityCredential, remarks, resultUrl, timeoutUrl }) {
+  shortcode = String(shortcode || '').trim();
+  const token = await getAccessToken({ consumerKey, consumerSecret, env });
+  const body = {
+    Initiator: initiatorName,
+    SecurityCredential: securityCredential,
+    CommandID: 'AccountBalance',
+    PartyA: shortcode,
+    IdentifierType: '4', // 4 = organization shortcode
+    Remarks: (remarks || 'Kenokip Farm balance check').slice(0, 100),
+    QueueTimeOutURL: timeoutUrl,
+    ResultURL: resultUrl,
+  };
+  const res = await fetch(`${baseUrl(env)}/mpesa/accountbalance/v1/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.errorCode) {
+    throw new Error(`Account balance query failed: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
+// Transaction Status: asks Safaricom for the current state of a past
+// transaction, identified by its M-Pesa receipt code (e.g. "OEI2AK4Q16") —
+// useful when a customer says "I paid but it's not showing" or similar.
+// Same Initiator-based async shape as Account Balance/B2C: this call just
+// acknowledges the request, the real answer arrives at resultUrl shortly
+// after (see mpesaTransactionStatusResult in index.js).
+async function transactionStatusQuery({ env, consumerKey, consumerSecret, shortcode, initiatorName, securityCredential, transactionId, remarks, occasion, resultUrl, timeoutUrl }) {
+  shortcode = String(shortcode || '').trim();
+  const token = await getAccessToken({ consumerKey, consumerSecret, env });
+  const body = {
+    Initiator: initiatorName,
+    SecurityCredential: securityCredential,
+    CommandID: 'TransactionStatusQuery',
+    TransactionID: transactionId,
+    PartyA: shortcode,
+    IdentifierType: '4',
+    ResultURL: resultUrl,
+    QueueTimeOutURL: timeoutUrl,
+    Remarks: (remarks || 'Kenokip Farm transaction check').slice(0, 100),
+    Occasion: (occasion || '').slice(0, 100),
+  };
+  const res = await fetch(`${baseUrl(env)}/mpesa/transactionstatus/v1/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.errorCode) {
+    throw new Error(`Transaction status query failed: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
+// Dynamic QR: the only one of these three that's a plain synchronous
+// request/response, and the only one that doesn't need Initiator/B2C
+// credentials at all — just the ordinary Consumer Key/Secret already used
+// for STK Push. Safaricom hands back a ready-to-display QR image (as a
+// base64 PNG string) that any M-Pesa app can scan to pay this shortcode —
+// no webhook, no waiting.
+//
+// trxCode must match how the shortcode is registered: 'BG' (Buy Goods) for
+// a Till, 'PB' (PayBill) for a Paybill.
+async function dynamicQR({ env, consumerKey, consumerSecret, merchantName, refNo, amount, trxCode, cpi, size }) {
+  cpi = String(cpi || '').trim();
+  const token = await getAccessToken({ consumerKey, consumerSecret, env });
+  const body = {
+    MerchantName: (merchantName || 'Kenokip Farm').slice(0, 100),
+    RefNo: (refNo || 'KenokipFarm').slice(0, 100),
+    Amount: Math.round(Number(amount) || 0),
+    TrxCode: trxCode || 'BG',
+    CPI: cpi,
+    Size: String(size || '300'),
+  };
+  const res = await fetch(`${baseUrl(env)}/mpesa/qrcode/v1/generate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.QRCode) {
+    throw new Error(`Dynamic QR generation failed: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
+module.exports = { getAccessToken, stkPush, registerC2BUrls, baseUrl, buildSecurityCredential, b2cSend, accountBalanceQuery, transactionStatusQuery, dynamicQR };

@@ -20,7 +20,7 @@ const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
-const { stkPush, buildSecurityCredential, b2cSend } = require('./daraja');
+const { stkPush, buildSecurityCredential, b2cSend, accountBalanceQuery, transactionStatusQuery, dynamicQR } = require('./daraja');
 const { timingSafeStringEqual } = require('./cryptoHelpers');
 
 admin.initializeApp();
@@ -89,6 +89,23 @@ function sval(secretRef, fallback) {
 
 const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 const FARM_REF = () => db.collection('farms').doc('kenokip');
+const MPESA_QUERIES_REF = () => db.collection('mpesaQueries');
+
+// Account Balance and Transaction Status are read-only lookups (they never
+// move money), so — unlike initiateWithdrawal — they don't need a TOTP
+// code, and are gated the same as "can see Finance at all" for the two
+// admin-level roles: administrator or co-administrator. (Financial Staff
+// can already see Finance's running balance and every transaction in the
+// app itself, so these two are about reconciling against Safaricom's own
+// records specifically, not a new kind of access.)
+function requireAdminLevelRole(request) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const role = request.auth.token.role;
+  if (role !== 'administrator' && role !== 'coadmin') {
+    throw new HttpsError('permission-denied', 'Only the administrator or co-administrator can do this.');
+  }
+  return request.auth;
+}
 
 // See the MPESA_WEBHOOK_SECRET comment above. Returns true (and lets the
 // caller continue) when the request is allowed through; returns false (and
@@ -374,4 +391,231 @@ exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (
     logger.error('c2bConfirmation error', err);
   }
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+});
+
+// ---------------------------------------------------------------------
+// Account Balance, Transaction Status, Dynamic QR
+//
+// Account Balance and Transaction Status are both "Initiator APIs" — same
+// credential shape as B2C (initiator name + encrypted security credential)
+// and the same async shape (this call only gets Safaricom to *accept* the
+// request; the real answer lands a few seconds later at a ResultURL
+// webhook). So each one writes a small "pending" doc to mpesaQueries/{id}
+// first, keyed by the ConversationID Safaricom hands back, and the webhook
+// below fills in the actual result on that same doc once it arrives — the
+// app's Finance page just listens to that doc in real time, the same way
+// it already listens to the Finance ledger itself.
+//
+// Dynamic QR is the odd one out: a plain synchronous request that only
+// needs the ordinary Consumer Key/Secret (no Initiator setup at all), so it
+// just returns the QR image straight back to the caller — nothing to
+// store, nothing to wait for.
+
+function extractResultParams(result) {
+  const items = (result.ResultParameters && result.ResultParameters.ResultParameter) || [];
+  const out = {};
+  items.forEach((it) => { if (it && it.Key) out[it.Key] = it.Value; });
+  return out;
+}
+
+// Safaricom's AccountBalance result packs every sub-account (Working
+// Account, Utility Account, etc.) into ONE string, "&"-separated per
+// account and "|"-separated within an account:
+//   "Working Account|KES|1234.00|1234.00|0.00|0.00&Float Account|KES|..."
+// (Account Name | Currency | Total | Available | Reserved | Uncleared).
+// Rather than assume Safaricom will never add/reorder fields, this keeps
+// the raw string too, so nothing is ever hidden even if parsing below
+// misses a case.
+function parseAccountBalanceString(raw) {
+  const accounts = String(raw || '').split('&').map((chunk) => {
+    const parts = chunk.split('|');
+    return { name: parts[0] || '', currency: parts[1] || '', total: parts[2] || '', available: parts[3] || '' };
+  }).filter((a) => a.name);
+  const working = accounts.find((a) => /working/i.test(a.name)) || accounts[0];
+  return { accounts, workingAccountBalance: working ? (working.available || working.total) : null, workingAccountCurrency: working ? working.currency : null };
+}
+
+exports.checkAccountBalance = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
+  const auth = requireAdminLevelRole(request);
+  const certPem = sval(MPESA_B2C_CERT);
+  const initiatorName = sval(MPESA_INITIATOR_NAME);
+  const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
+  if (!certPem || !initiatorName || !initiatorPassword) {
+    throw new HttpsError('failed-precondition', "This needs the same Initiator setup as B2C ('Send via M-Pesa') — see SETUP-B2C.md.");
+  }
+  const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
+  const webhookKey = sval(MPESA_WEBHOOK_SECRET);
+  const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
+  try {
+    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const result = await accountBalanceQuery({
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      shortcode: sval(MPESA_SHORTCODE),
+      initiatorName, securityCredential,
+      resultUrl: `${callbackBase}/mpesaAccountBalanceResult${webhookQs}`,
+      timeoutUrl: `${callbackBase}/mpesaAccountBalanceTimeout${webhookQs}`,
+    });
+    const conversationId = result.ConversationID;
+    await MPESA_QUERIES_REF().doc(conversationId).set({
+      type: 'balance',
+      status: 'pending',
+      requestedBy: auth.uid,
+      requestedAt: new Date().toISOString(),
+    });
+    return { ok: true, conversationId };
+  } catch (err) {
+    logger.error('Account balance query failed', err);
+    throw new HttpsError('internal', 'Could not reach M-Pesa. Try again in a moment.');
+  }
+});
+
+exports.mpesaAccountBalanceResult = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
+  try {
+    const result = req.body && req.body.Result;
+    const conversationId = result && result.ConversationID;
+    if (conversationId) {
+      if (result.ResultCode === 0) {
+        const params = extractResultParams(result);
+        const parsed = parseAccountBalanceString(params.AccountBalance);
+        await MPESA_QUERIES_REF().doc(conversationId).set({
+          status: 'done',
+          resultCode: 0,
+          resultDesc: result.ResultDesc,
+          raw: params.AccountBalance || null,
+          accounts: parsed.accounts,
+          workingAccountBalance: parsed.workingAccountBalance,
+          workingAccountCurrency: parsed.workingAccountCurrency,
+          completedAt: new Date().toISOString(),
+        }, { merge: true });
+      } else {
+        await MPESA_QUERIES_REF().doc(conversationId).set({
+          status: 'failed',
+          resultCode: result.ResultCode,
+          resultDesc: result.ResultDesc,
+          completedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+    }
+  } catch (err) {
+    logger.error('mpesaAccountBalanceResult error', err);
+  }
+  res.status(200).send('ok');
+});
+
+exports.mpesaAccountBalanceTimeout = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
+  logger.info('Account balance query timed out', req.body);
+  res.status(200).send('ok');
+});
+
+exports.checkTransactionStatus = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
+  const auth = requireAdminLevelRole(request);
+  const transactionId = String((request.data && request.data.transactionId) || '').trim().toUpperCase();
+  if (!transactionId || !/^[A-Z0-9]{6,15}$/.test(transactionId)) {
+    throw new HttpsError('invalid-argument', 'Enter a valid M-Pesa receipt code, e.g. OEI2AK4Q16.');
+  }
+  const certPem = sval(MPESA_B2C_CERT);
+  const initiatorName = sval(MPESA_INITIATOR_NAME);
+  const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
+  if (!certPem || !initiatorName || !initiatorPassword) {
+    throw new HttpsError('failed-precondition', "This needs the same Initiator setup as B2C ('Send via M-Pesa') — see SETUP-B2C.md.");
+  }
+  const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
+  const webhookKey = sval(MPESA_WEBHOOK_SECRET);
+  const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
+  try {
+    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const result = await transactionStatusQuery({
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      shortcode: sval(MPESA_SHORTCODE),
+      initiatorName, securityCredential, transactionId,
+      resultUrl: `${callbackBase}/mpesaTransactionStatusResult${webhookQs}`,
+      timeoutUrl: `${callbackBase}/mpesaTransactionStatusTimeout${webhookQs}`,
+    });
+    const conversationId = result.ConversationID;
+    await MPESA_QUERIES_REF().doc(conversationId).set({
+      type: 'txnstatus',
+      status: 'pending',
+      transactionId,
+      requestedBy: auth.uid,
+      requestedAt: new Date().toISOString(),
+    });
+    return { ok: true, conversationId };
+  } catch (err) {
+    logger.error('Transaction status query failed', err);
+    throw new HttpsError('internal', 'Could not reach M-Pesa. Try again in a moment.');
+  }
+});
+
+exports.mpesaTransactionStatusResult = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
+  try {
+    const result = req.body && req.body.Result;
+    const conversationId = result && result.ConversationID;
+    if (conversationId) {
+      if (result.ResultCode === 0) {
+        const params = extractResultParams(result);
+        await MPESA_QUERIES_REF().doc(conversationId).set({
+          status: 'done',
+          resultCode: 0,
+          resultDesc: result.ResultDesc,
+          transactionStatus: params.TransactionStatus || params.Result || null,
+          amount: params.Amount || params.TransactionAmount || null,
+          finalisedTime: params.FinalisedTime || null,
+          receiverPartyPublicName: params.ReceiverPartyPublicName || null,
+          completedAt: new Date().toISOString(),
+        }, { merge: true });
+      } else {
+        await MPESA_QUERIES_REF().doc(conversationId).set({
+          status: 'failed',
+          resultCode: result.ResultCode,
+          resultDesc: result.ResultDesc,
+          completedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+    }
+  } catch (err) {
+    logger.error('mpesaTransactionStatusResult error', err);
+  }
+  res.status(200).send('ok');
+});
+
+exports.mpesaTransactionStatusTimeout = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+  if (!checkWebhookSecret(req, res)) return;
+  logger.info('Transaction status query timed out', req.body);
+  res.status(200).send('ok');
+});
+
+exports.generateDynamicQR = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const role = request.auth.token.role;
+  const isFinancialStaff = role === 'employee' && request.auth.token.jobTitle === 'financial';
+  if (role !== 'administrator' && role !== 'coadmin' && !isFinancialStaff) {
+    throw new HttpsError('permission-denied', 'Only the administrator, co-administrator, or financial staff can generate a payment QR code.');
+  }
+  const amount = Number(request.data && request.data.amount) || 0;
+  if (amount < 0) throw new HttpsError('invalid-argument', 'Enter a valid amount, or leave it blank for the customer to type their own.');
+  const accountType = sval(MPESA_ACCOUNT_TYPE, 'till');
+  try {
+    const data = await dynamicQR({
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      merchantName: 'Kenokip Farm',
+      refNo: 'KenokipFarm',
+      amount,
+      trxCode: accountType === 'paybill' ? 'PB' : 'BG',
+      cpi: sval(MPESA_SHORTCODE),
+      size: '300',
+    });
+    return { ok: true, qrCode: data.QRCode, requestId: data.RequestID };
+  } catch (err) {
+    logger.error('Dynamic QR generation failed', err);
+    throw new HttpsError('internal', 'Could not generate the QR code. Try again in a moment.');
+  }
 });
