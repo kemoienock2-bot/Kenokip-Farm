@@ -46,9 +46,20 @@ function stkPassword({ shortcode, passkey, ts }) {
 // accountType must be "till" (Buy Goods) or "paybill" — they use different
 // TransactionType values and Safaricom rejects the wrong one for your
 // shortcode.
-async function stkPush({ env, consumerKey, consumerSecret, shortcode, passkey, phone, amount, callbackUrl, accountRef, description, accountType }) {
+//
+// storeNumber: for a Till that was issued under an "Agent" structure (an
+// agent/organization shortcode with one or more Till/Store numbers under
+// it — common when a till was set up through a partner rather than
+// directly with Safaricom), BusinessShortCode must be the AGENT number
+// while PartyB must be the actual STORE number the money should land in —
+// sending the agent number for both fails with Safaricom's own error
+// "The Agent number and Store number entered do not match." Left blank
+// (the ordinary case — a shortcode with no separate agent/store split),
+// PartyB just falls back to the same shortcode as before.
+async function stkPush({ env, consumerKey, consumerSecret, shortcode, passkey, phone, amount, callbackUrl, accountRef, description, accountType, storeNumber }) {
   shortcode = String(shortcode || '').trim();
   passkey = String(passkey || '').trim();
+  const partyB = String(storeNumber || '').trim() || shortcode;
   const token = await getAccessToken({ consumerKey, consumerSecret, env });
   const ts = timestamp();
   const password = stkPassword({ shortcode, passkey, ts });
@@ -60,7 +71,7 @@ async function stkPush({ env, consumerKey, consumerSecret, shortcode, passkey, p
     TransactionType: transactionType,
     Amount: Math.round(amount),
     PartyA: phone,
-    PartyB: shortcode,
+    PartyB: partyB,
     PhoneNumber: phone,
     CallBackURL: callbackUrl,
     AccountReference: accountRef || 'KenokipFarm',
@@ -82,12 +93,20 @@ async function stkPush({ env, consumerKey, consumerSecret, shortcode, passkey, p
 // the till directly (not via our own STK push). Run this once per
 // environment (sandbox once, production once) after deploying, via
 // `npm run register-c2b`.
+//
+// Deliberately the v2 endpoint, not v1: Safaricom's production Daraja apps
+// are approved per-product, and current apps get mapped to "C2B v2", not
+// the older plain "C2B" (v1) — calling v1 with a v2-only app's token fails
+// with the same generic 401.003.01 "Invalid Access Token" error as a
+// genuinely bad credential, which is what makes this so easy to misread as
+// a credentials problem. The request/response shape is unchanged between
+// v1 and v2, only the URL path differs.
 async function registerC2BUrls({ env, consumerKey, consumerSecret, shortcode, confirmationUrl, validationUrl }) {
   shortcode = String(shortcode || '').trim();
   confirmationUrl = String(confirmationUrl || '').trim();
   validationUrl = String(validationUrl || '').trim();
   const token = await getAccessToken({ consumerKey, consumerSecret, env });
-  const res = await fetch(`${baseUrl(env)}/mpesa/c2b/v1/registerurl`, {
+  const res = await fetch(`${baseUrl(env)}/mpesa/c2b/v2/registerurl`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({

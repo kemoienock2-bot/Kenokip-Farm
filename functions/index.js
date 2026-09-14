@@ -58,6 +58,15 @@ const MPESA_PASSKEY = defineSecret('MPESA_PASSKEY');
 const MPESA_ENV = defineSecret('MPESA_ENV'); // "sandbox" or "production"
 const MPESA_CALLBACK_BASE_URL = defineSecret('MPESA_CALLBACK_BASE_URL'); // e.g. https://us-central1-kenokip-farm.cloudfunctions.net
 const MPESA_ACCOUNT_TYPE = defineSecret('MPESA_ACCOUNT_TYPE'); // "till" (Buy Goods) or "paybill"
+// Only needed for a Till that was issued under an "Agent" structure — an
+// agent/organization shortcode (MPESA_SHORTCODE) with one or more actual
+// Till/Store numbers registered under it. In that setup, MPESA_SHORTCODE
+// is the "Agent number" Safaricom authenticates API calls against, while
+// this is the "Store number" the money should actually land in and the
+// one customers see when they pay. Leave unset for an ordinary Till/
+// Paybill with no separate agent/store split — everything just uses
+// MPESA_SHORTCODE for both, as before.
+const MPESA_STORE_NUMBER = defineSecret('MPESA_STORE_NUMBER');
 // A shared secret embedded as `?key=...` in every M-Pesa webhook URL below,
 // so a stranger who finds or guesses this Cloud Function's public URL
 // (project IDs aren't secret — this one's visible in the app's own Firebase
@@ -74,7 +83,7 @@ const MPESA_INITIATOR_NAME = defineSecret('MPESA_INITIATOR_NAME');
 const MPESA_INITIATOR_PASSWORD = defineSecret('MPESA_INITIATOR_PASSWORD');
 const MPESA_B2C_CERT = defineSecret('MPESA_B2C_CERT'); // the Safaricom public certificate for your environment, as PEM text
 
-const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET];
+const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET, MPESA_STORE_NUMBER];
 const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT]);
 
 // Secrets set via `echo value| firebase functions:secrets:set NAME --data-file -`
@@ -201,6 +210,7 @@ exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }
       consumerKey: sval(MPESA_CONSUMER_KEY),
       consumerSecret: sval(MPESA_CONSUMER_SECRET),
       shortcode: sval(MPESA_SHORTCODE),
+      storeNumber: sval(MPESA_STORE_NUMBER),
       passkey: sval(MPESA_PASSKEY),
       accountType: sval(MPESA_ACCOUNT_TYPE, 'till'),
       phone,
@@ -610,7 +620,7 @@ exports.generateDynamicQR = onCall({ secrets: ALL_SECRETS, region: 'us-central1'
       refNo: 'KenokipFarm',
       amount,
       trxCode: accountType === 'paybill' ? 'PB' : 'BG',
-      cpi: sval(MPESA_SHORTCODE),
+      cpi: sval(MPESA_STORE_NUMBER) || sval(MPESA_SHORTCODE),
       size: '300',
     });
     return { ok: true, qrCode: data.QRCode, requestId: data.RequestID };
