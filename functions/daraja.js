@@ -123,6 +123,24 @@ async function registerC2BUrls({ env, consumerKey, consumerSecret, shortcode, co
   return data;
 }
 
+// A certificate is easy to paste wrong — this fixes the one mistake that's
+// actually recoverable (only the base64 body was copied, without its
+// -----BEGIN/END CERTIFICATE----- armor, e.g. from an email or portal that
+// visually shows just the block "inside" the dashes) by rebuilding proper
+// PEM around it. Anything else broken (truncated, actually a binary/DER
+// file mangled into text, wrong file entirely) is left alone and surfaces
+// as a clear error below rather than being silently "fixed" wrong.
+function normalizeCertPem(certPem) {
+  let text = String(certPem || '').trim();
+  if (!text || /-----BEGIN CERTIFICATE-----/.test(text)) return text;
+  const body = text.replace(/\s+/g, '');
+  if (/^[A-Za-z0-9+/=]+$/.test(body) && body.length > 100) {
+    const wrapped = body.match(/.{1,64}/g).join('\n');
+    text = `-----BEGIN CERTIFICATE-----\n${wrapped}\n-----END CERTIFICATE-----\n`;
+  }
+  return text;
+}
+
 // B2C's "SecurityCredential" is your initiator password, RSA-encrypted
 // with Safaricom's own public certificate so only Safaricom can decrypt
 // it. Which certificate is "right" depends on environment — sandbox and
@@ -132,9 +150,20 @@ async function registerC2BUrls({ env, consumerKey, consumerSecret, shortcode, co
 // fail silently and this project has no offline way to verify one against
 // Safaricom's actual key.
 function buildSecurityCredential({ initiatorPassword, certPem }) {
+  const normalized = normalizeCertPem(certPem);
   const buffer = Buffer.from(String(initiatorPassword || ''), 'utf8');
-  const encrypted = crypto.publicEncrypt({ key: certPem, padding: crypto.constants.RSA_PKCS1_PADDING }, buffer);
-  return encrypted.toString('base64');
+  try {
+    const encrypted = crypto.publicEncrypt({ key: normalized, padding: crypto.constants.RSA_PKCS1_PADDING }, buffer);
+    return encrypted.toString('base64');
+  } catch (e) {
+    // The generic OpenSSL message here ("error:1E08010C:DECODER
+    // routines::unsupported") just means "this isn't a certificate I can
+    // read" — could be truncated, a binary .cer file that got mangled into
+    // text, or the wrong file. Surfacing that plainly (and the length, safe
+    // to log — a certificate isn't secret) saves a trip through Cloud Logs
+    // next time this happens.
+    throw new Error(`MPESA_B2C_CERT doesn't look like a usable certificate (length ${normalized.length}; ${e.message}). Re-download it fresh from Safaricom/Daraja as a PEM (.pem/.cer text file starting with -----BEGIN CERTIFICATE-----) and set it again — see SETUP-B2C.md.`);
+  }
 }
 
 // B2C ("Business to Customer"): pushes money OUT of the till/paybill to a

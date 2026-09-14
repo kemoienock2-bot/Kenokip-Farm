@@ -80,6 +80,14 @@ What you need, before this can go live:
    yourself as a secret (below), for whichever environment `MPESA_ENV` is
    currently set to.
 
+   **Can't find the certificate file?** Some Org Portal accounts have a
+   **"Generate Security Credential Value"** tool instead (pick your
+   Initiator, type its password, select Production or Sandbox, and it
+   hands back an already-encrypted string). If that's what you have
+   instead of a downloadable certificate, skip `MPESA_B2C_CERT` entirely
+   and set `MPESA_SECURITY_CREDENTIAL` to that string instead — see the
+   note below.
+
 Once you have all three, set the new secrets the same way you set the
 original M-Pesa ones:
 
@@ -104,6 +112,56 @@ Then redeploy:
 ```
 firebase deploy --only functions
 ```
+
+### Before you set the certificate — check it first
+
+Certificates are easy to paste wrong (missing the `-----BEGIN/END-----`
+lines, or Safaricom hands you an actual binary `.cer` file instead of
+pasteable text), and when that happens Safaricom is never even contacted —
+it fails instantly with a cryptic OpenSSL error. Check the file you're
+about to use *before* setting it as a secret:
+
+```
+node check-cert.js "C:\path\to\the\certificate\file\you\got\from\Safaricom"
+```
+
+(Run this from inside the `functions` folder.) It tells you right away if
+the file works, and if it's fixable (missing header/footer lines, or a
+binary file that needs converting) it writes out a corrected copy and
+tells you exactly which file to point `--data-file` at instead. The
+certificate itself isn't secret — it's Safaricom's public key — so this
+check is completely safe to run and share the output of.
+
+If "Send via M-Pesa" ever fails again with "Could not send the payout",
+this is the first thing to check — a bad `MPESA_B2C_CERT` also breaks
+**Check M-Pesa balance** and **Check transaction status** the exact same
+way, since all three build their SecurityCredential from it.
+
+### Alternative: skip the certificate entirely with a pre-generated value
+
+If your Org Portal offers a **"Generate Security Credential Value"** tool
+(pick your Initiator, enter its password, choose Production or Sandbox),
+it does the certificate-encryption step for you and hands back an
+already-encrypted string. That string is safe to handle freely — it's
+one-way encrypted with Safaricom's own certificate, so nothing short of
+Safaricom's own private key can turn it back into your password.
+
+Set it instead of `MPESA_B2C_CERT`:
+
+```
+firebase functions:secrets:set MPESA_SECURITY_CREDENTIAL
+```
+
+When this secret is set, the app uses it directly for B2C, Check Balance,
+and Check Transaction Status, and `MPESA_B2C_CERT`/`MPESA_INITIATOR_PASSWORD`
+aren't needed at all. The one thing to remember: because it's baked from a
+specific password, **if you ever change that operator's password on the
+portal, come back to the same "Generate Security Credential Value" tool,
+generate a fresh one with the new password, and set it here again.** The
+certificate-based route above doesn't have that limitation (it recomputes
+this value itself on every request), so it's worth switching to if you
+later do get hold of the actual certificate file — but this is a
+perfectly good way to get going today.
 
 After that, **Send via M-Pesa** appears next to **Add via M-Pesa** in
 Finance (administrator only), and asks for the recipient's phone, an

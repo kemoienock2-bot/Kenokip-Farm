@@ -82,9 +82,33 @@ const MPESA_WEBHOOK_SECRET = defineSecret('MPESA_WEBHOOK_SECRET');
 const MPESA_INITIATOR_NAME = defineSecret('MPESA_INITIATOR_NAME');
 const MPESA_INITIATOR_PASSWORD = defineSecret('MPESA_INITIATOR_PASSWORD');
 const MPESA_B2C_CERT = defineSecret('MPESA_B2C_CERT'); // the Safaricom public certificate for your environment, as PEM text
+// An alternative to MPESA_B2C_CERT + MPESA_INITIATOR_PASSWORD: some Org
+// Portal accounts expose a "Generate Security Credential Value" tool that
+// does the certificate encryption step for you and hands back the already-
+// encrypted result. Since RSA encryption of the same password comes out
+// different (but equally valid) every time, a single value generated this
+// way keeps working indefinitely — it only needs regenerating (via that
+// same portal tool) if the operator's password is ever changed. When this
+// is set, it's used as-is and MPESA_B2C_CERT isn't needed at all.
+const MPESA_SECURITY_CREDENTIAL = defineSecret('MPESA_SECURITY_CREDENTIAL');
 
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET, MPESA_STORE_NUMBER];
-const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT]);
+const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT, MPESA_SECURITY_CREDENTIAL]);
+
+// A pre-generated SecurityCredential is a long base64 blob (a few hundred
+// characters) — same threshold used for the certificate check, so a leftover
+// placeholder like "not-set-yet" is never mistaken for a real value.
+function looksConfigured(value) {
+  return String(value || '').trim().length >= 100;
+}
+
+// Resolves the SecurityCredential to send Safaricom: prefer a pre-generated
+// value (MPESA_SECURITY_CREDENTIAL) when one's actually set, otherwise fall
+// back to computing it from the certificate + password as before.
+function resolveSecurityCredential({ precomputed, initiatorPassword, certPem }) {
+  if (looksConfigured(precomputed)) return String(precomputed).trim();
+  return buildSecurityCredential({ initiatorPassword, certPem });
+}
 
 // Secrets set via `echo value| firebase functions:secrets:set NAME --data-file -`
 // (a common workaround on Windows when the interactive prompt won't accept a
@@ -291,16 +315,18 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
   await security.verifyTotpForUid(request.auth.uid, code);
 
   const certPem = sval(MPESA_B2C_CERT);
+  const precomputedCred = sval(MPESA_SECURITY_CREDENTIAL);
   const initiatorName = sval(MPESA_INITIATOR_NAME);
   const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
-  if (!certPem || !initiatorName || !initiatorPassword) {
+  const haveCredentialSource = looksConfigured(precomputedCred) || (certPem && initiatorPassword);
+  if (!initiatorName || !haveCredentialSource) {
     throw new HttpsError('failed-precondition', "B2C isn't set up on this deployment yet — see SETUP-B2C.md.");
   }
   const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
   const webhookKey = sval(MPESA_WEBHOOK_SECRET);
   const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
   try {
-    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await b2cSend({
       env: sval(MPESA_ENV, 'sandbox'),
       consumerKey: sval(MPESA_CONSUMER_KEY),
@@ -448,16 +474,18 @@ function parseAccountBalanceString(raw) {
 exports.checkAccountBalance = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
   const auth = requireAdminLevelRole(request);
   const certPem = sval(MPESA_B2C_CERT);
+  const precomputedCred = sval(MPESA_SECURITY_CREDENTIAL);
   const initiatorName = sval(MPESA_INITIATOR_NAME);
   const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
-  if (!certPem || !initiatorName || !initiatorPassword) {
+  const haveCredentialSource = looksConfigured(precomputedCred) || (certPem && initiatorPassword);
+  if (!initiatorName || !haveCredentialSource) {
     throw new HttpsError('failed-precondition', "This needs the same Initiator setup as B2C ('Send via M-Pesa') — see SETUP-B2C.md.");
   }
   const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
   const webhookKey = sval(MPESA_WEBHOOK_SECRET);
   const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
   try {
-    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await accountBalanceQuery({
       env: sval(MPESA_ENV, 'sandbox'),
       consumerKey: sval(MPESA_CONSUMER_KEY),
@@ -528,16 +556,18 @@ exports.checkTransactionStatus = onCall({ secrets: B2C_SECRETS, region: 'us-cent
     throw new HttpsError('invalid-argument', 'Enter a valid M-Pesa receipt code, e.g. OEI2AK4Q16.');
   }
   const certPem = sval(MPESA_B2C_CERT);
+  const precomputedCred = sval(MPESA_SECURITY_CREDENTIAL);
   const initiatorName = sval(MPESA_INITIATOR_NAME);
   const initiatorPassword = sval(MPESA_INITIATOR_PASSWORD);
-  if (!certPem || !initiatorName || !initiatorPassword) {
+  const haveCredentialSource = looksConfigured(precomputedCred) || (certPem && initiatorPassword);
+  if (!initiatorName || !haveCredentialSource) {
     throw new HttpsError('failed-precondition', "This needs the same Initiator setup as B2C ('Send via M-Pesa') — see SETUP-B2C.md.");
   }
   const callbackBase = sval(MPESA_CALLBACK_BASE_URL);
   const webhookKey = sval(MPESA_WEBHOOK_SECRET);
   const webhookQs = webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '';
   try {
-    const securityCredential = buildSecurityCredential({ initiatorPassword, certPem });
+    const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await transactionStatusQuery({
       env: sval(MPESA_ENV, 'sandbox'),
       consumerKey: sval(MPESA_CONSUMER_KEY),
