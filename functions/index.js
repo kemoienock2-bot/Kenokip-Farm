@@ -124,6 +124,27 @@ const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 const FARM_REF = () => db.collection('farms').doc('kenokip');
 const MPESA_QUERIES_REF = () => db.collection('mpesaQueries');
 
+// Safaricom's async webhook can — and in production, does — reach us before
+// this function's own "mark this pending" write finishes (confirmed: Check
+// Balance requests were getting stuck forever showing "Checking..." because
+// mpesaAccountBalanceResult was landing within ~2 seconds, and the plain
+// .set() that used to run here replaces the ENTIRE document, silently
+// erasing the real result the webhook had just written moments earlier).
+// Wrapping this in a transaction closes that race: if a final status
+// (done/failed) is already sitting there by the time we get here, we leave
+// it alone instead of stomping it back to "pending".
+async function markQueryPending(conversationId, data) {
+  const ref = MPESA_QUERIES_REF().doc(conversationId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const existing = snap.exists ? snap.data() : null;
+    if (existing && (existing.status === 'done' || existing.status === 'failed')) {
+      return; // the real result already arrived — don't overwrite it
+    }
+    tx.set(ref, { status: 'pending', ...data }, { merge: true });
+  });
+}
+
 // Account Balance and Transaction Status are read-only lookups (they never
 // move money), so — unlike initiateWithdrawal — they don't need a TOTP
 // code, and are gated the same as "can see Finance at all" for the two
@@ -496,9 +517,8 @@ exports.checkAccountBalance = onCall({ secrets: B2C_SECRETS, region: 'us-central
       timeoutUrl: `${callbackBase}/mpesaAccountBalanceTimeout${webhookQs}`,
     });
     const conversationId = result.ConversationID;
-    await MPESA_QUERIES_REF().doc(conversationId).set({
+    await markQueryPending(conversationId, {
       type: 'balance',
-      status: 'pending',
       requestedBy: auth.uid,
       requestedAt: new Date().toISOString(),
     });
@@ -578,9 +598,8 @@ exports.checkTransactionStatus = onCall({ secrets: B2C_SECRETS, region: 'us-cent
       timeoutUrl: `${callbackBase}/mpesaTransactionStatusTimeout${webhookQs}`,
     });
     const conversationId = result.ConversationID;
-    await MPESA_QUERIES_REF().doc(conversationId).set({
+    await markQueryPending(conversationId, {
       type: 'txnstatus',
-      status: 'pending',
       transactionId,
       requestedBy: auth.uid,
       requestedAt: new Date().toISOString(),
