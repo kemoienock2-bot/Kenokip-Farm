@@ -101,6 +101,12 @@ async function stkPush({ env, consumerKey, consumerSecret, shortcode, passkey, p
 // genuinely bad credential, which is what makes this so easy to misread as
 // a credentials problem. The request/response shape is unchanged between
 // v1 and v2, only the URL path differs.
+// ShortCode here must be the shortcode YOUR OWN app credentials are tied to
+// (confirmed directly by Safaricom's API: registering against anything else,
+// including a Till/Store number issued under this as an Agent, is rejected
+// outright with "Bad Request - Kindly use your own ShortCode" — unlike
+// stkPush's PartyB or dynamicQR's cpi, there's no separate "destination"
+// field here, so no Agent/Store split is possible for this call at all).
 async function registerC2BUrls({ env, consumerKey, consumerSecret, shortcode, confirmationUrl, validationUrl }) {
   shortcode = String(shortcode || '').trim();
   confirmationUrl = String(confirmationUrl || '').trim();
@@ -171,10 +177,26 @@ function buildSecurityCredential({ initiatorPassword, certPem }) {
 // specifically enabled for your shortcode (a separate approval from
 // ordinary STK/C2B collections), plus an Initiator Name + the encrypted
 // SecurityCredential above, which only exist once that's set up.
-async function b2cSend({ env, consumerKey, consumerSecret, shortcode, initiatorName, securityCredential, phone, amount, remarks, occasion, resultUrl, timeoutUrl, commandId }) {
+// PartyA here is "your own" identity for this call (same rule Safaricom
+// enforced for registerC2BUrls's ShortCode) — B2C has no separate
+// Agent/Store split the way stkPush's PartyB does, so this always uses the
+// plain shortcode.
+//
+// v1 is correct here — confirmed directly against Safaricom's own official
+// Postman collection for this account, which lists "Make a B2C Payment
+// Request" at exactly this v1 path. (An earlier version of this file tried
+// switching to a "b2c/v3" path based on third-party docs; that was wrong —
+// Safaricom's own gateway rejected it outright with "no apiproduct match
+// found", meaning v3 isn't a real path for this app at all. Reverted.)
+// OriginatorConversationID is still included below even though it's not in
+// every older sample request — Safaricom's own collection shows a newer
+// example (B2Pochi) sending it on this same URL, so it's cheap insurance:
+// a unique ID per request that Safaricom can use to tell retries apart.
+async function b2cSend({ env, consumerKey, consumerSecret, shortcode, initiatorName, securityCredential, phone, amount, remarks, occasion, resultUrl, timeoutUrl, commandId, originatorConversationId }) {
   shortcode = String(shortcode || '').trim();
   const token = await getAccessToken({ consumerKey, consumerSecret, env });
   const body = {
+    OriginatorConversationID: originatorConversationId || `KF${Date.now()}${Math.floor(Math.random() * 10000)}`,
     InitiatorName: initiatorName,
     SecurityCredential: securityCredential,
     CommandID: commandId || 'BusinessPayment',

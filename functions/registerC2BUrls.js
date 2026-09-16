@@ -39,6 +39,16 @@ async function main() {
   if (!webhookSecret) {
     console.warn('MPESA_WEBHOOK_SECRET is blank in c2b.env — registering WITHOUT the extra protection. See SETUP-SECURITY.md.');
   }
+  // Printed loudly on purpose: this file's MPESA_ENV is separate from the
+  // deployed app's MPESA_ENV secret — it's easy to fill this file in once,
+  // leave it on "sandbox" from the .example default, and never notice,
+  // which registers these URLs with Safaricom's sandbox system while real
+  // customers pay through production. Nothing calls this back, ever, and
+  // there's no error to find — it just silently never arrives.
+  console.log(`Registering against Safaricom ${envName.toUpperCase()} for shortcode ${shortcode}.`);
+  if (envName !== 'production') {
+    console.warn('MPESA_ENV in c2b.env is NOT "production" — if your till is live, this registration will not receive real customer payments. Set MPESA_ENV=production in c2b.env and re-run this if that\'s not intentional.');
+  }
   const result = await registerC2BUrls({
     env: envName,
     consumerKey,
