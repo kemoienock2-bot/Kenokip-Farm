@@ -488,8 +488,22 @@ function parseAccountBalanceString(raw) {
     const parts = chunk.split('|');
     return { name: parts[0] || '', currency: parts[1] || '', total: parts[2] || '', available: parts[3] || '' };
   }).filter((a) => a.name);
-  const working = accounts.find((a) => /working/i.test(a.name)) || accounts[0];
-  return { accounts, workingAccountBalance: working ? (working.available || working.total) : null, workingAccountCurrency: working ? working.currency : null };
+  // The account that actually holds received-but-unwithdrawn till funds is
+  // "Merchant Account" (Buy Goods tills, like this one) or "Utility Account"
+  // (Paybills) — per Safaricom's own docs, "Working" is a separate
+  // pre-withdrawal staging account that sits at 0.00 except during an
+  // actual withdrawal, so checking it first always showed KES 0.00
+  // regardless of real takings. This checks Merchant/Utility first instead.
+  const primary = accounts.find((a) => /merchant/i.test(a.name)) ||
+                  accounts.find((a) => /utility/i.test(a.name)) ||
+                  accounts.find((a) => /working/i.test(a.name)) ||
+                  accounts[0];
+  return {
+    accounts,
+    workingAccountBalance: primary ? (primary.available || primary.total) : null,
+    workingAccountCurrency: primary ? primary.currency : null,
+    workingAccountName: primary ? primary.name : null,
+  };
 }
 
 exports.checkAccountBalance = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
@@ -546,6 +560,7 @@ exports.mpesaAccountBalanceResult = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] 
           accounts: parsed.accounts,
           workingAccountBalance: parsed.workingAccountBalance,
           workingAccountCurrency: parsed.workingAccountCurrency,
+          workingAccountName: parsed.workingAccountName,
           completedAt: new Date().toISOString(),
         }, { merge: true });
       } else {
