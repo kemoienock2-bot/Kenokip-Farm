@@ -5487,7 +5487,9 @@ var qrcode = (function(){
     var actions = currencySelectHTML();
     if(isAdmin()) actions += '<button class="btn" data-action="open-set-opening">Opening balance</button>';
     if(mpesaEnabled && canProposeFinance()) actions += '<button class="btn" data-action="open-mpesa-deposit">Add via M-Pesa</button>';
-    if(mpesaEnabled && isAdmin()) actions += '<button class="btn" data-action="open-mpesa-withdraw">Send via M-Pesa</button>';
+    if(mpesaEnabled && isAdmin()) actions += mpesaPayoutsEnabled
+      ? '<button class="btn" data-action="open-mpesa-withdraw">Send via M-Pesa</button>'
+      : '<button class="btn" data-action="open-mpesa-withdraw" title="Payouts aren\'t available on this M-Pesa account yet" style="opacity:.55">Send via M-Pesa</button>';
     actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'New transaction');
     return actions;
   }
@@ -6242,7 +6244,7 @@ var qrcode = (function(){
     if(/\b(add|record)\b.*\bincome/.test(q)) return 'Go to Income and tap "Add income" — pick a category, amount, date, and an optional note.';
     if(/\badd\b.*\bcustomer/.test(q)) return 'Go to Customers and tap "Add customer" — their name is enough to start; phone and notes are optional. Sales linked to them (from Flock or Eggs) show up automatically.';
     if(/\bdeposit\b|\badd.*money\b|\bstk\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Add via M-Pesa" and confirm the PIN prompt on your phone — Safaricom handles that step directly, this app never sees your M-Pesa PIN.'; }
-    if(/\bwithdraw\b|\bsend.*money\b|\bpay ?out\b|\bb2c\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); return 'On the Finance page, tap "Send via M-Pesa", enter the phone number and amount — it goes out as a normal M-Pesa payment.'; }
+    if(/\bwithdraw\b|\bsend.*money\b|\bpay ?out\b|\bb2c\b/.test(q)){ if(!canSeeFinance()) return kemAiRestricted('Finance'); if(!mpesaPayoutsEnabled) return 'Payouts aren\'t available on this M-Pesa account yet — Safaricom needs to confirm B2C access for our Till first. Until then, payments out still have to be sent manually.'; return 'On the Finance page, tap "Send via M-Pesa", enter the phone number and amount — it goes out as a normal M-Pesa payment.'; }
     if(/\bfingerprint\b|\bface unlock\b|\bfinance pin\b/.test(q)) return 'From Settings → Your account: set a personal Finance PIN, then tap "Set up fingerprint / Face unlock" and follow your device\'s own prompt. After that, the Finance portal offers a Fingerprint + PIN tab as a faster alternative to password + code — either one alone still can\'t get in.';
     if(/\bsearch box\b|\bhow.*search\b/.test(q)) return 'The search box above every page searches flock, eggs, feed, health, expenses, income, and customers as you type (plus Finance and Team if your account can see those) — tap a result to jump straight to it.';
     if(/\bvoice\b/.test(q)) return 'Tap the mic in the search box and say something like "open eggs" to jump to a page, or just say what you\'re looking for and it searches for it. Needs Chrome, Edge, or Safari.';
@@ -6808,6 +6810,7 @@ var qrcode = (function(){
       case 'open-mpesa-withdraw':
         if(!isAdmin()){ toast('Only the administrator can send money out.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
+        if(!mpesaPayoutsEnabled){ toast('Payouts aren\'t available on this M-Pesa account yet.'); break; }
         if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
         openModal(mpesaWithdrawFormHtml());
         break;
@@ -7627,6 +7630,7 @@ var qrcode = (function(){
     if(name==='mpesa-withdraw'){
       if(!isAdmin()){ toast('Only the administrator can send money out.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
+      if(!mpesaPayoutsEnabled){ toast('Payouts aren\'t available on this M-Pesa account yet.'); return; }
       var wAmount = Number(val('amount')||0), wPhone = (val('phone')||'').trim(), wNote = (val('note')||'').trim(), wCode = (val('code')||'').trim();
       var wBtn = document.getElementById('mpesa-withdraw-submit');
       if(wBtn){ wBtn.disabled = true; wBtn.textContent = 'Sending…'; }
@@ -7794,6 +7798,12 @@ var qrcode = (function(){
   var offlineSessionActive = false; // true only when signed in from cached claims while offline — see onAuthStateChanged
   var financeRevealed = false; // masked by default — cleared back to false on every fresh page load
   var mpesaEnabled = false;
+  // Kill-switch mirroring PAYOUTS_ENABLED in functions/index.js — keeps the UI
+  // from opening the payout form / server from even being asked, while this
+  // Till's B2C-via-API access with Safaricom is unresolved (see SETUP-B2C.md
+  // and the M-Pesa Business team correspondence). Flip both flags back to
+  // true together once B2C is confirmed working.
+  var mpesaPayoutsEnabled = false;
   var financeSyncStarted = false;
   var directorySyncStarted = false;
   var logsSyncStarted = false;

@@ -95,6 +95,19 @@ const MPESA_SECURITY_CREDENTIAL = defineSecret('MPESA_SECURITY_CREDENTIAL');
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET, MPESA_STORE_NUMBER];
 const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT, MPESA_SECURITY_CREDENTIAL]);
 
+// Kill-switch for the "Send via M-Pesa" payout feature (initiateWithdrawal
+// below). Safaricom's Business team confirmed this shortcode's Till is a
+// Buy-Goods Till, and told us B2C on it is limited (possibly USSD-only, per
+// their own two emails, which didn't fully agree with each other) — either
+// way it's not something a Till reliably does through the Daraja API. Until
+// that's resolved (a One Account shortcode from Safaricom, or written
+// confirmation from apisupport@safaricom.co.ke that automated B2C actually
+// works here), flip this to false rather than let every payout attempt fail
+// against Safaricom with a confusing error. Flip it back to true once B2C is
+// actually confirmed working end-to-end — no redeploy of anything else
+// needed, just this one flag plus `firebase deploy --only functions`.
+const PAYOUTS_ENABLED = false;
+
 // A pre-generated SecurityCredential is a long base64 blob (a few hundred
 // characters) — same threshold used for the certificate check, so a leftover
 // placeholder like "not-set-yet" is never mistaken for a real value.
@@ -323,6 +336,9 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
   }
   if (request.auth.token.role !== 'administrator') {
     throw new HttpsError('permission-denied', 'Only the administrator can send money out.');
+  }
+  if (!PAYOUTS_ENABLED) {
+    throw new HttpsError('failed-precondition', "Payouts aren't available on this M-Pesa account yet.");
   }
   const amount = Number(request.data && request.data.amount);
   const phone = normalizePhone(request.data && request.data.phone);
