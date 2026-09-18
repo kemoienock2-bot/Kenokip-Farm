@@ -617,6 +617,60 @@
   .verify-result.bad{ background:var(--bad-tint); color:var(--bad); }
   .verify-fields{ margin-top:10px; font-size:12.5px; color:var(--ink-2); }
   .verify-fields div{ padding:3px 0; border-bottom:1px dashed var(--border-soft); }
+
+  /* ---- administrator's quick Finance unlock (PIN alone / fingerprint
+     alone) — a deliberately distinct look from the rest of the app, so it
+     reads as "a different, faster door", styled after a mobile-money PIN
+     screen: dark gradient card, glowing avatar ring, auto-submitting dots,
+     no OK button. Scoped entirely under .quickpin-* so it never leaks into
+     any other screen. ---- */
+  .quickpin-card{
+    max-width:360px; margin:0 auto; border-radius:22px; padding:32px 24px 26px;
+    background:linear-gradient(165deg,#0F3D3E 0%,#12524F 45%,#0B2E30 100%);
+    color:#EAF6F1; box-shadow:0 1px 2px rgba(0,0,0,0.2), 0 20px 40px -18px rgba(7,30,31,0.65);
+    text-align:center; position:relative; overflow:hidden;
+  }
+  .quickpin-card::before{
+    content:''; position:absolute; inset:-40% -40% auto -40%; height:220px;
+    background:radial-gradient(closest-side, rgba(231,169,61,0.25), transparent 70%);
+    pointer-events:none;
+  }
+  .quickpin-avatar-ring{
+    width:86px; height:86px; border-radius:50%; margin:0 auto 14px; padding:3px;
+    background:linear-gradient(135deg,#E7A93D,#B9740E); position:relative; z-index:1;
+    box-shadow:0 0 0 4px rgba(231,169,61,0.16);
+  }
+  .quickpin-avatar-ring > *{ width:100% !important; height:100% !important; font-size:30px !important; }
+  .quickpin-title{ font-size:15px; font-weight:700; letter-spacing:0.01em; margin-bottom:2px; position:relative; z-index:1; }
+  .quickpin-sub{ font-size:12.5px; color:#AFD9CE; margin-bottom:22px; position:relative; z-index:1; }
+  .quickpin-label{ font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#AFD9CE; margin-bottom:14px; position:relative; z-index:1; }
+  .quickpin-dots{ display:flex; justify-content:center; gap:14px; margin-bottom:26px; position:relative; z-index:1; }
+  .quickpin-dot{
+    width:16px; height:16px; border-radius:50%; border:2px solid rgba(234,246,241,0.45);
+    background:transparent; transition:background .12s, border-color .12s, transform .12s;
+  }
+  .quickpin-dot.filled{ background:#E7A93D; border-color:#E7A93D; transform:scale(1.08); }
+  .quickpin-dots.shake{ animation:quickpin-shake .38s; }
+  @keyframes quickpin-shake{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+  .quickpin-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px 18px; max-width:260px; margin:0 auto; position:relative; z-index:1; }
+  .quickpin-key{
+    appearance:none; border:none; background:rgba(234,246,241,0.06); color:#EAF6F1;
+    font-size:22px; font-weight:600; padding:16px 0; border-radius:16px; cursor:pointer;
+    transition:background .1s, transform .05s;
+  }
+  .quickpin-key:active{ background:rgba(231,169,61,0.35); transform:scale(0.96); }
+  .quickpin-key.ghost{ background:transparent; color:#AFD9CE; font-size:13px; font-weight:600; }
+  .quickpin-links{ margin-top:22px; display:flex; justify-content:space-between; font-size:12.5px; position:relative; z-index:1; }
+  .quickpin-links a, .quickpin-links button.linklike{
+    color:#E7A93D; background:none; border:none; padding:0; font:inherit; cursor:pointer; text-decoration:none;
+  }
+  .quickpin-fp-btn{
+    display:inline-flex; align-items:center; gap:6px; margin-top:18px; background:rgba(234,246,241,0.08);
+    color:#EAF6F1; border:1px solid rgba(234,246,241,0.18); border-radius:999px; padding:9px 18px;
+    font-size:13px; font-weight:600; cursor:pointer; position:relative; z-index:1;
+  }
+  .quickpin-fp-btn svg{ width:16px; height:16px; }
+  .quickpin-status{ min-height:18px; font-size:12.5px; color:#F2BE9E; margin-top:4px; position:relative; z-index:1; }
 </style>
 </head>
 <body>
@@ -4831,6 +4885,8 @@ var qrcode = (function(){
   }
   var SECURITY_EVENT_LABELS = {
     'password-totp': 'Password + code', 'fingerprint-pin': 'Fingerprint + PIN', 'admin-clear': 'Admin cleared lock',
+    'pin-only': 'Quick PIN unlock', 'fingerprint-only': 'Quick fingerprint unlock', 'quick-unlock': 'Quick unlock',
+    'payout-pin': 'Payout — PIN', 'payout-fingerprint': 'Payout — fingerprint',
   };
   var SECURITY_OUTCOME_PILLS = {
     success: '<span class="pill" style="background:var(--good-tint); color:var(--good)">Success</span>',
@@ -5514,7 +5570,7 @@ var qrcode = (function(){
       : '<div class="banner">Deposits you add count right away. Withdrawals wait for the administrator\'s approval before they affect the balance.</div>';
 
     var eyeBtn = '<button class="icon-btn" style="margin-left:6px" data-action="'+(revealed?'finance-reveal-hide':'finance-reveal-prompt')+'" title="'+(revealed?'Hide amounts':'Show amounts')+'">'+(revealed?ICONS.eyeOff:ICONS.eye)+'</button>';
-    var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap <span class="inline-ico">'+ICONS.eye+'</span> to reveal them (needs a code from your authenticator app).</div>';
+    var privacyNote = revealed ? '' : '<div class="hint" style="margin-bottom:10px">Amounts and notes are masked on screen — tap <span class="inline-ico">'+ICONS.eye+'</span> to reveal them (needs '+(isAdmin()?'your Finance PIN':'a code from your authenticator app')+').</div>';
 
     var finPage = paginate('finance-txns', txns);
     var rows = finPage.items.map(function(t){
@@ -5607,17 +5663,133 @@ var qrcode = (function(){
       render();
     });
   }
+  // ---- Administrator's quick PIN pad (financeQuickPinGateHTML above) ----
+  // Digit taps update the DOM directly (no render()) so it feels instant and
+  // never desyncs mid-typing; render() only happens once, on submit success
+  // or failure, or when switching tabs — see quickPinBuffer's own comment.
+  function quickPinRenderDots(){
+    var wrap = document.getElementById('quickpin-dots');
+    if(!wrap) return;
+    var dots = wrap.children;
+    for(var i=0;i<dots.length;i++){ dots[i].classList.toggle('filled', i < quickPinBuffer.length); }
+  }
+  function quickPinSetStatus(msg){
+    var el = document.getElementById('quickpin-status');
+    if(el) el.textContent = msg || ' ';
+  }
+  function quickPinShake(){
+    var wrap = document.getElementById('quickpin-dots');
+    if(!wrap) return;
+    wrap.classList.remove('shake');
+    // Force a reflow so re-adding the class restarts the animation even if
+    // it just ran (e.g. two wrong PINs typed back to back).
+    void wrap.offsetWidth;
+    wrap.classList.add('shake');
+  }
+  function quickPinPressDigit(d){
+    if(quickPinBusy || !financeGuardStatus || !financeGuardStatus.pinSet) return;
+    var pinLen = financeGuardStatus.pinLength || 4;
+    if(quickPinBuffer.length >= pinLen) return;
+    quickPinBuffer += String(d);
+    quickPinRenderDots();
+    quickPinSetStatus('');
+    if(quickPinBuffer.length === pinLen) quickPinSubmit();
+  }
+  function quickPinBackspaceKey(){
+    if(quickPinBusy) return;
+    quickPinBuffer = quickPinBuffer.slice(0, -1);
+    quickPinRenderDots();
+  }
+  // Auto-submits the moment the PIN pad is full — no OK button, matching
+  // what was asked for. Wrong PIN: dots shake, buffer clears, and (per
+  // quickUnlockFinancePortal in financeGuard.js) it counts toward the same
+  // shared 3-strikes lockout / admin alert as every other Finance security
+  // check — a 3rd wrong entry surfaces the authenticator step-up on the
+  // lock screen (financeLockedGateHTML), not silently, and the
+  // administrator gets an alert on every wrong attempt either way.
+  function quickPinSubmit(){
+    quickPinBusy = true;
+    quickPinSetStatus('Checking…');
+    var pinVal = quickPinBuffer;
+    firebase.functions().httpsCallable('quickUnlockFinancePortal')({ pin: pinVal }).then(function(){
+      financePortalUnlocked = true;
+      startFinancePortalTimer();
+      toast('Finance portal unlocked.');
+      render();
+    }).catch(function(err){
+      quickPinBusy = false;
+      quickPinBuffer = '';
+      quickPinRenderDots();
+      quickPinShake();
+      quickPinSetStatus((err&&err.message)||'Incorrect PIN.');
+      refreshFinanceGuardStatus();
+      if(err && err.code==='permission-denied' && /locked/i.test((err&&err.message)||'')) render();
+    });
+  }
+  function quickPinFingerprint(){
+    if(!webauthnSupported()){ toast('Fingerprint/Face unlock needs a newer browser.'); return; }
+    quickPinSetStatus('Checking…');
+    firebase.functions().httpsCallable('startFinanceFingerprintUnlock')().then(function(res){
+      var publicKey = PublicKeyCredential.parseRequestOptionsFromJSON(res.data);
+      return navigator.credentials.get({ publicKey: publicKey });
+    }).then(function(cred){
+      return firebase.functions().httpsCallable('quickUnlockFinancePortal')({ response: cred.toJSON() });
+    }).then(function(){
+      financePortalUnlocked = true;
+      startFinancePortalTimer();
+      toast('Finance portal unlocked.');
+      render();
+    }).catch(function(err){
+      quickPinSetStatus('');
+      refreshFinanceGuardStatus();
+      if(err && err.name==='NotAllowedError'){ toast('Cancelled.'); return; }
+      toast((err&&err.message)||'Could not unlock the Finance portal.');
+      render();
+    });
+  }
+  // "Use fingerprint" from inside the Send-via-M-Pesa modal — gathers the
+  // already-typed phone/amount/note directly from the open modal's fields
+  // (this is a plain button, not a form submit, so handleForm's FormData
+  // helper doesn't apply here) and confirms the payout with a fingerprint/
+  // Face check instead of the PIN field.
+  function mpesaWithdrawWithFingerprint(){
+    if(!webauthnSupported()){ toast('Fingerprint/Face unlock needs a newer browser.'); return; }
+    var phone = ((document.getElementById('mpesa-withdraw-phone')||{}).value||'').trim();
+    var amount = Number((document.getElementById('mpesa-withdraw-amount')||{}).value||0);
+    var note = ((document.getElementById('mpesa-withdraw-note')||{}).value||'').trim();
+    if(!phone || !amount){ toast('Enter the recipient phone and amount first.'); return; }
+    var btn = document.getElementById('mpesa-withdraw-submit');
+    if(btn) btn.disabled = true;
+    firebase.functions().httpsCallable('startFinanceFingerprintUnlock')().then(function(res){
+      var publicKey = PublicKeyCredential.parseRequestOptionsFromJSON(res.data);
+      return navigator.credentials.get({ publicKey: publicKey });
+    }).then(function(cred){
+      return firebase.functions().httpsCallable('initiateWithdrawal')({ amount: amount, phone: phone, note: note, fingerprintResponse: cred.toJSON() });
+    }).then(function(res){
+      closeModal();
+      toast((res.data && res.data.message) || 'Payout sent — it will show up here once Safaricom confirms it.');
+    }).catch(function(err){
+      if(btn) btn.disabled = false;
+      if(err && err.name==='NotAllowedError'){ toast('Cancelled.'); return; }
+      toast((err&&err.message)||'Could not send that payout.');
+    });
+  }
   function financePortalGateHTML(){
     if(financeGuardStatus===null) refreshFinanceGuardStatus();
     if(financeGuardStatus && financeGuardStatus.locked){
-      return '<div class="card" style="max-width:420px; margin:0 auto">'+
-        '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px; color:var(--bad)">'+ICONS.lockClosed+'</span>Finance portal locked</h3></div>'+
-        '<p class="hint">Locked after repeated wrong attempts, for safety — nobody can get in, including with correct details, until it\'s cleared.</p>'+
-        '<p class="hint">'+(isAdmin()
-          ? 'As the administrator, clear it from Settings → Team → Finance security, once you know it was you or you\'ve checked who it was.'
-          : 'Ask the administrator to clear it from Settings.')+'</p>'+
-      '</div>';
+      return financeLockedGateHTML();
     }
+    var admin = isAdmin();
+    // The administrator's quick PIN-alone/fingerprint-alone unlock is the
+    // default view for them — matching how they asked their own Finance
+    // login to work — but only once it's actually usable (a PIN set and/or
+    // a fingerprint enrolled) and only until they explicitly pick a
+    // different tab themselves, which sticks for the rest of the session.
+    var quickAvailable = admin && financeGuardStatus && (financeGuardStatus.pinSet || financeGuardStatus.fingerprintEnrolled);
+    var effectiveTab = (!financeUnlockTabTouched && quickAvailable) ? 'quickpin' : financeUnlockTab;
+    if(effectiveTab==='quickpin' && !quickAvailable) effectiveTab = 'password';
+    if(effectiveTab==='quickpin') return financeQuickPinGateHTML();
+
     var showFingerprintTab = webauthnSupported();
     var tabsHtml = showFingerprintTab ? '<div class="segmented" style="margin-bottom:14px">'+
         '<button class="'+(financeUnlockTab==='password'?'active':'')+'" data-action="finance-unlock-tab:password" type="button">Password + code</button>'+
@@ -5645,9 +5817,75 @@ var qrcode = (function(){
     }
     return '<div class="card" style="max-width:420px; margin:0 auto">'+
       '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px">'+ICONS.shield+'</span>Finance portal locked</h3></div>'+
+      (quickAvailable ? '<p class="hint" style="margin-bottom:10px"><button type="button" style="background:none;border:none;color:var(--accent-strong);font:inherit;font-weight:600;cursor:pointer;padding:0" data-action="finance-unlock-tab:quickpin">⚡ Use your quick PIN / fingerprint instead</button></p>' : '')+
       (financeUnlockTab==='password' ? '<p class="hint">Enter the Finance portal password and a current Finance portal authenticator code to continue. Both are separate from your regular sign-in password and from the authenticator code used to reveal amounts or send M-Pesa payouts.</p>' : '')+
       tabsHtml+
       ((financeUnlockTab==='fingerprint' && showFingerprintTab) ? fingerprintTabHtml : passwordTabHtml)+
+    '</div>';
+  }
+  // The administrator's fast, single-factor door: PIN alone, or
+  // fingerprint/Face alone — deliberately not combined, and deliberately
+  // restricted server-side (quickUnlockFinancePortal in financeGuard.js) to
+  // the administrator's own account, so nobody else's login even offers
+  // this. Styled distinctly on purpose — this should visually read as "a
+  // different, faster door", not just another tab on the same form.
+  function financeQuickPinGateHTML(){
+    quickPinBuffer = '';
+    quickPinBusy = false;
+    var pinLen = (financeGuardStatus && financeGuardStatus.pinLength) || 4;
+    var hasPin = !!(financeGuardStatus && financeGuardStatus.pinSet);
+    var hasFp = !!(financeGuardStatus && financeGuardStatus.fingerprintEnrolled);
+    var dotsHtml = '';
+    for(var i=0;i<pinLen;i++) dotsHtml += '<div class="quickpin-dot"></div>';
+    var padHtml = '<div class="quickpin-pad">'+
+      [1,2,3,4,5,6,7,8,9].map(function(k){ return '<button type="button" class="quickpin-key" data-action="quickpin-key:'+k+'">'+k+'</button>'; }).join('')+
+      '<span></span>'+
+      '<button type="button" class="quickpin-key" data-action="quickpin-key:0">0</button>'+
+      '<button type="button" class="quickpin-key ghost" data-action="quickpin-backspace" aria-label="Backspace">⌫</button>'+
+    '</div>';
+    var body;
+    if(hasPin){
+      body = '<div class="quickpin-label">Enter PIN</div>'+
+        '<div class="quickpin-dots" id="quickpin-dots">'+dotsHtml+'</div>'+
+        '<div class="quickpin-status" id="quickpin-status">&nbsp;</div>'+
+        padHtml;
+    } else if(hasFp){
+      body = '<p class="hint" style="color:#CDE7DE">No Finance PIN set yet — use fingerprint / Face below, or set a PIN from Settings → Your account.</p>'+
+        '<div class="quickpin-status" id="quickpin-status">&nbsp;</div>';
+    } else {
+      body = '<p class="hint" style="color:#CDE7DE">Set up your personal Finance PIN first, from Settings → Your account.</p>';
+    }
+    return '<div class="quickpin-card">'+
+      '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
+      '<div class="quickpin-title">'+esc((currentUser&&currentUser.name)||'Administrator')+'</div>'+
+      '<div class="quickpin-sub">Kenokip Farm · Finance access</div>'+
+      body+
+      (hasFp ? '<div><button type="button" class="quickpin-fp-btn" data-action="quickpin-fingerprint">'+ICONS.fingerprint+' Use fingerprint / Face instead</button></div>' : '')+
+      '<div class="quickpin-links">'+
+        '<button type="button" class="linklike" data-action="finance-unlock-tab:password">Use password + code</button>'+
+        '<span></span>'+
+      '</div>'+
+    '</div>';
+  }
+  // Shown once the shared 3-strikes lockout has actually tripped (any
+  // method — see financeGuard.js). For the administrator this now offers a
+  // faster way back in than a trip to Settings: their main authenticator
+  // app code, right here, clears the lock immediately — exactly the step-up
+  // the administrator asked for after repeated wrong PIN attempts. Everyone
+  // else still has to ask the administrator, same as before.
+  function financeLockedGateHTML(){
+    var admin = isAdmin();
+    return '<div class="card" style="max-width:420px; margin:0 auto">'+
+      '<div class="card-title"><h3><span class="inline-ico" style="width:18px; height:18px; margin-right:6px; vertical-align:-3px; color:var(--bad)">'+ICONS.lockClosed+'</span>Finance portal locked</h3></div>'+
+      '<p class="hint">Locked after repeated wrong attempts, for safety — nobody can get in, including with correct details, until it\'s cleared.</p>'+
+      (admin
+        ? '<p class="hint">Enter your main authenticator app code below — the same one already used to reveal amounts or send M-Pesa payouts — to clear the lock and try again.</p>'+
+          '<form data-form="quickpin-clear-lock">'+
+            '<div class="field-row"><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit authenticator code" required autofocus></div>'+
+            '<button class="btn primary" type="submit" style="width:100%; margin-top:12px">Clear lock &amp; continue</button>'+
+          '</form>'+
+          '<p class="hint" style="margin-top:12px">You can also clear it any time from Settings → Team → Finance security.</p>'
+        : '<p class="hint">Ask the administrator to clear it from Settings.</p>')+
     '</div>';
   }
   function financeFormHtml(id){
@@ -5697,14 +5935,24 @@ var qrcode = (function(){
     '</form>';
   }
   function mpesaWithdrawFormHtml(){
+    var hasPin = !!(financeGuardStatus && financeGuardStatus.pinSet);
+    var hasFp = !!(financeGuardStatus && financeGuardStatus.fingerprintEnrolled);
+    var confirmHint = hasPin && hasFp ? 'Confirm with your Finance PIN, or fingerprint/Face.'
+      : hasPin ? 'Confirm with your Finance PIN.'
+      : hasFp ? 'Confirm with fingerprint/Face below.'
+      : 'Set up your personal Finance PIN or fingerprint/Face unlock first, from Settings → Your account.';
     return '<div class="modal-head"><h3>Send via M-Pesa</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    '<p class="hint">Sends real money out of the farm\'s M-Pesa account to the number below — this can\'t be undone once Safaricom processes it. Needs a current code from your authenticator app.</p>'+
+    '<p class="hint">Sends real money out of the farm\'s M-Pesa account to the number below — this can\'t be undone once Safaricom processes it. '+confirmHint+'</p>'+
     '<form data-form="mpesa-withdraw">'+
-      '<div class="field-row"><label>Recipient phone</label><input class="field" type="tel" name="phone" placeholder="0712345678" required autofocus></div>'+
-      '<div class="field-row" style="margin-top:12px"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required></div>'+
-      '<div class="field-row" style="margin-top:12px"><label>Note (optional)</label><input class="field" type="text" name="note" maxlength="100" placeholder="What this payout is for"></div>'+
-      '<div class="field-row" style="margin-top:12px"><label>Authenticator code</label><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required></div>'+
-      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn danger" type="submit" id="mpesa-withdraw-submit">Send</button></div>'+
+      '<div class="field-row"><label>Recipient phone</label><input class="field" type="tel" name="phone" id="mpesa-withdraw-phone" placeholder="0712345678" required autofocus></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" id="mpesa-withdraw-amount" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note (optional)</label><input class="field" type="text" name="note" id="mpesa-withdraw-note" maxlength="100" placeholder="What this payout is for"></div>'+
+      (hasPin ? '<div class="field-row" style="margin-top:12px"><label>Your Finance PIN</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin" placeholder="Your PIN"></div>' : '')+
+      '<div class="modal-foot">'+
+        '<button type="button" class="btn" data-action="close-modal">Cancel</button>'+
+        (hasFp ? '<button type="button" class="btn" data-action="mpesa-withdraw-fingerprint">'+ICONS.fingerprint+' Fingerprint</button>' : '')+
+        '<button class="btn danger" type="submit" id="mpesa-withdraw-submit"'+((!hasPin&&!hasFp)?' disabled':'')+'>Send</button>'+
+      '</div>'+
     '</form>';
   }
   // M-Pesa's real Account Balance / Transaction Status answers arrive a few
@@ -5769,10 +6017,13 @@ var qrcode = (function(){
     '<div class="modal-foot"><button type="button" class="btn primary" data-action="close-modal">Done</button></div>';
   }
   function financeRevealFormHtml(){
+    var admin = isAdmin();
     return '<div class="modal-head"><h3>Show amounts</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
-    '<p class="hint">Enter the current code from your authenticator app.</p>'+
+    '<p class="hint">'+(admin ? 'Enter your personal Finance PIN.' : 'Enter the current code from your authenticator app.')+'</p>'+
     '<form data-form="finance-reveal-code">'+
-      '<div class="field-row"><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required autofocus></div>'+
+      (admin
+        ? '<div class="field-row"><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin" placeholder="Your Finance PIN" required autofocus></div>'
+        : '<div class="field-row"><input class="field" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" placeholder="6-digit code" required autofocus></div>')+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Show</button></div>'+
     '</form>';
   }
@@ -6811,7 +7062,13 @@ var qrcode = (function(){
         if(!isAdmin()){ toast('Only the administrator can send money out.'); break; }
         if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); break; }
         if(!mpesaPayoutsEnabled){ toast('Payouts aren\'t available on this M-Pesa account yet.'); break; }
-        if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
+        // Payouts are confirmed with the Finance PIN or fingerprint/Face now
+        // (see mpesaWithdrawFormHtml/initiateWithdrawal) — the main
+        // authenticator app is no longer part of this flow, so it's no
+        // longer required just to open this form.
+        if(!(financeGuardStatus && (financeGuardStatus.pinSet || financeGuardStatus.fingerprintEnrolled))){
+          toast('Set up your personal Finance PIN or fingerprint/Face unlock first, in Settings → Your account.'); break;
+        }
         openModal(mpesaWithdrawFormHtml());
         break;
       case 'mpesa-check-balance':
@@ -6846,10 +7103,23 @@ var qrcode = (function(){
         break;
       case 'finance-unlock-tab':
         financeUnlockTab = a1;
+        financeUnlockTabTouched = true;
         render();
         break;
       case 'unlock-finance-fingerprint':
         unlockWithFinanceFingerprint();
+        break;
+      case 'quickpin-key':
+        quickPinPressDigit(a1);
+        break;
+      case 'quickpin-backspace':
+        quickPinBackspaceKey();
+        break;
+      case 'quickpin-fingerprint':
+        quickPinFingerprint();
+        break;
+      case 'mpesa-withdraw-fingerprint':
+        mpesaWithdrawWithFingerprint();
         break;
       case 'enroll-finance-fingerprint':
         enrollFinanceFingerprint();
@@ -7631,10 +7901,11 @@ var qrcode = (function(){
       if(!isAdmin()){ toast('Only the administrator can send money out.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
       if(!mpesaPayoutsEnabled){ toast('Payouts aren\'t available on this M-Pesa account yet.'); return; }
-      var wAmount = Number(val('amount')||0), wPhone = (val('phone')||'').trim(), wNote = (val('note')||'').trim(), wCode = (val('code')||'').trim();
+      var wAmount = Number(val('amount')||0), wPhone = (val('phone')||'').trim(), wNote = (val('note')||'').trim(), wPin = (val('pin')||'').trim();
+      if(!wPin){ toast('Enter your Finance PIN, or use the fingerprint button.'); return; }
       var wBtn = document.getElementById('mpesa-withdraw-submit');
       if(wBtn){ wBtn.disabled = true; wBtn.textContent = 'Sending…'; }
-      firebase.functions().httpsCallable('initiateWithdrawal')({ amount: wAmount, phone: wPhone, note: wNote, code: wCode }).then(function(res){
+      firebase.functions().httpsCallable('initiateWithdrawal')({ amount: wAmount, phone: wPhone, note: wNote, pin: wPin }).then(function(res){
         closeModal();
         toast((res.data && res.data.message) || 'Payout sent — it will show up here once Safaricom confirms it.');
       }).catch(function(err){
@@ -7680,11 +7951,34 @@ var qrcode = (function(){
     }
     if(name==='finance-reveal-code'){
       if(!canSeeFinance()){ toast('Not available for your account.'); return; }
+      if(isAdmin()){
+        var revealPin = (val('pin')||'').trim();
+        firebase.functions().httpsCallable('verifyFinancePinReveal')({ pin: revealPin }).then(function(){
+          financeRevealed = true;
+          closeModal(); render();
+        }).catch(function(err){ toast((err&&err.message)||'Incorrect PIN — try again.'); });
+        return;
+      }
       var revealCode = (val('code')||'').trim();
       firebase.functions().httpsCallable('verifyTotpCode')({ code: revealCode }).then(function(){
         financeRevealed = true;
         closeModal(); render();
       }).catch(function(err){ toast((err&&err.message)||'That code didn\'t work — try again.'); });
+      return;
+    }
+    if(name==='quickpin-clear-lock'){
+      if(!isAdmin()){ toast('Only the administrator can clear a Finance portal lock.'); return; }
+      var clearCode = (val('code')||'').trim();
+      var clearBtn = form.querySelector('button[type="submit"]');
+      if(clearBtn){ clearBtn.disabled = true; clearBtn.textContent = 'Clearing…'; }
+      firebase.functions().httpsCallable('adminClearFinanceLock')({ code: clearCode }).then(function(){
+        toast('Lock cleared.');
+        refreshFinanceGuardStatus();
+        render();
+      }).catch(function(err){
+        if(clearBtn){ clearBtn.disabled = false; clearBtn.textContent = 'Clear lock & continue'; }
+        toast((err&&err.message)||'That code didn\'t work — try again.');
+      });
       return;
     }
     if(name==='confirm-portal-authapp'){
@@ -7839,7 +8133,19 @@ var qrcode = (function(){
   // null until the first refreshFinanceGuardStatus() call comes back.
   var financeGuardStatus = null;
   var financeGuardStatusLoading = false;
-  var financeUnlockTab = 'password'; // 'password' | 'fingerprint' — which tab the gate shows
+  var financeUnlockTab = 'password'; // 'password' | 'fingerprint' | 'quickpin' — which tab the gate shows
+  // True once the administrator has explicitly picked a tab themselves —
+  // until then, financePortalGateHTML defaults them into 'quickpin' instead
+  // of 'password' whenever it's available, without permanently overriding
+  // an explicit choice to go back to password + code.
+  var financeUnlockTabTouched = false;
+  // Digits typed so far into the administrator's quick-unlock PIN pad — kept
+  // outside the render cycle and mutated directly by the keypad handlers
+  // (not via render()) so each tap feels instant, with no flicker. Reset to
+  // '' every time financeQuickPinGateHTML() builds fresh (unfilled) dots, so
+  // it can never end up out of sync with what's on screen.
+  var quickPinBuffer = '';
+  var quickPinBusy = false;
   var artifactApi = null;
   var saveTimer = null;
 

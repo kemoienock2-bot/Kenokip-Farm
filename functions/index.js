@@ -324,12 +324,19 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
 // recipient's phone via Safaricom's B2C API. Two things stand between a
 // tap and real money moving: (1) role check, right below — the
 // administrator only, since sending is the one action in this app that's
-// both real and irreversible; and (2) a valid, unused code from their
-// authenticator app, checked via verifyTotpForUid before anything is sent
-// to Safaricom at all. Nothing is written to the Finance ledger from this
-// function directly — that only happens from mpesaB2CResult below, once
-// Safaricom actually confirms the payout went through (exactly the same
-// pattern as mpesaStkCallback for deposits).
+// both real and irreversible; and (2) the administrator's personal Finance
+// PIN, or a fingerprint/Face check, confirmed via financeGuard's shared
+// verifyFinancePin/verifyFingerprintAssertion helpers before anything is
+// sent to Safaricom at all. (The old main-authenticator-code requirement
+// moved to being the "opening" method only — see security.js's
+// unlockFinancePortal / the Finance portal password+code gate — per the
+// administrator's own request; PIN/fingerprint alone is what confirms an
+// actual payout now.) A wrong PIN or fingerprint here counts toward the
+// same shared 3-strikes lockout as every other Finance security check, and
+// alerts the administrator the same way. Nothing is written to the Finance
+// ledger from this function directly — that only happens from
+// mpesaB2CResult below, once Safaricom actually confirms the payout went
+// through (exactly the same pattern as mpesaStkCallback for deposits).
 exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1' }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in first.');
@@ -340,16 +347,30 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
   if (!PAYOUTS_ENABLED) {
     throw new HttpsError('failed-precondition', "Payouts aren't available on this M-Pesa account yet.");
   }
+  await financeGuard.helpers.assertNotLocked();
   const amount = Number(request.data && request.data.amount);
   const phone = normalizePhone(request.data && request.data.phone);
   const note = String((request.data && request.data.note) || '').slice(0, 100);
-  const code = String((request.data && request.data.code) || '');
+  const pin = request.data && request.data.pin != null ? String(request.data.pin) : null;
+  const fingerprintResponse = request.data && request.data.fingerprintResponse;
   if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
   if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
+  if (!pin && !fingerprintResponse) throw new HttpsError('invalid-argument', 'Enter your Finance PIN, or use fingerprint/Face.');
 
-  // Throws (failed-precondition / invalid-argument) on a missing, wrong, or
-  // already-used code — nothing below this line runs unless it passes.
-  await security.verifyTotpForUid(request.auth.uid, code);
+  // Throws (failed-precondition / invalid-argument) on a wrong PIN or a
+  // fingerprint/Face check that doesn't match — nothing below this line
+  // runs, and the shared lockout streak advances, unless it passes.
+  try {
+    if (pin) {
+      await financeGuard.helpers.verifyFinancePin(request.auth.uid, pin);
+    } else {
+      await financeGuard.helpers.verifyFingerprintAssertion(request.auth.uid, fingerprintResponse);
+    }
+  } catch (err) {
+    await financeGuard.helpers.onFail(request, pin ? 'payout-pin' : 'payout-fingerprint', (err && err.message) || 'unknown');
+    throw err;
+  }
+  await financeGuard.helpers.onSuccess(request, pin ? 'payout-pin' : 'payout-fingerprint');
 
   const certPem = sval(MPESA_B2C_CERT);
   const precomputedCred = sval(MPESA_SECURITY_CREDENTIAL);

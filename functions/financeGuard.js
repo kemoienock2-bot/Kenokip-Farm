@@ -217,6 +217,8 @@ module.exports = function (admin, db, opts) {
       fingerprintEnrolled: Array.isArray(sec.webauthnCredentials) && sec.webauthnCredentials.length > 0,
       fingerprintDevices: (sec.webauthnCredentials || []).map((c) => ({ label: c.label || 'A device', addedAt: c.addedAt || null })),
       pinSet: !!sec.financePinHash,
+      pinLength: sec.financePinLength || null,
+      isAdministrator: auth.token.role === 'administrator',
     };
   });
 
@@ -231,7 +233,10 @@ module.exports = function (admin, db, opts) {
     if (!canUseAuthApp(auth)) throw new HttpsError('permission-denied', 'Not available for your account.');
     const pin = String((request.data && request.data.pin) || '');
     if (!/^\d{4,8}$/.test(pin)) throw new HttpsError('invalid-argument', 'Use a 4 to 8 digit PIN.');
-    await SECURITY_REF(auth.uid).set({ financePinHash: hashPassword(pin) }, { merge: true });
+    // financePinLength is stored alongside the hash (never the PIN itself) so
+    // the client can know how many digits to collect before auto-submitting
+    // the quick-unlock/payout PIN pad, without ever seeing the real PIN.
+    await SECURITY_REF(auth.uid).set({ financePinHash: hashPassword(pin), financePinLength: pin.length }, { merge: true });
     return { ok: true };
   });
 
@@ -326,6 +331,72 @@ module.exports = function (admin, db, opts) {
   });
 
   // -----------------------------------------------------------------------
+  // Shared verification helpers — used both by the callables below AND
+  // directly (as plain functions, not callables) by index.js's
+  // initiateWithdrawal, so a payout can be confirmed with the same PIN or
+  // fingerprint/Face check without duplicating the WebAuthn/PIN logic.
+  // -----------------------------------------------------------------------
+
+  // Verifies a WebAuthn assertion against whichever challenge was last
+  // generated for this uid by startFinanceFingerprintUnlock (the one
+  // challenge-issuing endpoint, reused for every fingerprint-based check —
+  // unlock, quick-unlock, or payout confirmation). Consumes the challenge
+  // (deletes it) and bumps the credential's replay counter on success.
+  async function verifyFingerprintAssertion(uid, response) {
+    if (!response) throw new HttpsError('invalid-argument', 'Missing fingerprint/Face response.');
+    const snap = await SECURITY_REF(uid).get();
+    const data = snap.exists ? snap.data() : {};
+    const challenge = data.webauthnChallenge;
+    if (!challenge || !data.webauthnChallengeExpires || Date.now() > data.webauthnChallengeExpires) {
+      throw new HttpsError('failed-precondition', 'That took too long — try again.');
+    }
+    const creds = data.webauthnCredentials || [];
+    const stored = creds.find((c) => c.id === response.id);
+    if (!stored) throw new HttpsError('invalid-argument', 'Unrecognized fingerprint/Face credential.');
+
+    let verification;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response,
+        expectedChallenge: challenge,
+        expectedOrigin: EXPECTED_ORIGIN,
+        expectedRPID: RP_ID,
+        credential: {
+          id: stored.id,
+          publicKey: Buffer.from(stored.publicKey, 'base64'),
+          counter: stored.counter,
+          transports: stored.transports || [],
+        },
+        requireUserVerification: true,
+      });
+    } catch (err) {
+      logger.warn('WebAuthn authentication verification error', err && err.message);
+      throw new HttpsError('invalid-argument', "That fingerprint/Face check didn't match.");
+    }
+    if (!verification.verified) throw new HttpsError('invalid-argument', "That fingerprint/Face check didn't match.");
+
+    const nextCreds = creds.map((c) => (c.id === stored.id ? Object.assign({}, c, { counter: verification.authenticationInfo.newCounter }) : c));
+    await SECURITY_REF(uid).set(
+      { webauthnCredentials: nextCreds, webauthnChallenge: admin.firestore.FieldValue.delete(), webauthnChallengeExpires: admin.firestore.FieldValue.delete() },
+      { merge: true }
+    );
+  }
+
+  // Verifies the personal Finance PIN alone (no fingerprint) — used for the
+  // administrator's quick-unlock, payout confirmation, and the PIN-based
+  // "reveal amounts" check.
+  async function verifyFinancePin(uid, pin) {
+    const snap = await SECURITY_REF(uid).get();
+    const data = snap.exists ? snap.data() : {};
+    if (!data.financePinHash) {
+      throw new HttpsError('failed-precondition', 'Set up your personal Finance PIN first, from Settings → Your account.');
+    }
+    if (!verifyPassword(String(pin || ''), data.financePinHash)) {
+      throw new HttpsError('invalid-argument', 'Incorrect PIN.');
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Fingerprint / Face + PIN unlock (WebAuthn "authentication")
   // -----------------------------------------------------------------------
 
@@ -367,54 +438,13 @@ module.exports = function (admin, db, opts) {
     const response = request.data && request.data.response;
     const pin = String((request.data && request.data.pin) || '');
 
-    const snap = await SECURITY_REF(auth.uid).get();
-    const data = snap.exists ? snap.data() : {};
-
     try {
-      if (!response) throw new HttpsError('invalid-argument', 'Missing fingerprint/Face response.');
-      const challenge = data.webauthnChallenge;
-      if (!challenge || !data.webauthnChallengeExpires || Date.now() > data.webauthnChallengeExpires) {
-        throw new HttpsError('failed-precondition', 'That took too long — try again.');
-      }
-      const creds = data.webauthnCredentials || [];
-      const stored = creds.find((c) => c.id === response.id);
-      if (!stored) throw new HttpsError('invalid-argument', 'Unrecognized fingerprint/Face credential.');
-
-      let verification;
-      try {
-        verification = await verifyAuthenticationResponse({
-          response,
-          expectedChallenge: challenge,
-          expectedOrigin: EXPECTED_ORIGIN,
-          expectedRPID: RP_ID,
-          credential: {
-            id: stored.id,
-            publicKey: Buffer.from(stored.publicKey, 'base64'),
-            counter: stored.counter,
-            transports: stored.transports || [],
-          },
-          requireUserVerification: true,
-        });
-      } catch (err) {
-        logger.warn('WebAuthn authentication verification error', err && err.message);
-        throw new HttpsError('invalid-argument', "That fingerprint/Face check didn't match.");
-      }
-      if (!verification.verified) throw new HttpsError('invalid-argument', "That fingerprint/Face check didn't match.");
-
-      // PIN is checked in the same pass — either mismatch is treated as one
-      // failed *attempt* for lockout purposes, not two, since it's one
-      // unlock action from the person's point of view.
-      if (!data.financePinHash || !verifyPassword(pin, data.financePinHash)) {
-        throw new HttpsError('invalid-argument', 'Incorrect PIN.');
-      }
-
-      // Both checks passed — persist the new counter (replay protection)
-      // and clear the used challenge.
-      const nextCreds = creds.map((c) => (c.id === stored.id ? Object.assign({}, c, { counter: verification.authenticationInfo.newCounter }) : c));
-      await SECURITY_REF(auth.uid).set(
-        { webauthnCredentials: nextCreds, webauthnChallenge: admin.firestore.FieldValue.delete(), webauthnChallengeExpires: admin.firestore.FieldValue.delete() },
-        { merge: true }
-      );
+      // Fingerprint/Face and PIN are both checked in the same pass — either
+      // mismatch is treated as one failed *attempt* for lockout purposes,
+      // not two, since it's one unlock action from the person's point of
+      // view.
+      await verifyFingerprintAssertion(auth.uid, response);
+      await verifyFinancePin(auth.uid, pin);
     } catch (err) {
       await onFail(request, 'fingerprint-pin', (err && err.message) || 'unknown');
       throw err;
@@ -424,10 +454,80 @@ module.exports = function (admin, db, opts) {
     return { ok: true };
   });
 
+  // -----------------------------------------------------------------------
+  // Administrator-only quick unlock — PIN ALONE, or fingerprint/Face ALONE
+  // (either one on its own, not combined). This is a deliberately weaker,
+  // faster door than every other method here, so it's restricted to the
+  // administrator's own account only — nobody else's login offers it, and
+  // it still shares the exact same lockout streak/alerting as every other
+  // method, so 3 wrong tries here locks the whole portal just the same.
+  // -----------------------------------------------------------------------
+
+  const quickUnlockFinancePortal = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    if (auth.token.role !== 'administrator') {
+      throw new HttpsError('permission-denied', 'This quick unlock is only available to the administrator.');
+    }
+
+    const guardSnap = await GUARD_REF().get();
+    if (guardSnap.exists && guardSnap.data().lockedAt) {
+      await onBlockedWhileLocked(request, 'quick-unlock');
+      throw new HttpsError('permission-denied', 'The Finance portal is locked after repeated failed attempts. Enter your authenticator code below to clear it.');
+    }
+
+    const pin = request.data && request.data.pin != null ? String(request.data.pin) : null;
+    const response = request.data && request.data.response;
+    if (!pin && !response) throw new HttpsError('invalid-argument', 'Enter your PIN, or use fingerprint/Face.');
+    const method = pin ? 'pin-only' : 'fingerprint-only';
+
+    try {
+      if (pin) {
+        await verifyFinancePin(auth.uid, pin);
+      } else {
+        await verifyFingerprintAssertion(auth.uid, response);
+      }
+    } catch (err) {
+      await onFail(request, method, (err && err.message) || 'unknown');
+      throw err;
+    }
+
+    await onSuccess(request, method);
+    return { ok: true };
+  });
+
+  // Reveals masked Finance figures using the personal Finance PIN instead of
+  // the main authenticator code — administrator-only (see SETUP-SECURITY.md
+  // update), everyone else keeps using verifyTotpCode from security.js
+  // unchanged. Deliberately NOT tied to the portal lockout streak above:
+  // you're already inside an unlocked portal at this point, so this is a
+  // lighter-weight check on a lower-stakes action (viewing, not entering or
+  // moving money) — same as the authenticator-code version it replaces,
+  // which was never subject to the lockout either.
+  const verifyFinancePinReveal = onCall({ region: 'us-central1' }, async (request) => {
+    const auth = requireAuth(request);
+    if (auth.token.role !== 'administrator') {
+      throw new HttpsError('permission-denied', 'Not available for your account.');
+    }
+    await verifyFinancePin(auth.uid, (request.data && request.data.pin) || '');
+    return { ok: true };
+  });
+
   return {
     RP_ID,
     EXPECTED_ORIGIN,
-    helpers: { assertNotLocked, onFail, onBlockedWhileLocked, onSuccess, makeAdminClearLock },
+    helpers: {
+      assertNotLocked,
+      onFail,
+      onBlockedWhileLocked,
+      onSuccess,
+      makeAdminClearLock,
+      // Exposed as plain functions (not callables) so index.js's
+      // initiateWithdrawal can confirm a payout with the same PIN/
+      // fingerprint checks and the same shared lockout streak, without
+      // duplicating the WebAuthn/PIN verification logic.
+      verifyFinancePin,
+      verifyFingerprintAssertion,
+    },
     triggers: {
       getFinanceGuardStatus,
       setFinancePin,
@@ -436,6 +536,8 @@ module.exports = function (admin, db, opts) {
       removeFinanceFingerprint,
       startFinanceFingerprintUnlock,
       finishFinanceFingerprintUnlock,
+      quickUnlockFinancePortal,
+      verifyFinancePinReveal,
     },
   };
 };

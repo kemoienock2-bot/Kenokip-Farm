@@ -182,3 +182,47 @@ You'll also get an **Urgent** alert (the same banner/sound/notification
 system as an Urgent team message, plus a real push if you've set that up)
 the moment any attempt is wrong, and again if it locks — no need to go
 looking for it.
+
+## Administrator's quick PIN / fingerprint unlock
+
+A second update, on top of everything above, at the administrator's own
+request — a faster, single-factor door that exists **only on the
+administrator's account**. Nobody else's login offers this; every other
+role keeps exactly the password + code and fingerprint + PIN methods
+described above, unchanged.
+
+- **Opening Finance** now defaults (for the administrator only) to a
+  full-screen PIN pad — enter your personal Finance PIN and it unlocks the
+  moment the last digit is typed, no button to press — or tap **Use
+  fingerprint / Face instead** to unlock with just that, no PIN needed
+  either way. This replaces having to enter *both* together. The original
+  password + authenticator-code method is still one tap away (**Use
+  password + code**) and is untouched — that's still the method every
+  other role uses, and it's still exactly how the administrator's own
+  Finance portal authenticator code works, "at the opening" only.
+- **Sending money via M-Pesa** now asks for your Finance PIN or
+  fingerprint/Face instead of a code from the main authenticator app. The
+  main authenticator app is no longer part of the payout flow at all — it's
+  reserved for opening the portal (the password + code method) and for
+  clearing a lock (below).
+- **Revealing masked amounts** (the eye icon on the Finance page) now asks
+  for your Finance PIN too, instead of the main authenticator code —
+  administrator only; every other role that can reveal amounts keeps using
+  the authenticator code exactly as before.
+- **Three wrong PINs (or fingerprint checks) in a row** locks the whole
+  Finance portal, exactly like three wrong tries on any other method
+  always has — same shared streak, same immediate alert to you. The
+  difference: the lock screen itself now offers a way back in for the
+  administrator, right there — enter your main authenticator app code and
+  it clears the lock and lets you straight back in, instead of having to
+  go to Settings → Team → Finance security first (that page's **Clear
+  lock** button still works too, exactly as before).
+
+**Worth knowing plainly:** a single PIN, or a single fingerprint check, is
+inherently a lower bar than the two-factor methods everywhere else in this
+app (password + code, or fingerprint + PIN together) — that trade-off is
+deliberate and was asked for specifically, in exchange for speed on the
+administrator's own device. The lockout-after-3 and instant alert are what
+keep that trade-off from being an open door: a stolen or borrowed device
+still can't get further than 3 guesses before everything locks and you're
+notified immediately.
