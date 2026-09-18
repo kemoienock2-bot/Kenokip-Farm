@@ -12,5 +12,20 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "hosting-stub",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/mpesaStkCallback", "function": { "functionId": "mpesaStkCallback", "region": "us-central1" } },
+      { "source": "/mpesaB2CResult", "function": { "functionId": "mpesaB2CResult", "region": "us-central1" } },
+      { "source": "/mpesaB2CTimeout", "function": { "functionId": "mpesaB2CTimeout", "region": "us-central1" } },
+      { "source": "/mpesaAccountBalanceResult", "function": { "functionId": "mpesaAccountBalanceResult", "region": "us-central1" } },
+      { "source": "/mpesaAccountBalanceTimeout", "function": { "functionId": "mpesaAccountBalanceTimeout", "region": "us-central1" } },
+      { "source": "/mpesaTransactionStatusResult", "function": { "functionId": "mpesaTransactionStatusResult", "region": "us-central1" } },
+      { "source": "/mpesaTransactionStatusTimeout", "function": { "functionId": "mpesaTransactionStatusTimeout", "region": "us-central1" } },
+      { "source": "/c2bConfirmation", "function": { "functionId": "c2bConfirmation", "region": "us-central1" } },
+      { "source": "/c2bValidation", "function": { "functionId": "c2bValidation", "region": "us-central1" } }
+    ]
   }
 }

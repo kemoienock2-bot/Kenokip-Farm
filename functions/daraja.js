@@ -182,12 +182,13 @@ function buildSecurityCredential({ initiatorPassword, certPem }) {
 // Agent/Store split the way stkPush's PartyB does, so this always uses the
 // plain shortcode.
 //
-// v1 is correct here — confirmed directly against Safaricom's own official
-// Postman collection for this account, which lists "Make a B2C Payment
-// Request" at exactly this v1 path. (An earlier version of this file tried
-// switching to a "b2c/v3" path based on third-party docs; that was wrong —
-// Safaricom's own gateway rejected it outright with "no apiproduct match
-// found", meaning v3 isn't a real path for this app at all. Reverted.)
+// v3 is correct here as of Sept 2026 — Safaricom's current official docs
+// (both sandbox and production) list "Make a B2C Payment Request" at
+// /mpesa/b2c/v3/paymentrequest, not v1. An earlier "no apiproduct match
+// found" failure on v3 turned out to be caused by B2C not being enabled on
+// this app at all (confirmed by Safaricom support) — not by v3 being the
+// wrong path. If that same error reappears, it's about product
+// authorization on the app, not the URL version.
 // OriginatorConversationID is still included below even though it's not in
 // every older sample request — Safaricom's own collection shows a newer
 // example (B2Pochi) sending it on this same URL, so it's cheap insurance:
@@ -208,7 +209,7 @@ async function b2cSend({ env, consumerKey, consumerSecret, shortcode, initiatorN
     ResultURL: resultUrl,
     Occasion: (occasion || '').slice(0, 100),
   };
-  const res = await fetch(`${baseUrl(env)}/mpesa/b2c/v1/paymentrequest`, {
+  const res = await fetch(`${baseUrl(env)}/mpesa/b2c/v3/paymentrequest`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
