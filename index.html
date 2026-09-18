@@ -5867,6 +5867,83 @@ var qrcode = (function(){
       '</div>'+
     '</div>';
   }
+  // Administrator's "Show amounts" PIN pad — same auto-detecting, no-OK-
+  // button style as financeQuickPinGateHTML above, reused here (inside the
+  // reveal modal) so every admin-only PIN prompt in the app looks and
+  // behaves the same way. Verifies via verifyFinancePinReveal, which is not
+  // lockout-gated on its own (matches the old TOTP-reveal behavior) — a
+  // wrong PIN here just shakes and clears, no strike against the shared
+  // 3-attempt lockout.
+  function financeRevealQuickPinHtml(){
+    revealPinBuffer = '';
+    revealPinBusy = false;
+    var pinLen = (financeGuardStatus && financeGuardStatus.pinLength) || 4;
+    var dotsHtml = '';
+    for(var i=0;i<pinLen;i++) dotsHtml += '<div class="quickpin-dot"></div>';
+    var padHtml = '<div class="quickpin-pad">'+
+      [1,2,3,4,5,6,7,8,9].map(function(k){ return '<button type="button" class="quickpin-key" data-action="revealpin-key:'+k+'">'+k+'</button>'; }).join('')+
+      '<span></span>'+
+      '<button type="button" class="quickpin-key" data-action="revealpin-key:0">0</button>'+
+      '<button type="button" class="quickpin-key ghost" data-action="revealpin-backspace" aria-label="Backspace">⌫</button>'+
+    '</div>';
+    return '<div class="quickpin-card">'+
+      '<button class="modal-close" data-action="close-modal" style="position:absolute; top:14px; right:14px; z-index:2; color:#EAF6F1">'+ICONS.close+'</button>'+
+      '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
+      '<div class="quickpin-title">Show amounts</div>'+
+      '<div class="quickpin-sub">Enter your Finance PIN</div>'+
+      '<div class="quickpin-dots" id="revealpin-dots">'+dotsHtml+'</div>'+
+      '<div class="quickpin-status" id="revealpin-status">&nbsp;</div>'+
+      padHtml+
+      '<div class="quickpin-links"><button type="button" class="linklike" data-action="close-modal">Cancel</button><span></span></div>'+
+    '</div>';
+  }
+  function revealPinRenderDots(){
+    var wrap = document.getElementById('revealpin-dots');
+    if(!wrap) return;
+    var dots = wrap.children;
+    for(var i=0;i<dots.length;i++){ dots[i].classList.toggle('filled', i < revealPinBuffer.length); }
+  }
+  function revealPinSetStatus(msg){
+    var el = document.getElementById('revealpin-status');
+    if(el) el.textContent = msg || ' ';
+  }
+  function revealPinShake(){
+    var wrap = document.getElementById('revealpin-dots');
+    if(!wrap) return;
+    wrap.classList.remove('shake');
+    void wrap.offsetWidth;
+    wrap.classList.add('shake');
+  }
+  function revealPinPressDigit(d){
+    if(revealPinBusy) return;
+    var pinLen = (financeGuardStatus && financeGuardStatus.pinLength) || 4;
+    if(revealPinBuffer.length >= pinLen) return;
+    revealPinBuffer += String(d);
+    revealPinRenderDots();
+    revealPinSetStatus('');
+    if(revealPinBuffer.length === pinLen) revealPinSubmit();
+  }
+  function revealPinBackspaceKey(){
+    if(revealPinBusy) return;
+    revealPinBuffer = revealPinBuffer.slice(0, -1);
+    revealPinRenderDots();
+  }
+  function revealPinSubmit(){
+    revealPinBusy = true;
+    revealPinSetStatus('Checking…');
+    var pinVal = revealPinBuffer;
+    firebase.functions().httpsCallable('verifyFinancePinReveal')({ pin: pinVal }).then(function(){
+      financeRevealed = true;
+      closeModal();
+      render();
+    }).catch(function(err){
+      revealPinBusy = false;
+      revealPinBuffer = '';
+      revealPinRenderDots();
+      revealPinShake();
+      revealPinSetStatus((err&&err.message)||'Incorrect PIN.');
+    });
+  }
   // Shown once the shared 3-strikes lockout has actually tripped (any
   // method — see financeGuard.js). For the administrator this now offers a
   // faster way back in than a trip to Settings: their main authenticator
@@ -7138,8 +7215,20 @@ var qrcode = (function(){
         break;
       case 'finance-reveal-prompt':
         if(!canSeeFinance()) break;
+        if(isAdmin()){
+          if(financeGuardStatus===null) refreshFinanceGuardStatus();
+          if(financeGuardStatus && !financeGuardStatus.pinSet){ toast('Set up your personal Finance PIN first, in Settings → Your account.'); break; }
+          openModal(financeRevealQuickPinHtml());
+          break;
+        }
         if(!currentUser.totpEnrolled){ toast('Set up your authenticator app first, in Settings → Your account.'); break; }
         openModal(financeRevealFormHtml());
+        break;
+      case 'revealpin-key':
+        revealPinPressDigit(a1);
+        break;
+      case 'revealpin-backspace':
+        revealPinBackspaceKey();
         break;
       case 'finance-reveal-hide':
         financeRevealed = false;
@@ -8146,6 +8235,12 @@ var qrcode = (function(){
   // it can never end up out of sync with what's on screen.
   var quickPinBuffer = '';
   var quickPinBusy = false;
+  // Same idea as quickPinBuffer above, but for the administrator's "Show
+  // amounts" PIN pad (financeRevealQuickPinHtml) — a separate buffer because
+  // this one lives inside a modal rather than the full Finance-gate screen,
+  // and can in principle be open at a different moment than the portal gate.
+  var revealPinBuffer = '';
+  var revealPinBusy = false;
   var artifactApi = null;
   var saveTimer = null;
 
