@@ -1841,14 +1841,19 @@ var qrcode = (function(){
     return state.flock.reduce(function(sum,b){ return sum + currentCount(b)*flockValuePerBird(b,atDate); }, 0);
   }
   // ---- Egg-to-cash asset value (admin-only) -------------------------
-  // A per-egg cash value used only to answer "could the eggs I currently
-  // have on hand cover what I've spent?" — shown as a separate,
-  // clearly-labelled figure alongside Expenses. Deliberately never added
-  // into income (that would double-count real egg sales, which are
-  // already logged as Income → Egg Sales) and never affects the
-  // Overview profit figure — see eggAssetCoverageCardHTML below.
+  // A per-egg cash value used only to answer "what are the eggs I
+  // currently have on hand actually worth?" — a real running stock
+  // figure (everything ever laid, minus everything ever sold, eaten,
+  // broken, or given for brooding — same subtraction eggsOverviewPanel's
+  // "Eggs available" stat tile already does), not a per-period total.
+  // Deliberately never added into income (that would double-count real
+  // egg sales, which are already logged as Income → Egg Sales) and never
+  // affects the Overview profit figure. Falls automatically whenever a
+  // loss of any kind is logged, since totalEggsLost() already includes
+  // every eggLosses reason (sold/breakage/consumed/brooding/other).
   var EGG_UNIT_VALUE_KSH = 15;
-  function eggAssetValueForRange(startISO, endISO){ return sumEggs(startISO, endISO) * EGG_UNIT_VALUE_KSH; }
+  function eggsAvailableCount(){ return Math.max(0, totalEggsLaid() - totalEggsLost()); }
+  function eggAssetValueTotal(){ return eggsAvailableCount() * EGG_UNIT_VALUE_KSH; }
   // Celebrates the first time a calendar month turns profitable (real
   // income minus real expenses — separate from the egg-asset coverage
   // figure above) while eggs are actually being collected that month, so
@@ -2377,6 +2382,37 @@ var qrcode = (function(){
       '<p class="hint" style="margin:0">'+info.note+'</p>'+
     '</div>';
   }
+  // Converts the two "what's actually on the farm right now" figures —
+  // eggs on hand and the current flock — into money, right on the
+  // Overview page, exactly as asked: admin-only (stricter than the
+  // profit figure above, which Financial Staff can also see), using the
+  // real current stock in both cases (eggsAvailableCount = laid minus
+  // every kind of loss; flockAssetValueTotal = every bird currently on
+  // the farm, from FLOCK_VALUE_TABLE). Each links straight to that
+  // section's own page, where the same figure gets its own dedicated
+  // card (eggAssetCardHTML on Eggs, flockAssetValueCardHTML on Flock).
+  function farmAssetsOverviewCardHTML(){
+    if(!isAdmin()) return '';
+    var eggsOnHand = eggsAvailableCount();
+    var eggValue = eggAssetValueTotal();
+    var flockValue = flockAssetValueTotal();
+    var birdsNow = state.flock.reduce(function(a,b){ return a+currentCount(b); }, 0);
+    var total = eggValue + flockValue;
+    return '<div class="card"><div class="card-title"><h3>Farm assets</h3><span class="hint">Only visible to you</span></div>'+
+      '<div class="stat-value num" style="font-size:32px">'+fmtMoney(total)+'</div>'+
+      '<div class="hint" style="margin-top:4px; margin-bottom:14px">Eggs on hand + the flock on the farm right now, converted to money. Never counted as income or folded into the profit figure above.</div>'+
+      '<div class="grid two">'+
+        '<button type="button" class="stat-tile" style="text-align:left; cursor:pointer; border:none; width:100%" data-action="nav:eggs">'+
+          '<div class="stat-label">Egg assets</div><div class="stat-value num" style="font-size:20px">'+fmtMoney(eggValue)+'</div>'+
+          '<div class="hint">'+eggsOnHand.toLocaleString()+' eggs on hand →</div>'+
+        '</button>'+
+        '<button type="button" class="stat-tile" style="text-align:left; cursor:pointer; border:none; width:100%" data-action="nav:flock">'+
+          '<div class="stat-label">Flock assets</div><div class="stat-value num" style="font-size:20px">'+fmtMoney(flockValue)+'</div>'+
+          '<div class="hint">'+birdsNow.toLocaleString()+' birds on the farm →</div>'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  }
   function overviewPanel(){
     var isEmpty = state.flock.length===0 && state.eggs.length===0 && state.expenses.length===0 && state.incomes.length===0;
     var period = ui.periods.overview;
@@ -2416,6 +2452,7 @@ var qrcode = (function(){
       '<div class="stat-value num" style="font-size:32px; color:'+allTimeColor+'">'+fmtMoney(Math.abs(allTimeProfit))+'</div>'+
       '<div class="hint" style="margin-top:6px">Total income '+fmtMoney(allTimeIncome)+' · Total expenses '+fmtMoney(allTimeExpense)+'</div>'+
     '</div>' : '')+
+    farmAssetsOverviewCardHTML()+
     '<div class="grid stats">'+
       (showProfit ? statTile('Profit · '+r.label, fmtMoney(profitCur), deltaBadge(profitCur,profitPrev)) : '')+
       statTile('Expenses · '+r.label, fmtMoney(expenseCur), deltaBadge(expenseCur,expensePrev,true))+
@@ -2926,9 +2963,25 @@ var qrcode = (function(){
           EGG_SIZES.map(function(p){ return genderTile(p[1], sizeTotals[p[0]].toLocaleString()); }).join('')+
         '</div></div>';
     })()+
+    eggAssetCardHTML()+
     '<div class="card" style="text-align:center; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">'+
       '<button type="button" class="btn" data-action="view-select:eggs:log">Open the Egg Log →</button>'+
       '<button type="button" class="btn" data-action="view-select:eggs:losses">Sold, Used &amp; Lost →</button>'+
+    '</div>';
+  }
+  // Eggs' own dedicated "assets" section, right on its Overview page (in
+  // addition to the summary on the app's main Overview and the vs.-spend
+  // comparison on Expenses) — admin-only, using the real on-hand count
+  // (see eggsAvailableCount above), which already falls on its own the
+  // moment a loss of any kind — sold, eaten, broken, given for brooding —
+  // gets logged, since it's laid-minus-lost rather than a period total.
+  function eggAssetCardHTML(){
+    if(!isAdmin()) return '';
+    var eggsOnHand = eggsAvailableCount();
+    var value = eggAssetValueTotal();
+    return '<div class="card"><div class="card-title"><h3>Egg assets</h3><span class="hint">Only visible to you</span></div>'+
+      '<div class="stat-value num" style="font-size:28px">'+fmtMoney(value)+'</div>'+
+      '<div class="hint" style="margin-top:6px">'+eggsOnHand.toLocaleString()+' eggs on hand right now (laid minus sold, eaten, broken, or given for brooding) × KSh '+EGG_UNIT_VALUE_KSH+' each. Never counted as income.</div>'+
     '</div>';
   }
   function eggsLogPageHTML(){
@@ -4459,25 +4512,29 @@ var qrcode = (function(){
 
   /* ============================= EXPENSES / INCOME ============================= */
   // Admin-only "could my eggs cover this spend" indicator — see
-  // EGG_UNIT_VALUE_KSH / eggAssetValueForRange above for why this is kept
+  // EGG_UNIT_VALUE_KSH / eggsAvailableCount above for why this is kept
   // completely separate from real income (Income → Egg Sales already
   // records actual money from eggs sold; this is a hypothetical asset
-  // value on top, never summed into it).
+  // value on top, never summed into it). The egg-asset value itself is a
+  // single running stock figure (on hand right now), weighed here against
+  // each period's actual spend — it's the same number in every row on
+  // purpose, since eggs on hand don't reset at the start of a week/month.
   function eggAssetCoverageCardHTML(){
     if(!isAdmin()) return '';
+    var eggsOnHand = eggsAvailableCount();
+    var eggValue = eggAssetValueTotal();
     var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
     var rows = periodsDef.map(function(pd){
       var r = getRange(pd[0]);
-      var eggCount = sumEggs(r.startISO, r.endISO);
-      var eggValue = eggAssetValueForRange(r.startISO, r.endISO);
       var expenseTotal = sumMoney(state.expenses, r.startISO, r.endISO);
       var net = expenseTotal - eggValue;
       var netColor = net<=0 ? 'var(--good)' : 'var(--bad)';
       var netText = net<=0 ? 'Covered, '+fmtMoney(Math.abs(net))+' to spare' : fmtMoney(net)+' short';
-      return '<tr><td>'+pd[1]+'</td><td class="num">'+eggCount.toLocaleString()+'</td><td class="num">'+fmtMoney(eggValue)+'</td><td class="num">'+fmtMoney(expenseTotal)+'</td><td class="num" style="color:'+netColor+'">'+netText+'</td></tr>';
+      return '<tr><td>'+pd[1]+'</td><td class="num">'+fmtMoney(expenseTotal)+'</td><td class="num" style="color:'+netColor+'">'+netText+'</td></tr>';
     }).join('');
-    return '<div class="card"><div class="card-title"><h3>Egg assets vs. spend</h3><span class="hint">Only visible to you — eggs logged × KSh '+EGG_UNIT_VALUE_KSH+' each, weighed against expenses. Not counted as income.</span></div>'+
-      '<div class="table-wrap"><table><thead><tr><th>Period</th><th class="num">Eggs</th><th class="num">Egg value</th><th class="num">Expenses</th><th class="num">Net after egg value</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    return '<div class="card"><div class="card-title"><h3>Egg assets vs. spend</h3><span class="hint">Only visible to you</span></div>'+
+      '<div class="hint" style="margin-bottom:10px">'+eggsOnHand.toLocaleString()+' eggs on hand right now × KSh '+EGG_UNIT_VALUE_KSH+' = <strong style="color:var(--ink)">'+fmtMoney(eggValue)+'</strong> in egg assets. Weighed against expenses below — never counted as income.</div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Period</th><th class="num">Expenses</th><th class="num">Net after egg value</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '</div>';
   }
   function moneyBreakdownPanel(list, categories, kind){
