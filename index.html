@@ -217,7 +217,21 @@
   .sync-dot.err{ background:var(--bad); }
   @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
 
-  .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .main{ flex:1; min-width:0; display:flex; flex-direction:column; position:relative; z-index:0; }
+  /* ---- per-page illustrated background scene ----------------------
+     #page-scene is filled fresh every render() with a handful of the
+     app's own existing illustrated icons (PICS — the same art already
+     used for nav icons and page headers), scattered and faded, so each
+     page reads as "its own place" (Flock = hens/cocks/chicks, Eggs =
+     eggs, Health = the health icon, etc.) without needing new image
+     assets. position:absolute + the negative z-index keeps it painted
+     behind the topbar/panel content but above .main's own flat/tinted
+     background above — see pageSceneHTML() in the script. */
+  #page-scene{ position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+  .page-scene-icon{ position:absolute; opacity:0.09; }
+  .page-scene-icon svg{ width:100%; height:100%; display:block; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .page-scene-icon{ opacity:0.14; } }
+  :root[data-theme="dark"] .page-scene-icon{ opacity:0.14; }
   /* A soft per-section background wash — a gentle tint fading into the
      ordinary page background within the first few hundred pixels, using
      each section's own --accent-tint (already scoped per data-section
@@ -671,6 +685,84 @@
   }
   .quickpin-fp-btn svg{ width:16px; height:16px; }
   .quickpin-status{ min-height:18px; font-size:12.5px; color:#F2BE9E; margin-top:4px; position:relative; z-index:1; }
+
+  /* ---- fullscreen PIN takeover ----------------------------------------
+     Wraps .quickpin-card (both the Finance quick-unlock gate and the
+     "Show amounts" reveal pad) so typing a PIN takes over the ENTIRE
+     screen — nav rail, topbar, and whatever page was open underneath all
+     disappear behind it — rather than just sitting inside the normal page
+     chrome or a small modal box. position:fixed + inset:0 makes this work
+     regardless of where in the DOM the HTML actually lands (inside #panel
+     for the Finance gate, inside #modal-root for the reveal pad), and
+     100dvh (falling back to 100vh) keeps it filling the real visible
+     viewport on phones even when the browser chrome shows/hides. The
+     scene behind the card is drawn entirely in CSS/SVG (coins, an egg
+     motif via radial-gradients, and two hen silhouettes) since we can't
+     drop in real photography here — kept low-opacity so it reads as
+     texture, not noise, behind the actual PIN card. ---- */
+  .quickpin-fullscreen{
+    position:fixed; inset:0; z-index:2000;
+    width:100%; height:100vh; height:100dvh;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; padding:24px calc(24px + env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) calc(24px + env(safe-area-inset-left,0px));
+    padding-top:calc(24px + env(safe-area-inset-top,0px));
+    background:
+      radial-gradient(circle at 14% 20%, rgba(231,169,61,0.30), transparent 20%),
+      radial-gradient(circle at 86% 14%, rgba(231,169,61,0.24), transparent 22%),
+      radial-gradient(circle at 22% 86%, rgba(231,169,61,0.20), transparent 24%),
+      radial-gradient(circle at 90% 82%, rgba(231,169,61,0.26), transparent 22%),
+      linear-gradient(165deg,#0B2E30 0%,#12524F 45%,#0F3D3E 100%);
+    touch-action:none;
+  }
+  .quickpin-fullscreen::before{
+    /* scattered coin + egg motifs — pure layered radial-gradients, no
+       image assets, so the app stays a single file */
+    content:''; position:absolute; inset:0; opacity:0.15; pointer-events:none;
+    background-image:
+      radial-gradient(circle, #E7A93D 0 13px, transparent 14px),
+      radial-gradient(circle, #F4E3C1 0 9px, transparent 10px),
+      radial-gradient(ellipse 11px 15px at center, #FDF6E8 0 100%, transparent 100%),
+      radial-gradient(ellipse 9px 12px at center, #FDF6E8 0 100%, transparent 100%);
+    background-repeat:repeat, repeat, repeat, repeat;
+    background-size:220px 220px, 260px 260px, 300px 300px, 260px 260px;
+    background-position:0 0, 90px 140px, 40px 60px, 190px 210px;
+  }
+  .quickpin-scene-hen{ position:absolute; width:130px; height:130px; opacity:0.13; pointer-events:none; z-index:0; }
+  .quickpin-scene-hen.h1{ top:5%; left:4%; transform:rotate(-8deg); }
+  .quickpin-scene-hen.h2{ bottom:6%; right:5%; transform:scaleX(-1) rotate(6deg); }
+  .quickpin-fullscreen .quickpin-card{ position:relative; z-index:1; max-height:100%; overflow-y:auto; }
+
+  /* ---- celebration overlay --------------------------------------------
+     Reused for all three "something nice happened" moments (a Finance
+     transaction actually confirmed, chicks hatching, a profitable month
+     of eggs) — see celebrate() in the script. Modeled on the confetti-
+     style M-Pesa "transaction successful" screen: a soft dark backdrop,
+     a light card that pops in with a spring easing, and paper confetti
+     falling from the top of the viewport, all drawn with CSS only. */
+  #celebration-root{ position:fixed; inset:0; z-index:3000; pointer-events:none; overflow:hidden; }
+  #celebration-root:empty{ display:none; }
+  .celebration-backdrop{ position:absolute; inset:0; background:rgba(10,20,15,0.4); opacity:0; transition:opacity .25s ease; pointer-events:auto; }
+  .celebration-backdrop.show{ opacity:1; }
+  .celebration-card{
+    position:absolute; top:50%; left:50%; z-index:1; width:calc(100% - 48px); max-width:320px;
+    transform:translate(-50%,-50%) scale(0.82); opacity:0;
+    background:var(--surface); border-radius:20px; padding:34px 26px 28px; text-align:center;
+    box-shadow:0 1px 2px rgba(0,0,0,0.15), 0 24px 60px -20px rgba(0,0,0,0.45);
+    transition:transform .4s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+    pointer-events:auto;
+  }
+  .celebration-card.show{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+  .celebration-icon{ width:64px; height:64px; margin:0 auto 16px; border-radius:50%; background:var(--good-tint); display:flex; align-items:center; justify-content:center; }
+  .celebration-icon svg{ width:34px; height:34px; }
+  .celebration-title{ font-family:"Fraunces",Georgia,serif; font-weight:700; font-size:21px; color:var(--ink); margin-bottom:6px; }
+  .celebration-sub{ font-size:13.5px; color:var(--ink-2); line-height:1.4; }
+  .celebration-dismiss{ margin-top:18px; background:none; border:none; color:var(--accent-strong); font:inherit; font-weight:600; font-size:13px; cursor:pointer; padding:4px; }
+  .confetti-piece{ position:absolute; top:-16px; width:8px; height:14px; border-radius:2px; opacity:0.95; animation-name:confetti-fall; animation-timing-function:cubic-bezier(.4,0,.6,1); animation-fill-mode:forwards; }
+  @keyframes confetti-fall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    85%{ opacity:1; }
+    100%{ transform:translateY(115vh) rotate(620deg); opacity:0; }
+  }
 </style>
 </head>
 <body>
@@ -683,6 +775,7 @@
 <div class="app" id="app">
   <nav class="rail" id="rail"></nav>
   <div class="main" id="main-content">
+    <div class="page-scene" id="page-scene" aria-hidden="true"></div>
     <header class="topbar" id="topbar"></header>
     <div class="global-search-bar" id="global-search-bar"></div>
     <div class="mobile-subtabs" id="mobile-subtabs" hidden></div>
@@ -691,6 +784,7 @@
   <nav class="mobile-tabbar" id="mobile-tabbar"></nav>
 </div>
 <div id="modal-root"></div>
+<div id="celebration-root" aria-hidden="true"></div>
 <div class="toast-root" id="toast-root"></div>
 <div id="urgent-alert" hidden></div>
 <div id="egg-toast-root" class="egg-toast-root"></div>
@@ -1674,6 +1768,34 @@ var qrcode = (function(){
       '<div class="table-wrap"><table><thead><tr><th>Batch</th><th class="num">Cost</th><th class="num">Sale income</th><th class="num">Net</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
     '</div>';
   }
+  // Standing "what is the flock worth right now" figure — administrator
+  // only (not even Financial Staff, per how the owner asked for this: "This
+  // profits should only show me no one else"), using FLOCK_VALUE_TABLE
+  // above. Purely informational, never folded into income/expenses.
+  function flockAssetValueCardHTML(){
+    if(!isAdmin()) return '';
+    var rows = [
+      ['Mature roosters (21+ wk)', function(b){return b.gender==='male' && ageWeeks(b)>=21;}, FLOCK_VALUE_TABLE.matureCock],
+      ['Hens (21+ wk)', function(b){return b.gender!=='male' && ageWeeks(b)>=21;}, FLOCK_VALUE_TABLE.hen],
+      ['Growers, 12–20 wk', function(b){var w=ageWeeks(b); return w>=12 && w<=20;}, FLOCK_VALUE_TABLE.growerOlder],
+      ['Growers, 9–11 wk', function(b){var w=ageWeeks(b); return w>=9 && w<=11;}, FLOCK_VALUE_TABLE.growerYounger],
+      ['Chicks, 4–8 wk', function(b){var w=ageWeeks(b); return w>=4 && w<=8;}, FLOCK_VALUE_TABLE.chickOlder],
+      ['Chicks, 2–3 wk', function(b){var w=ageWeeks(b); return w>=2 && w<=3;}, FLOCK_VALUE_TABLE.chickMid],
+      ['Chicks, 0–1 wk', function(b){var w=ageWeeks(b); return w<2;}, FLOCK_VALUE_TABLE.chickYoungest]
+    ];
+    var grandTotal = 0;
+    var body = rows.map(function(rw){
+      var label=rw[0], match=rw[1], price=rw[2];
+      var count = state.flock.reduce(function(a,b){ return a + (match(b) ? currentCount(b) : 0); }, 0);
+      var value = count*price;
+      grandTotal += value;
+      return '<tr><td>'+label+'</td><td class="num">'+count.toLocaleString()+'</td><td class="num">'+fmtMoney(price)+'</td><td class="num">'+fmtMoney(value)+'</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Flock asset value</h3><span class="hint">Only visible to you — fixed price-per-bird estimate, not a market quote</span></div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Category</th><th class="num">Birds</th><th class="num">Price each</th><th class="num">Value</th></tr></thead><tbody>'+body+'</tbody>'+
+      '<tfoot><tr style="font-weight:700"><td>Total</td><td></td><td></td><td class="num">'+fmtMoney(grandTotal)+'</td></tr></tfoot></table></div>'+
+    '</div>';
+  }
 
   /* ============================= AGGREGATES ============================= */
   function inRange(iso,s,e){ return iso>=s && iso<=e; }
@@ -1689,6 +1811,65 @@ var qrcode = (function(){
   function ageGroupForWeeks(w){ return w<=8 ? 'chick' : (w<=20 ? 'grower' : 'layer'); }
   function ageGroupLabel(k){ return k==='chick'?'Chicks':(k==='grower'?'Growers':'Layers'); }
   function genderLabel(g){ return g==='female'?'hen':(g==='male'?'rooster':'unsexed bird'); }
+  // ---- Flock asset valuation (admin-only) ---------------------------
+  // A fixed, editable-in-code price table the owner gave for what each
+  // bird is roughly "worth" right now, by age band and (once mature)
+  // gender — used only to show a standing asset value for the flock on
+  // hand, never fed into income/expense totals or profit figures
+  // elsewhere in the app. Bands line up with the existing
+  // ageGroupForWeeks bands (chick 0-8wk, grower 9-20wk, layer 21+wk),
+  // just split further where the owner wants a finer price step.
+  var FLOCK_VALUE_TABLE = {
+    matureCock: 1000,   // male, 21+ weeks
+    hen: 600,           // female (or unsexed), 21+ weeks
+    growerOlder: 400,   // 12-20 weeks
+    growerYounger: 300, // 9-11 weeks
+    chickOlder: 200,    // 4-8 weeks
+    chickMid: 150,      // 2-3 weeks
+    chickYoungest: 100  // 0-1 weeks
+  };
+  function flockValuePerBird(b, atDate){
+    var w = ageWeeks(b, atDate);
+    if(w>=21) return b.gender==='male' ? FLOCK_VALUE_TABLE.matureCock : FLOCK_VALUE_TABLE.hen;
+    if(w>=9) return w>=12 ? FLOCK_VALUE_TABLE.growerOlder : FLOCK_VALUE_TABLE.growerYounger;
+    if(w>=4) return FLOCK_VALUE_TABLE.chickOlder;
+    if(w>=2) return FLOCK_VALUE_TABLE.chickMid;
+    return FLOCK_VALUE_TABLE.chickYoungest;
+  }
+  function flockAssetValueTotal(atDate){
+    atDate = atDate || new Date();
+    return state.flock.reduce(function(sum,b){ return sum + currentCount(b)*flockValuePerBird(b,atDate); }, 0);
+  }
+  // ---- Egg-to-cash asset value (admin-only) -------------------------
+  // A per-egg cash value used only to answer "could the eggs I currently
+  // have on hand cover what I've spent?" — shown as a separate,
+  // clearly-labelled figure alongside Expenses. Deliberately never added
+  // into income (that would double-count real egg sales, which are
+  // already logged as Income → Egg Sales) and never affects the
+  // Overview profit figure — see eggAssetCoverageCardHTML below.
+  var EGG_UNIT_VALUE_KSH = 15;
+  function eggAssetValueForRange(startISO, endISO){ return sumEggs(startISO, endISO) * EGG_UNIT_VALUE_KSH; }
+  // Celebrates the first time a calendar month turns profitable (real
+  // income minus real expenses — separate from the egg-asset coverage
+  // figure above) while eggs are actually being collected that month, so
+  // it reads as "the eggs are paying off this month" rather than firing
+  // for an unrelated one-off sale. In-memory only (celebratedProfitMonths
+  // resets on reload) — this is a nice-to-have moment, not a record, so
+  // there's no need to persist it or show it more than once per session.
+  var celebratedProfitMonths = {};
+  function checkMonthlyEggProfitCelebration(){
+    if(!canSeeFinance()) return;
+    var r = getRange('month');
+    var monthKey = r.startISO.slice(0,7);
+    if(celebratedProfitMonths[monthKey]) return;
+    var eggsThisMonth = sumEggs(r.startISO, r.endISO);
+    if(eggsThisMonth<=0) return;
+    var profit = sumMoney(state.incomes, r.startISO, r.endISO) - sumMoney(state.expenses, r.startISO, r.endISO);
+    if(profit>0){
+      celebratedProfitMonths[monthKey] = true;
+      celebrate({ title:'Profit this month!', subtitle:r.label+' — '+eggsThisMonth.toLocaleString()+' eggs collected, '+fmtMoney(profit)+' ahead so far.' });
+    }
+  }
   function removalReasonLabel(r){ return {sold:'Sold', died:'Died', predator:'Taken by predators', consumed:'Consumed at home', culled:'Culled', other:'Other'}[r] || 'Other'; }
   function lossesByReason(){
     var map = {};
@@ -2073,8 +2254,41 @@ var qrcode = (function(){
     // attribute is all it takes to recolor the whole page.
     var mainEl = document.getElementById('main-content');
     if(mainEl) mainEl.setAttribute('data-section', ui.section);
+    var sceneEl = document.getElementById('page-scene');
+    if(sceneEl) sceneEl.innerHTML = pageSceneHTML(ui.section);
     document.getElementById('topbar').innerHTML = navControlsHTML() + sec.topbar();
     document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + sec.panel();
+  }
+  // One small themed illustration set per page, drawn from the app's own
+  // existing PICS icon art (see var PICS above) rather than new assets —
+  // scattered at a few fixed positions and faded via .page-scene-icon so
+  // each section feels visually like "its own place" (money for
+  // Expenses/Income/Finance, hens/cocks/chicks for Flock, and so on)
+  // without competing with the actual page content on top of it.
+  function sceneIcon(svg, style){ return '<div class="page-scene-icon" style="'+style+'">'+svg+'</div>'; }
+  function pageSceneHTML(key){
+    var defs = {
+      overview:[[PICS.hen,'top:8%;left:4%;width:130px;transform:rotate(-6deg)'],[PICS.eggs,'bottom:10%;right:6%;width:120px;transform:rotate(5deg)'],[PICS.cock,'top:12%;right:10%;width:100px;transform:scaleX(-1)']],
+      flock:[[PICS.hen,'top:8%;left:4%;width:150px;transform:rotate(-6deg)'],[PICS.cock,'bottom:8%;right:5%;width:170px;transform:rotate(5deg) scaleX(-1)'],[PICS.chick,'top:52%;right:8%;width:90px'],[PICS.chick,'bottom:22%;left:16%;width:70px;transform:scaleX(-1)']],
+      eggs:[[PICS.eggs,'top:9%;right:7%;width:150px'],[PICS.eggs,'bottom:10%;left:5%;width:120px;transform:scaleX(-1)'],[PICS.hen,'top:55%;right:4%;width:100px;transform:rotate(4deg)']],
+      feed:[[PICS.feed,'top:10%;left:5%;width:150px'],[PICS.feed,'bottom:9%;right:6%;width:120px;transform:scaleX(-1)']],
+      health:[[PICS.health,'top:9%;right:5%;width:150px'],[PICS.health,'bottom:10%;left:6%;width:110px;transform:scaleX(-1)']],
+      expenses:[[PICS.expenses,'top:9%;left:5%;width:140px'],[PICS.expenses,'bottom:9%;right:6%;width:120px;transform:scaleX(-1)']],
+      income:[[PICS.income,'top:9%;right:5%;width:140px'],[PICS.income,'bottom:9%;left:6%;width:120px;transform:scaleX(-1)']],
+      customers:[[PICS.customers,'top:9%;left:5%;width:140px'],[PICS.customers,'bottom:9%;right:6%;width:110px;transform:scaleX(-1)']],
+      finance:[[PICS.finance,'top:9%;right:5%;width:150px'],[PICS.finance,'bottom:9%;left:6%;width:120px;transform:scaleX(-1)']],
+      reports:[[PICS.reports,'top:9%;left:5%;width:140px'],[PICS.reports,'bottom:9%;right:6%;width:110px;transform:scaleX(-1)']],
+      about:[[PICS.about,'top:9%;right:5%;width:140px']],
+      settings:[[PICS.settings,'top:9%;left:5%;width:130px']],
+      team:[[PICS.team,'top:9%;right:5%;width:140px']],
+      directory:[[PICS.directory,'top:9%;left:5%;width:140px']],
+      messages:[[PICS.messages,'top:9%;right:5%;width:140px']],
+      signoffs:[[PICS.signoffs,'top:9%;left:5%;width:140px']],
+      trash:[[PICS.trash,'top:9%;right:5%;width:130px']]
+    };
+    var list = defs[key];
+    if(!list) return '';
+    return list.map(function(d){ return sceneIcon(d[0], d[1]); }).join('');
   }
 
   /* ============================= OVERVIEW ============================= */
@@ -2282,34 +2496,19 @@ var qrcode = (function(){
   }
 
   /* ============================= FLOCK ============================= */
-  function genderTile(label,count,icon){
-    return '<div class="stat-tile'+(icon?' with-pic':'')+'" style="padding:14px 16px">'+
+  function genderTile(label,count,icon,action){
+    return '<div class="stat-tile'+(icon?' with-pic':'')+'"'+
+      (action?' data-action="'+action+'" style="padding:14px 16px; cursor:pointer" title="Open '+esc(label)+' page"':' style="padding:14px 16px"')+'>'+
       (icon?'<div class="pic-badge sm">'+icon+'</div>':'')+
       '<div class="stat-tile-text"><div class="stat-label">'+label+'</div><div class="stat-value num" style="font-size:22px">'+count+'</div></div>'+
     '</div>';
   }
-  function flockPanel(){
-    var inv = buildInventory();
-    var totalNow = birdsAsOf(todayISO());
-    // Each age group gets its own illustrated badge in the card title — and
-    // the Layers card's Hens/Roosters tiles additionally get the Hen/Cock
-    // artwork, since that's where sexed adult birds actually live.
-    var groupDefs = [['chick','Chicks','0–8 weeks',PICS.chick],['grower','Growers','9–20 weeks',PICS.grower],['layer','Layers','21+ weeks',null]];
-    var groupsHTML = groupDefs.map(function(gd){
-      var key=gd[0], label=gd[1], sub=gd[2], icon=gd[3];
-      var g = inv[key]; var subtotal = g.female+g.male+g.unsexed;
-      var henIcon = key==='layer' ? PICS.hen : null;
-      var cockIcon = key==='layer' ? PICS.cock : null;
-      return '<div class="card"><div class="card-title"><div class="card-title-lead">'+(icon?'<div class="pic-badge">'+icon+'</div>':'')+'<h3>'+label+'</h3></div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+sub+' · '+subtotal+' birds</span>'+
-        '<button class="icon-btn" data-action="open-add-flock:'+key+'" title="Add '+label.toLowerCase()+'" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
-        '<div class="grid" style="grid-template-columns:repeat(3,1fr)">'+
-          genderTile('Hens',g.female,henIcon)+genderTile('Roosters',g.male,cockIcon)+genderTile('Unsexed',g.unsexed)+
-        '</div></div>';
-    }).join('');
-
-    var batches = state.flock.slice().sort(function(a,b){ return a.dateAdded<b.dateAdded?1:-1; });
-    var batchesPage = paginate('flock-batches', batches);
-    var rows = batchesPage.items.map(function(b){
+  // Turns the filtered "Batches" table shared by the Flock Overview and
+  // its dedicated Chicks/Growers/Hens/Cocks pages into rows — pulled out
+  // of flockOverviewPanel so both places render identical, always-in-sync
+  // rows instead of two copies of the same markup drifting apart.
+  function flockBatchRowsHtml(batches){
+    return batches.map(function(b){
       var c = currentCount(b), wk = ageWeeks(b);
       var histCount = (b.removals||[]).filter(function(r){return r.reason!=='resexed';}).length + (b.removals||[]).filter(function(r){return r.reason==='resexed';}).length;
       return '<tr>'+
@@ -2328,6 +2527,86 @@ var qrcode = (function(){
         '</div></td>'+
       '</tr>';
     }).join('');
+  }
+  // ---- Flock: "Overview + dropdown" restructuring -------------------
+  // The Flock section is now split into an Overview (the original page,
+  // content unchanged below) plus dedicated Chicks / Growers / Hens /
+  // Cocks / Brooding Hens pages, switched with a dropdown — see
+  // flockViewSwitcherHTML(). SECTIONS.flock.panel points at this
+  // dispatcher; flockOverviewPanel() further down is the original body.
+  var FLOCK_VIEWS = [['overview','Overview'],['chicks','Chicks'],['growers','Growers'],['hens','Hens'],['cocks','Cocks'],['brooding','Brooding Hens']];
+  function sectionViewSwitcherHTML(sectionKey, views, currentLabel){
+    var cur = currentView(sectionKey);
+    return '<div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap">'+
+      '<label class="hint" style="margin:0">Viewing</label>'+
+      '<select class="field" data-change="view-select:'+sectionKey+'" style="max-width:240px; width:auto">'+
+        views.map(function(v){ return '<option value="'+v[0]+'" '+(cur===v[0]?'selected':'')+'>'+v[1]+'</option>'; }).join('')+
+      '</select>'+
+      (cur!=='overview' ? '<button type="button" class="linklike" data-action="view-select:'+sectionKey+':overview">← Back to Overview</button>' : '')+
+    '</div>';
+  }
+  function flockViewSwitcherHTML(){ return sectionViewSwitcherHTML('flock', FLOCK_VIEWS); }
+  // One dedicated page for Chicks, Growers, Hens, or Cocks — same
+  // filtered-batches idea each time, just a different age-band/gender
+  // predicate (matchFn) and heading art.
+  function flockGroupPageHTML(label, icon, sub, matchFn){
+    var batches = state.flock.filter(matchFn).sort(function(a,b){ return a.dateAdded<b.dateAdded?1:-1; });
+    var total = batches.reduce(function(a,b){ return a+currentCount(b); }, 0);
+    var batchesPage = paginate('flock-group-'+label, batches);
+    return '<div class="banner">'+total.toLocaleString()+' '+label.toLowerCase()+' on the farm today.</div>'+
+      '<div class="card"><div class="card-title"><div class="card-title-lead">'+(icon?'<div class="pic-badge">'+icon+'</div>':'')+'<h3>'+label+'</h3></div><span class="hint">'+sub+'</span></div>'+
+        '<div class="table-wrap">'+
+        (batches.length ?
+          '<table><thead><tr><th>Added</th><th>Gender</th><th>Age</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+flockBatchRowsHtml(batchesPage.items)+'</tbody></table>'
+          : '<div class="empty">'+ICONS.empty+'<div>No '+label.toLowerCase()+' recorded yet.</div></div>')+
+        '</div>'+pagerHtml('flock-group-'+label, batchesPage.pageCount, batchesPage.page)+'</div>';
+  }
+  function flockChicksPageHTML(){ return flockGroupPageHTML('Chicks', PICS.chick, '0–8 weeks', function(b){ return ageGroupForWeeks(ageWeeks(b))==='chick'; }); }
+  function flockGrowersPageHTML(){ return flockGroupPageHTML('Growers', PICS.grower, '9–20 weeks', function(b){ return ageGroupForWeeks(ageWeeks(b))==='grower'; }); }
+  function flockHensPageHTML(){ return flockGroupPageHTML('Hens', PICS.hen, '21+ weeks · female', function(b){ return ageGroupForWeeks(ageWeeks(b))==='layer' && b.gender==='female'; }); }
+  function flockCocksPageHTML(){ return flockGroupPageHTML('Cocks', PICS.cock, '21+ weeks · male', function(b){ return ageGroupForWeeks(ageWeeks(b))==='layer' && b.gender==='male'; }); }
+  function flockPanel(){
+    var view = currentView('flock');
+    var body;
+    if(view==='chicks') body = flockChicksPageHTML();
+    else if(view==='growers') body = flockGrowersPageHTML();
+    else if(view==='hens') body = flockHensPageHTML();
+    else if(view==='cocks') body = flockCocksPageHTML();
+    else if(view==='brooding') body = broodingPanelHTML(false);
+    else body = flockOverviewPanel();
+    return flockViewSwitcherHTML() + body;
+  }
+  function flockOverviewPanel(){
+    var inv = buildInventory();
+    var totalNow = birdsAsOf(todayISO());
+    // Each age group gets its own illustrated badge in the card title — and
+    // the Layers card's Hens/Roosters tiles additionally get the Hen/Cock
+    // artwork, since that's where sexed adult birds actually live.
+    // Card titles for Chicks/Growers now double as links to their own
+    // dedicated page (flock-view:chicks / flock-view:growers); the mixed
+    // Layers card instead makes its Hens/Roosters tiles the links, since
+    // those are the two dedicated pages that apply to it.
+    var groupDefs = [['chick','Chicks','0–8 weeks',PICS.chick,'chicks'],['grower','Growers','9–20 weeks',PICS.grower,'growers'],['layer','Layers','21+ weeks',null,null]];
+    var groupsHTML = groupDefs.map(function(gd){
+      var key=gd[0], label=gd[1], sub=gd[2], icon=gd[3], viewKey=gd[4];
+      var g = inv[key]; var subtotal = g.female+g.male+g.unsexed;
+      var henIcon = key==='layer' ? PICS.hen : null;
+      var cockIcon = key==='layer' ? PICS.cock : null;
+      var titleHtml = viewKey
+        ? '<h3 style="cursor:pointer" data-action="view-select:flock:'+viewKey+'" title="Open the '+label+' page">'+label+'</h3>'
+        : '<h3>'+label+'</h3>';
+      return '<div class="card"><div class="card-title"><div class="card-title-lead">'+(icon?'<div class="pic-badge">'+icon+'</div>':'')+titleHtml+'</div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+sub+' · '+subtotal+' birds</span>'+
+        '<button class="icon-btn" data-action="open-add-flock:'+key+'" title="Add '+label.toLowerCase()+'" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
+        '<div class="grid" style="grid-template-columns:repeat(3,1fr)">'+
+          genderTile('Hens',g.female,henIcon, key==='layer'?'view-select:flock:hens':null)+
+          genderTile('Roosters',g.male,cockIcon, key==='layer'?'view-select:flock:cocks':null)+
+          genderTile('Unsexed',g.unsexed)+
+        '</div></div>';
+    }).join('');
+
+    var batches = state.flock.slice().sort(function(a,b){ return a.dateAdded<b.dateAdded?1:-1; });
+    var batchesPage = paginate('flock-batches', batches);
+    var rows = flockBatchRowsHtml(batchesPage.items);
 
     var lossEntries = lossesByReason();
     var totalLost = lossEntries.reduce(function(a,e){return a+e[1];},0);
@@ -2342,7 +2621,8 @@ var qrcode = (function(){
         '</div>'+pagerHtml('flock-batches', batchesPage.pageCount, batchesPage.page)+'</div>'+
       flockActivityPanelHTML()+
       batchProfitabilityCardHTML()+
-      broodingPanelHTML()+
+      flockAssetValueCardHTML()+
+      broodingPanelHTML(true)+
       '<div class="card"><div class="card-title"><h3>Flock losses, all time</h3><span class="hint">'+totalLost+' birds total — use "Record loss or sale" on a batch to add one</span></div>'+
         countBars(lossEntries)+
       '</div>';
@@ -2392,7 +2672,7 @@ var qrcode = (function(){
         : '<div class="empty">'+ICONS.empty+'<div>Nothing recorded yet.</div></div>')+
       '</div>'+pagerHtml('flock-activity', activityPage.pageCount, activityPage.page)+'</div>';
   }
-  function broodingPanelHTML(){
+  function broodingPanelHTML(linkToPage){
     var list = (state.broodings||[]).slice().sort(function(a,b){ return a.dateStarted<b.dateStarted?1:-1; });
     var broodPage = paginate('brooding', list);
     var rows = broodPage.items.map(function(b){
@@ -2418,7 +2698,10 @@ var qrcode = (function(){
           '<button class="icon-btn" data-action="delete-brooding:'+b.id+'" title="Delete" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
         '</div></td></tr>';
     }).join('');
-    return '<div class="card"><div class="card-title"><div class="card-title-lead"><div class="pic-badge">'+PICS.brooding+'</div><h3>Brooding</h3></div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+list.length+' recorded</span>'+
+    var broodingTitleHtml = linkToPage
+      ? '<h3 style="cursor:pointer" data-action="view-select:flock:brooding" title="Open the Brooding Hens page">Brooding</h3>'
+      : '<h3>Brooding</h3>';
+    return '<div class="card"><div class="card-title"><div class="card-title-lead"><div class="pic-badge">'+PICS.brooding+'</div>'+broodingTitleHtml+'</div><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+list.length+' recorded</span>'+
         '<button class="icon-btn" data-action="open-add-brooding" title="Start brooding" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
       '<p class="hint" style="margin-top:-6px">When a hen starts sitting on eggs, log how many she\'s given here — the app works out the expected hatch date on its own (21 days). Once it\'s time, come back and record how many didn\'t hatch; the rest are added to the flock as new chicks automatically.</p>'+
       '<div class="table-wrap">'+
@@ -2602,8 +2885,14 @@ var qrcode = (function(){
   }
 
   /* ============================= EGGS ============================= */
-  function eggsPanel(){
-    var entries = state.eggs.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+  // ---- Eggs: "Overview + dropdown" restructuring --------------------
+  // Same pattern as Flock above: Overview keeps the trend/aggregate cards
+  // that used to be the whole page; the daily log and the sold/used/lost
+  // table each moved to their own dedicated page, reachable from the
+  // dropdown or the two links at the bottom of Overview.
+  var EGGS_VIEWS = [['overview','Overview'],['log','Egg Log'],['losses','Sold, Used & Lost']];
+  function eggsOverviewPanel(){
+    var entries = state.eggs.slice();
     var last30 = [];
     for(var i=29;i>=0;i--){ var iso=toISO(addDays(new Date(),-i)); last30.push(sumEggs(iso,iso)); }
 
@@ -2613,27 +2902,7 @@ var qrcode = (function(){
     var months = [];
     for(var m=0; m<6; m++){ var refM=new Date(); refM.setDate(1); refM.setMonth(refM.getMonth()-m); var rm=getRange('month', refM); months.push({label:rm.label, total:sumEggs(rm.startISO,rm.endISO), days:daysBetween(rm.start,rm.end)+1}); }
 
-    var eggsPage = paginate('eggs-log', entries);
-    var rows = eggsPage.items.map(function(e){
-      var sizeStr = eggSizeSummary(e.sizes);
-      return '<tr><td>'+fmtDate(parseISO(e.date))+'</td><td class="num">'+e.total+'</td><td>'+(sizeStr||'<span class="hint">—</span>')+'</td><td>'+esc(e.note||'—')+'</td>'+
-      '<td><div class="row-actions">'+
-        '<button class="icon-btn" data-action="edit-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
-        '<button class="icon-btn" data-action="delete-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
-      '</div></td></tr>';
-    }).join('');
-
     var laidAll = totalEggsLaid(), lostAll = totalEggsLost(), availableAll = laidAll - lostAll;
-    var lossEntries = state.eggLosses.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
-    var lossPage = paginate('egg-losses', lossEntries);
-    var lossRows = lossPage.items.map(function(x){
-      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+eggLossReasonLabel(x.reason)+'</td><td>'+esc(x.note||'—')+'</td>'+
-      '<td><div class="row-actions">'+
-        (x.reason==='sold' ? '<button class="icon-btn" data-action="view-egg-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
-        '<button class="icon-btn" data-action="edit-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
-        '<button class="icon-btn" data-action="delete-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
-      '</div></td></tr>';
-    }).join('');
 
     return '<div class="grid stats">'+
       statTile('Eggs laid, all time', laidAll.toLocaleString()+' eggs', '')+
@@ -2657,18 +2926,54 @@ var qrcode = (function(){
           EGG_SIZES.map(function(p){ return genderTile(p[1], sizeTotals[p[0]].toLocaleString()); }).join('')+
         '</div></div>';
     })()+
-    '<div class="card"><div class="card-title"><h3>Daily log</h3><span class="hint">'+entries.length+' entries</span></div>'+
+    '<div class="card" style="text-align:center; display:flex; gap:10px; justify-content:center; flex-wrap:wrap">'+
+      '<button type="button" class="btn" data-action="view-select:eggs:log">Open the Egg Log →</button>'+
+      '<button type="button" class="btn" data-action="view-select:eggs:losses">Sold, Used &amp; Lost →</button>'+
+    '</div>';
+  }
+  function eggsLogPageHTML(){
+    var entries = state.eggs.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var eggsPage = paginate('eggs-log', entries);
+    var rows = eggsPage.items.map(function(e){
+      var sizeStr = eggSizeSummary(e.sizes);
+      return '<tr><td>'+fmtDate(parseISO(e.date))+'</td><td class="num">'+e.total+'</td><td>'+(sizeStr||'<span class="hint">—</span>')+'</td><td>'+esc(e.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-egg:'+e.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Daily log</h3><span class="hint">'+entries.length+' entries</span></div>'+
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>By size</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No eggs logged yet.</div></div>')+
-      '</div>'+pagerHtml('eggs-log', eggsPage.pageCount, eggsPage.page)+'</div>'+
-    '<div class="card"><div class="card-title"><h3>Sold, used &amp; lost eggs</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">Sales, breakage, home use, or given for brooding</span>'+
+      '</div>'+pagerHtml('eggs-log', eggsPage.pageCount, eggsPage.page)+'</div>';
+  }
+  function eggsLossesPageHTML(){
+    var lossEntries = state.eggLosses.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var lossPage = paginate('egg-losses', lossEntries);
+    var lossRows = lossPage.items.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+eggLossReasonLabel(x.reason)+'</td><td>'+esc(x.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        (x.reason==='sold' ? '<button class="icon-btn" data-action="view-egg-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
+        '<button class="icon-btn" data-action="edit-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-eggloss:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Sold, used &amp; lost eggs</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">Sales, breakage, home use, or given for brooding</span>'+
       '<button class="icon-btn" data-action="open-add-eggloss" title="Log a sale or a loss" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'</button></div></div>'+
       countBars(eggLossesByReason())+
       '<div class="table-wrap" style="margin-top:14px">'+
       (lossEntries.length ? '<table><thead><tr><th>Date</th><th class="num">Eggs</th><th>Reason</th><th>Note</th><th></th></tr></thead><tbody>'+lossRows+'</tbody></table>'
         : '<div class="empty">No egg losses recorded yet.</div>')+
       '</div>'+pagerHtml('egg-losses', lossPage.pageCount, lossPage.page)+'</div>';
+  }
+  function eggsPanel(){
+    var view = currentView('eggs');
+    var body;
+    if(view==='log') body = eggsLogPageHTML();
+    else if(view==='losses') body = eggsLossesPageHTML();
+    else body = eggsOverviewPanel();
+    return sectionViewSwitcherHTML('eggs', EGGS_VIEWS) + body;
   }
   var EGG_SIZES = [['small','Small'],['medium','Medium'],['large','Large'],['jumbo','Jumbo']];
   // Short "S12 · M40 · L20 · J3" style summary for a table row — only the
@@ -2900,7 +3205,12 @@ var qrcode = (function(){
       });
   }
   function overdueHealthCount(){ return upcomingHealthReminders().filter(function(r){ return r.overdue; }).length; }
-  function healthPanel(){
+  // ---- Health: "Overview + dropdown" restructuring -------------------
+  // Overview keeps just the reminders (what used to be the top half of
+  // this page); the full log — which can get long — moved to its own
+  // "All Records" page.
+  var HEALTH_VIEWS = [['overview','Overview'],['records','All Records']];
+  function healthOverviewPanel(){
     var reminders = upcomingHealthReminders();
     var remindersHtml = reminders.length ? reminders.map(function(r){
       var pillStyle = r.overdue ? 'style="background:var(--bad-tint); color:var(--bad)"' : (r.dueSoon ? 'style="background:var(--accent-tint); color:var(--accent-strong)"' : '');
@@ -2909,7 +3219,10 @@ var qrcode = (function(){
         '<div class="hint">'+esc(healthBatchLabel(r.batchId))+' · due '+fmtDate(parseISO(r.nextDueDate))+'</div></div>'+
         '<button class="icon-btn" data-action="edit-health:'+r.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button></div>';
     }).join('') : '<div class="empty">'+ICONS.empty+'<div>Nothing due — set a "next due" date on a record to see reminders here.</div></div>';
-
+    return '<div class="card"><div class="card-title"><h3>Upcoming &amp; due</h3></div>'+remindersHtml+'</div>'+
+      '<div class="card" style="text-align:center"><button type="button" class="btn" data-action="view-select:health:records">Open the full Health Log →</button></div>';
+  }
+  function healthRecordsPageHTML(){
     var entries = (state.healthRecords||[]).slice().sort(function(a,b){ return a.date<b.date?1:-1; });
     var healthPage = paginate('health-log', entries);
     var rows = healthPage.items.map(function(x){
@@ -2921,13 +3234,16 @@ var qrcode = (function(){
         '<button class="icon-btn" data-action="delete-health:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
       '</div></td></tr>';
     }).join('');
-
-    return '<div class="card"><div class="card-title"><h3>Upcoming &amp; due</h3></div>'+remindersHtml+'</div>'+
-    '<div class="card"><div class="card-title"><h3>Health log</h3><span class="hint">'+entries.length+' records</span></div>'+
+    return '<div class="card"><div class="card-title"><h3>Health log</h3><span class="hint">'+entries.length+' records</span></div>'+
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Type</th><th>What</th><th>Batch</th><th>Next due</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
         : '<div class="empty">'+ICONS.empty+'<div>No health records yet.</div></div>')+
       '</div>'+pagerHtml('health-log', healthPage.pageCount, healthPage.page)+'</div>';
+  }
+  function healthPanel(){
+    var view = currentView('health');
+    var body = view==='records' ? healthRecordsPageHTML() : healthOverviewPanel();
+    return sectionViewSwitcherHTML('health', HEALTH_VIEWS) + body;
   }
   function healthFormHtml(id){
     var x = id ? (state.healthRecords||[]).find(function(i){return i.id===id;}) : null;
@@ -3004,7 +3320,8 @@ var qrcode = (function(){
     var profitableCount = profRows.filter(function(x){ return x.hasData && x.net>=0; }).length;
     var losingCount = profRows.filter(function(x){ return x.hasData && x.net<0; }).length;
 
-    return '<div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">'+
+    return moneyCrossNavHTML('reports')+
+      '<div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">'+
         periodSegment('reports')+
         '<div style="display:flex; gap:8px">'+
           '<button class="btn" data-action="export-report-csv">Download CSV</button>'+
@@ -4141,7 +4458,30 @@ var qrcode = (function(){
   }
 
   /* ============================= EXPENSES / INCOME ============================= */
+  // Admin-only "could my eggs cover this spend" indicator — see
+  // EGG_UNIT_VALUE_KSH / eggAssetValueForRange above for why this is kept
+  // completely separate from real income (Income → Egg Sales already
+  // records actual money from eggs sold; this is a hypothetical asset
+  // value on top, never summed into it).
+  function eggAssetCoverageCardHTML(){
+    if(!isAdmin()) return '';
+    var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
+    var rows = periodsDef.map(function(pd){
+      var r = getRange(pd[0]);
+      var eggCount = sumEggs(r.startISO, r.endISO);
+      var eggValue = eggAssetValueForRange(r.startISO, r.endISO);
+      var expenseTotal = sumMoney(state.expenses, r.startISO, r.endISO);
+      var net = expenseTotal - eggValue;
+      var netColor = net<=0 ? 'var(--good)' : 'var(--bad)';
+      var netText = net<=0 ? 'Covered, '+fmtMoney(Math.abs(net))+' to spare' : fmtMoney(net)+' short';
+      return '<tr><td>'+pd[1]+'</td><td class="num">'+eggCount.toLocaleString()+'</td><td class="num">'+fmtMoney(eggValue)+'</td><td class="num">'+fmtMoney(expenseTotal)+'</td><td class="num" style="color:'+netColor+'">'+netText+'</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Egg assets vs. spend</h3><span class="hint">Only visible to you — eggs logged × KSh '+EGG_UNIT_VALUE_KSH+' each, weighed against expenses. Not counted as income.</span></div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Period</th><th class="num">Eggs</th><th class="num">Egg value</th><th class="num">Expenses</th><th class="num">Net after egg value</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>';
+  }
   function moneyBreakdownPanel(list, categories, kind){
+    var moneyNavHtml = moneyCrossNavHTML(kind==='expense'?'expenses':'income');
     var periodsDef = [['day','Today'],['week','This week'],['month','This month'],['year','This year']];
     var cards = periodsDef.map(function(pd){
       var r = getRange(pd[0]);
@@ -4161,7 +4501,8 @@ var qrcode = (function(){
       '</div></td></tr>';
     }).join('');
 
-    return '<div class="grid four">'+cards+'</div>'+
+    return moneyNavHtml+'<div class="grid four">'+cards+'</div>'+
+    (kind==='expense' ? eggAssetCoverageCardHTML() : '')+
     '<div class="card"><div class="card-title"><h3>All '+(kind==='expense'?'expenses':'income')+'</h3><span class="hint">'+entries.length+' records</span></div>'+
       '<div class="table-wrap">'+
       (entries.length ? '<table><thead><tr><th>Date</th><th>Category</th><th class="num">Amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
@@ -5549,9 +5890,29 @@ var qrcode = (function(){
     actions += addBtn('open-add-finance', isAdmin() ? 'Add transaction' : 'New transaction');
     return actions;
   }
+  // ---- Money: lightweight cross-navigation ---------------------------
+  // Income, Expenses, Finance, and Reports stay their own separate
+  // sections (Finance's PIN/fingerprint/lockout gating is too
+  // security-sensitive to risk merging into a shared route right now) —
+  // but each now carries the same "Money" quick-switcher the other
+  // partitioned sections (Flock/Eggs/Health) use, so hopping between them
+  // doesn't mean going back to the sidebar every time. Deliberately never
+  // shown on the Finance lock/PIN screens themselves.
+  var MONEY_VIEWS = [['income','Income'],['expenses','Expenses'],['finance','Finance'],['reports','Reports']];
+  function moneyCrossNavHTML(currentKey){
+    return '<div class="card" style="padding:12px 16px; margin-bottom:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap">'+
+      '<label class="hint" style="margin:0">Money</label>'+
+      '<select class="field" data-change="money-nav" style="max-width:200px; width:auto">'+
+        MONEY_VIEWS.filter(function(v){ return sectionAllowed(v[0]); }).map(function(v){ return '<option value="'+v[0]+'" '+(currentKey===v[0]?'selected':'')+'>'+v[1]+'</option>'; }).join('')+
+      '</select>'+
+    '</div>';
+  }
   function financePanel(){
     if(!canSeeFinance()) return '<div class="empty">'+ICONS.empty+'<div>Finance isn\'t available for your account.</div></div>';
     if(!financePortalUnlocked) return financePortalGateHTML();
+    return moneyCrossNavHTML('finance') + financePanelInner();
+  }
+  function financePanelInner(){
     var f = financeState();
     var r = getRange('month');
     var visible = f.transactions.filter(function(t){
@@ -5829,6 +6190,29 @@ var qrcode = (function(){
   // the administrator's own account, so nobody else's login even offers
   // this. Styled distinctly on purpose — this should visually read as "a
   // different, faster door", not just another tab on the same form.
+  // Two simple flat-illustration hen silhouettes, drawn as inline SVG (no
+  // external image), reused as decorative background layers behind every
+  // fullscreen PIN card — see .quickpin-scene-hen / .quickpin-fullscreen
+  // above for how they're positioned and faded.
+  var QUICKPIN_SCENE_HENS =
+    '<svg class="quickpin-scene-hen h1" viewBox="0 0 100 100" aria-hidden="true">'+
+      '<ellipse cx="52" cy="62" rx="30" ry="23" fill="#EAF6F1"/>'+
+      '<circle cx="80" cy="42" r="13" fill="#EAF6F1"/>'+
+      '<polygon points="92,42 104,38 104,47" fill="#E7A93D"/>'+
+      '<path d="M74 31 q3 -9 8 -2 q3 -8 7 2 q-3 3 -7 3 q-4 0 -8 -3 z" fill="#E7A93D"/>'+
+      '<ellipse cx="24" cy="70" rx="9" ry="12" fill="#EAF6F1"/>'+
+      '<rect x="42" y="82" width="4" height="13" fill="#EAF6F1"/>'+
+      '<rect x="60" y="82" width="4" height="13" fill="#EAF6F1"/>'+
+    '</svg>'+
+    '<svg class="quickpin-scene-hen h2" viewBox="0 0 100 100" aria-hidden="true">'+
+      '<ellipse cx="52" cy="62" rx="30" ry="23" fill="#EAF6F1"/>'+
+      '<circle cx="80" cy="42" r="13" fill="#EAF6F1"/>'+
+      '<polygon points="92,42 104,38 104,47" fill="#E7A93D"/>'+
+      '<path d="M74 31 q3 -9 8 -2 q3 -8 7 2 q-3 3 -7 3 q-4 0 -8 -3 z" fill="#E7A93D"/>'+
+      '<ellipse cx="24" cy="70" rx="9" ry="12" fill="#EAF6F1"/>'+
+      '<rect x="42" y="82" width="4" height="13" fill="#EAF6F1"/>'+
+      '<rect x="60" y="82" width="4" height="13" fill="#EAF6F1"/>'+
+    '</svg>';
   function financeQuickPinGateHTML(){
     quickPinBuffer = '';
     quickPinBusy = false;
@@ -5855,7 +6239,9 @@ var qrcode = (function(){
     } else {
       body = '<p class="hint" style="color:#CDE7DE">Set up your personal Finance PIN first, from Settings → Your account.</p>';
     }
-    return '<div class="quickpin-card">'+
+    return '<div class="quickpin-fullscreen">'+
+      QUICKPIN_SCENE_HENS+
+      '<div class="quickpin-card">'+
       '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
       '<div class="quickpin-title">'+esc((currentUser&&currentUser.name)||'Administrator')+'</div>'+
       '<div class="quickpin-sub">Kenokip Farm · Finance access</div>'+
@@ -5865,7 +6251,7 @@ var qrcode = (function(){
         '<button type="button" class="linklike" data-action="finance-unlock-tab:password">Use password + code</button>'+
         '<span></span>'+
       '</div>'+
-    '</div>';
+    '</div></div>';
   }
   // Administrator's "Show amounts" PIN pad — same auto-detecting, no-OK-
   // button style as financeQuickPinGateHTML above, reused here (inside the
@@ -5886,7 +6272,9 @@ var qrcode = (function(){
       '<button type="button" class="quickpin-key" data-action="revealpin-key:0">0</button>'+
       '<button type="button" class="quickpin-key ghost" data-action="revealpin-backspace" aria-label="Backspace">⌫</button>'+
     '</div>';
-    return '<div class="quickpin-card">'+
+    return '<div class="quickpin-fullscreen">'+
+      QUICKPIN_SCENE_HENS+
+      '<div class="quickpin-card">'+
       '<button class="modal-close" data-action="close-modal" style="position:absolute; top:14px; right:14px; z-index:2; color:#EAF6F1">'+ICONS.close+'</button>'+
       '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
       '<div class="quickpin-title">Show amounts</div>'+
@@ -5895,7 +6283,7 @@ var qrcode = (function(){
       '<div class="quickpin-status" id="revealpin-status">&nbsp;</div>'+
       padHtml+
       '<div class="quickpin-links"><button type="button" class="linklike" data-action="close-modal">Cancel</button><span></span></div>'+
-    '</div>';
+    '</div></div>';
   }
   function revealPinRenderDots(){
     var wrap = document.getElementById('revealpin-dots');
@@ -6188,10 +6576,33 @@ var qrcode = (function(){
   function initFinanceSync(){
     if(financeSyncStarted || !db) return;
     financeSyncStarted = true;
+    // Tracks which approved transaction ids this client has already seen,
+    // so the celebration below only fires the moment a NEW one appears
+    // (Safaricom's callback landing in Firestore and this listener
+    // picking it up) — not for the entire transaction history on first
+    // load, and not twice for one the admin has already looked at.
+    var seenApprovedTxnIds = null;
     db.collection(FINANCE_COLLECTION).doc(FINANCE_DOC).onSnapshot(function(snap){
       state.finance = snap.exists ? Object.assign(defaultFinanceState(), snap.data()) : defaultFinanceState();
       if(!Array.isArray(state.finance.transactions)) state.finance.transactions = [];
+      var newlyApproved = [];
+      var nextSeen = {};
+      state.finance.transactions.forEach(function(t){
+        var approved = (t.status||'approved')==='approved';
+        if(approved){
+          nextSeen[t.id] = true;
+          if(seenApprovedTxnIds && !seenApprovedTxnIds[t.id]) newlyApproved.push(t);
+        }
+      });
+      seenApprovedTxnIds = nextSeen;
       render();
+      if(newlyApproved.length && canSeeFinance()){
+        var t0 = newlyApproved[newlyApproved.length-1];
+        celebrate({
+          title:'Transaction successful',
+          subtitle:(t0.type==='withdrawal'?'−':'+')+fmtMoney(Math.abs(t0.amount))+(t0.date?' · '+fmtDate(parseISO(t0.date)):'')
+        });
+      }
     }, function(){ /* Finance reads are restricted by rule to administrator/financial staff; a failure here just leaves Finance showing its last-known data */ });
   }
 
@@ -6659,6 +7070,50 @@ var qrcode = (function(){
     if(first) first.focus();
   }
   function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+  // ---- Celebration overlay -------------------------------------------
+  // One shared confetti-style "something nice happened" overlay, used for
+  // three moments: a Finance transaction actually confirming (see the
+  // finance snapshot diff in initFinanceSync), chicks hatching (see
+  // 'resolve-brooding' in handleForm), and a profitable month of eggs
+  // (see checkMonthlyEggProfitCelebration). Auto-dismisses on its own;
+  // tapping the backdrop or the "Nice!" link also closes it right away.
+  var CELEBRATION_COLORS = ['#E7A93D','#5FBA80','#3D8F6B','#F2BE63','#D6273C','#4FA8D8','#EAF6F1'];
+  var CELEBRATION_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#3D8F6B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  var celebrationTimer = null;
+  function celebrate(opts){
+    opts = opts || {};
+    var root = document.getElementById('celebration-root');
+    if(!root) return;
+    var confettiHtml = '';
+    for(var i=0;i<40;i++){
+      var left = (Math.random()*100).toFixed(1);
+      var delay = (Math.random()*0.5).toFixed(2);
+      var duration = (2.4+Math.random()*1.6).toFixed(2);
+      var color = CELEBRATION_COLORS[i % CELEBRATION_COLORS.length];
+      var rotate = Math.round(Math.random()*360);
+      var wide = Math.random()>0.5;
+      confettiHtml += '<div class="confetti-piece" style="left:'+left+'%; background:'+color+'; animation-delay:'+delay+'s; animation-duration:'+duration+'s; transform:rotate('+rotate+'deg);'+(wide?'width:12px;height:8px;':'')+'"></div>';
+    }
+    root.innerHTML = confettiHtml+
+      '<div class="celebration-backdrop" data-action="dismiss-celebration"></div>'+
+      '<div class="celebration-card">'+
+        '<div class="celebration-icon">'+(opts.icon||CELEBRATION_CHECK_SVG)+'</div>'+
+        '<div class="celebration-title">'+esc(opts.title||'Nice!')+'</div>'+
+        (opts.subtitle?'<div class="celebration-sub">'+esc(opts.subtitle)+'</div>':'')+
+        '<button type="button" class="celebration-dismiss" data-action="dismiss-celebration">Nice!</button>'+
+      '</div>';
+    requestAnimationFrame(function(){
+      var bd = root.querySelector('.celebration-backdrop'); if(bd) bd.classList.add('show');
+      var card = root.querySelector('.celebration-card'); if(card) card.classList.add('show');
+    });
+    clearTimeout(celebrationTimer);
+    celebrationTimer = setTimeout(dismissCelebration, 4200);
+  }
+  function dismissCelebration(){
+    clearTimeout(celebrationTimer);
+    var root = document.getElementById('celebration-root');
+    if(root) root.innerHTML = '';
+  }
   function confirmModal(message, onYes, opts){
     opts = opts || {};
     // Defaults to a red "Delete" button since most callers are destructive
@@ -6870,6 +7325,12 @@ var qrcode = (function(){
     var verb = parts[0], a1 = parts[1], a2 = parts[2];
     switch(verb){
       case 'nav': goToSection(a1); break;
+      // "← Back to Overview" link on a partitioned section's sub-page
+      // (Flock/Eggs/Money/Health) — the dropdown itself (data-change, see
+      // handleChange) covers switching to any other view; this is just a
+      // one-tap shortcut back to 'overview'. a1=section key, a2=view.
+      case 'view-select': setView(a1, a2); render(); break;
+      case 'dismiss-celebration': dismissCelebration(); break;
       // Phone tab bar only: tapping a group tab (Farm Records, Money,
       // Team) jumps to whichever of its sections was open last, or its
       // first allowed one if none was — the actual page never becomes a
@@ -7355,6 +7816,15 @@ var qrcode = (function(){
     return total;
   }
   function handleChange(name, el){
+    if(name==='money-nav'){ goToSection(el.value); return; }
+    if(name.indexOf('view-select:')===0){
+      // Overview + dropdown sub-pages (Flock: Chicks/Growers/Hens/Cocks/
+      // Brooding; same pattern used for Eggs, Money and Health) — see
+      // currentView()/setView() and each section's own *ViewSwitcherHTML().
+      setView(name.split(':')[1], el.value);
+      render();
+      return;
+    }
     if(name.indexOf('attach-photo:')===0){
       var apParts = name.split(':');
       attachPhotoTo(apParts[1], apParts[2], el.files[0]);
@@ -7428,6 +7898,7 @@ var qrcode = (function(){
       });
       closeModal(); toast('Egg log saved.');
       notifyEggActivity('logged', total+' egg(s) for '+fmtDate(parseISO(date))+(note?' — '+note:''));
+      checkMonthlyEggProfitCelebration();
       return;
     }
     if(name==='eggloss'){
@@ -7600,6 +8071,7 @@ var qrcode = (function(){
       if(rbChicks>0){
         var rbBrood = (state.broodings||[]).find(function(x){return x.id===rbId2;});
         notifyHatch(rbChicks+' chick'+(rbChicks===1?'':'s')+' hatched from the brooding started '+fmtDate(parseISO(rbBrood?rbBrood.dateStarted:rbDate))+'.');
+        celebrate({ title:rbChicks+' chick'+(rbChicks===1?'':'s')+' hatched!', subtitle:'Added to the flock as a new batch.' });
       }
       return;
     }
@@ -7762,6 +8234,7 @@ var qrcode = (function(){
         else list.push({id:uid(name==='expense'?'exp':'inc'), date:mdate, category:category, amount:amount, note:mnote, recordedByRole: roleLabel(currentUser)});
       });
       closeModal(); toast('Saved.');
+      checkMonthlyEggProfitCelebration();
       return;
     }
     if(name==='activity-statement-range'){
@@ -8161,7 +8634,13 @@ var qrcode = (function(){
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
-  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{} };
+  // Which sub-page is showing within a section that's been split into
+  // "Overview + a dropdown of dedicated pages" (Flock, Eggs, Money,
+  // Health) — keyed by section, defaulting to 'overview'. In-memory only,
+  // same as the rest of `ui` (a reload starting back on Overview is fine).
+  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{}, view:{} };
+  function currentView(key){ return ui.view[key] || 'overview'; }
+  function setView(key, v){ ui.view[key] = v; }
   // Where you've been, so the back arrow (see navControlsHTML) has
   // somewhere to go — a plain stack of previously-visited section keys,
   // most recent last. In-memory only (a reload starting fresh is normal
@@ -8250,6 +8729,28 @@ var qrcode = (function(){
     if(!el) return;
     e.preventDefault();
     handleAction(el.dataset.action);
+  });
+  // Lets a laptop/desktop keyboard drive either fullscreen PIN pad
+  // directly — typing digits or tapping Backspace — instead of forcing a
+  // mouse click on the on-screen keys. Whichever pad's dots element is
+  // currently on screen (quickpin-dots for the Finance quick-unlock gate,
+  // revealpin-dots for the "Show amounts" pad) is the one listening; both
+  // can never be open at the same time. Ignored while typing into an
+  // actual text field/textarea elsewhere on the page (e.g. the password +
+  // code tab, or any open form) so this never steals normal typing.
+  document.addEventListener('keydown', function(e){
+    var typingInField = e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA' || e.target.isContentEditable);
+    if(typingInField) return;
+    var quickpinOpen = !!document.getElementById('quickpin-dots');
+    var revealpinOpen = !document.getElementById('revealpin-dots') ? false : true;
+    if(!quickpinOpen && !revealpinOpen) return;
+    if(/^[0-9]$/.test(e.key)){
+      e.preventDefault();
+      if(quickpinOpen) quickPinPressDigit(e.key); else revealPinPressDigit(e.key);
+    } else if(e.key==='Backspace'){
+      e.preventDefault();
+      if(quickpinOpen) quickPinBackspaceKey(); else revealPinBackspaceKey();
+    }
   });
   document.addEventListener('submit', function(e){
     var form = e.target.closest ? e.target.closest('form[data-form]') : null;
