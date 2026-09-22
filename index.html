@@ -802,6 +802,23 @@
     85%{ opacity:1; }
     100%{ transform:translateY(115vh) rotate(620deg); opacity:0; }
   }
+
+  /* ---- "New version available" gate — shown once a fresh deploy has been
+     detected (see the service-worker registration script at the end of the
+     body) and the person is past sign-in. Sits above absolutely everything
+     else in the app (even the photo lightbox and the PIN lock screen) and
+     has no dismiss path except the Refresh button, by design. ---- */
+  .app-update-backdrop{ position:fixed; inset:0; z-index:999999; background:rgba(20,14,6,.55); display:flex; align-items:flex-start; justify-content:center; padding:calc(env(safe-area-inset-top, 0px) + 14px) 16px 16px; animation:app-update-fade-in .25s ease; }
+  .app-update-backdrop[hidden]{ display:none; }
+  @keyframes app-update-fade-in{ from{ opacity:0; } to{ opacity:1; } }
+  .app-update-card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:14px; box-shadow:var(--shadow); width:100%; max-width:380px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .app-update-head{ display:flex; align-items:center; gap:10px; }
+  .app-update-icon{ width:34px; height:34px; border-radius:50%; background:var(--accent-tint); color:var(--accent-strong); display:flex; align-items:center; justify-content:center; flex:none; }
+  .app-update-icon svg{ width:18px; height:18px; }
+  .app-update-head-text{ flex:1 1 auto; min-width:0; }
+  .app-update-head-text strong{ display:block; font-size:14px; color:var(--ink); }
+  .app-update-head-text span{ display:block; font-size:11.5px; color:var(--ink-3); margin-top:2px; line-height:1.35; }
+  .app-update-card button{ width:100%; justify-content:center; }
 </style>
 </head>
 <body>
@@ -1362,6 +1379,11 @@ var qrcode = (function(){
 <script id="app-script">
 (function(){
   'use strict';
+
+  // Bump this alongside sw.js's CACHE_NAME on every deploy — shown in
+  // Settings → About this app, purely so a person (or you, debugging a
+  // support message) can confirm which build is actually running.
+  var APP_VERSION = 'v56';
 
   /* ============================= ICONS ============================= */
   var ICONS = {
@@ -4715,6 +4737,10 @@ var qrcode = (function(){
         '<label class="btn" style="margin:0">Restore from backup<input type="file" accept="application/json" data-change="import-file" style="display:none"></label>'+
       '</div>'+
       '<p class="hint" style="margin-top:10px">Restoring replaces everything currently in the app with the contents of the backup file.</p>'+
+    '</div>'+
+    '<div class="card"><div class="card-title"><h3>About this app</h3></div>'+
+      '<div class="kv-row"><span>Version</span><span class="num">'+APP_VERSION+'</span></div>'+
+      '<p class="hint" style="margin-top:8px">When a new version is published, you\'ll see an "Update available" notice with a Refresh button the next time you open the app — refreshing always gets you the latest build.</p>'+
     '</div>';
   }
   function currencyFormHtml(code){
@@ -8947,9 +8973,98 @@ var qrcode = (function(){
 </script>
 
 <script>
+  // "New version available" gate. sw.js is a cache-first service worker with
+  // a versioned CACHE_NAME — every time this app gets redeployed with that
+  // version bumped, browsers that already have the app open (or installed)
+  // will, on their own, download the new sw.js, install it, and — because
+  // sw.js calls self.skipWaiting()+clients.claim() — activate it and take
+  // over the open page automatically. The one thing the browser can't do on
+  // its own is make an already-loaded page re-fetch the new index.html, so
+  // this listens for that hand-over and asks the person to refresh instead
+  // of silently leaving them on stale HTML/JS talking to a newer backend.
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('sw.js').catch(function(){ /* offline support is best-effort */ });
+      var hadControllerAtLoad = !!navigator.serviceWorker.controller;
+      var updateAvailable = false;
+      var overlayShown = false;
+      var gateObserver = null;
+
+      function buildOverlay(){
+        if(document.getElementById('app-update-backdrop')) return;
+        var refreshIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>';
+        var el = document.createElement('div');
+        el.id = 'app-update-backdrop';
+        el.className = 'app-update-backdrop';
+        el.hidden = true;
+        el.innerHTML =
+          '<div class="app-update-card" role="alertdialog" aria-live="assertive" aria-label="Update available">' +
+            '<div class="app-update-head">' +
+              '<div class="app-update-icon">' + refreshIcon + '</div>' +
+              '<div class="app-update-head-text"><strong>Update available</strong><span>A newer version of Kenokip Farm is ready. Refresh to keep going.</span></div>' +
+            '</div>' +
+            '<button type="button" class="btn primary" id="app-update-refresh-btn">Refresh</button>' +
+          '</div>';
+        document.body.appendChild(el);
+        document.getElementById('app-update-refresh-btn').addEventListener('click', function(){
+          this.disabled = true;
+          this.textContent = 'Refreshing…';
+          location.reload();
+        });
+      }
+
+      // Deliberately doesn't gate on currentUser/guestMode directly (this
+      // script runs outside the app's own IIFE) — the auth-gate element's
+      // own hidden state is already exactly that signal: it's unhidden
+      // while signing in and hidden the moment someone is in, as guest or
+      // signed in for real.
+      function isPastSignIn(){
+        var gate = document.getElementById('auth-gate');
+        return !gate || gate.hidden === true;
+      }
+
+      function revealIfReady(){
+        if(!updateAvailable || overlayShown || !isPastSignIn()) return;
+        buildOverlay();
+        document.getElementById('app-update-backdrop').hidden = false;
+        document.body.style.overflow = 'hidden';
+        overlayShown = true;
+        if(gateObserver){ gateObserver.disconnect(); gateObserver = null; }
+      }
+
+      function watchForSignIn(){
+        var gate = document.getElementById('auth-gate');
+        if(!gate || gateObserver) return;
+        gateObserver = new MutationObserver(revealIfReady);
+        gateObserver.observe(gate, { attributes:true, attributeFilter:['hidden'] });
+      }
+
+      function onUpdateDetected(){
+        if(updateAvailable) return;
+        updateAvailable = true;
+        watchForSignIn();
+        revealIfReady();
+      }
+
+      // Fires once the freshly-installed service worker actually takes over
+      // this page. hadControllerAtLoad tells a real update (a worker was
+      // already in charge, and now a different one is) apart from the very
+      // first install on a brand-new visit (no worker yet, so this is just
+      // this page's own first activation, not "a newer version exists").
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if(hadControllerAtLoad) onUpdateDetected();
+        hadControllerAtLoad = true;
+      });
+
+      navigator.serviceWorker.register('sw.js').then(function(reg){
+        // A phone left open for days shouldn't have to wait for the
+        // browser's own (much lazier) background update schedule — nudge it
+        // to check whenever the tab is looked at again or comes back online.
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState === 'visible') reg.update().catch(function(){});
+        });
+        window.addEventListener('online', function(){ reg.update().catch(function(){}); });
+        setInterval(function(){ reg.update().catch(function(){}); }, 15 * 60 * 1000);
+      }).catch(function(){ /* offline support is best-effort */ });
     });
   }
 </script>
