@@ -184,6 +184,32 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Till (C2B) webhook activity log — every call Safaricom's C2B
+    // Validation/Confirmation URLs receive, accepted or rejected, so the
+    // admin can tell from inside the app whether a real till payment ever
+    // reached us. Same shape as accessLogs — administrator/co-administrator
+    // only, and only the Admin SDK (c2bValidation/c2bConfirmation in
+    // functions/index.js) ever writes here.
+    match /c2bLog/{id} {
+      allow read: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin');
+      allow write: if false;
+    }
+
+    // Admin "push update to everyone" signal — the Team page's "Push update
+    // to everyone" button (administrator/co-administrator only) just bumps
+    // pushedAt on this one doc; every open app (team members AND guests,
+    // read is public same as farms/kenokip) has a realtime listener on it
+    // and shows a mandatory "Update available" refresh prompt the moment it
+    // changes (see the meta/appUpdate onSnapshot listener in index.html).
+    // Simple enough it writes directly from the client rather than through
+    // a Cloud Function.
+    match /meta/appUpdate {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        (request.auth.token.role == 'administrator' || request.auth.token.role == 'coadmin');
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

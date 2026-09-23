@@ -137,6 +137,12 @@ const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 const FARM_REF = () => db.collection('farms').doc('kenokip');
 const MPESA_QUERIES_REF = () => db.collection('mpesaQueries');
 
+// Same egg price the app itself uses (see EGG_UNIT_VALUE_KSH in index.html)
+// — kept as its own constant here rather than shared code because this
+// backend and the static app are deployed completely separately. If you
+// ever change the app's price per egg, change this to match.
+const EGG_UNIT_VALUE_KSH = 15;
+
 // Safaricom's async webhook can — and in production, does — reach us before
 // this function's own "mark this pending" write finishes (confirmed: Check
 // Balance requests were getting stuck forever showing "Checking..." because
@@ -174,18 +180,52 @@ function requireAdminLevelRole(request) {
   return request.auth;
 }
 
-// See the MPESA_WEBHOOK_SECRET comment above. Returns true (and lets the
-// caller continue) when the request is allowed through; returns false (and
-// has already sent a 403) when it wasn't — every onRequest handler below
-// starts with `if (!checkWebhookSecret(req, res)) return;`.
-function checkWebhookSecret(req, res) {
+// See the MPESA_WEBHOOK_SECRET comment above. Pure check, no side effects —
+// split out from checkWebhookSecret() so the C2B logger below can record
+// whether a call was accepted or rejected before a response is sent.
+function webhookKeyMatches(req) {
   const configured = sval(MPESA_WEBHOOK_SECRET);
   if (!configured) return true; // not set up yet on this deployment — don't break anything
   const provided = (req.query && req.query.key) || '';
-  if (timingSafeStringEqual(provided, configured)) return true;
+  return timingSafeStringEqual(provided, configured);
+}
+
+// Returns true (and lets the caller continue) when the request is allowed
+// through; returns false (and has already sent a 403) when it wasn't —
+// every onRequest handler below starts with
+// `if (!checkWebhookSecret(req, res)) return;`.
+function checkWebhookSecret(req, res) {
+  if (webhookKeyMatches(req)) return true;
   logger.warn('Webhook called with a missing/incorrect key', { path: req.path });
   res.status(403).send('forbidden');
   return false;
+}
+
+// Diagnostic trail for the Till (C2B) webhooks specifically — these are the
+// ones Safaricom calls automatically and registers only once (see the
+// comment above c2bValidation/c2bConfirmation), so when they silently stop
+// arriving there's normally no way to tell from inside the app at all. Every
+// call — accepted or rejected — gets one row here, so the admin can open the
+// Team page after a real till payment and see whether Safaricom even
+// reached us, and if so what we did with it. Never throws: a logging
+// failure must never break the actual webhook response Safaricom needs.
+async function logC2BCall(endpoint, req, accepted, extra) {
+  try {
+    const b = req.body || {};
+    await db.collection('c2bLog').add(Object.assign({
+      at: admin.firestore.FieldValue.serverTimestamp(),
+      endpoint: endpoint,
+      accepted: !!accepted,
+      transId: b.TransID || null,
+      amount: b.TransAmount != null ? Number(b.TransAmount) : null,
+      msisdn: b.MSISDN || null,
+      payer: [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ') || null,
+      shortCode: b.BusinessShortCode || null,
+      rawBody: b,
+    }, extra || {}));
+  } catch (err) {
+    logger.error('logC2BCall failed', err);
+  }
 }
 
 function normalizePhone(raw) {
@@ -231,7 +271,7 @@ async function addTransactionIfNew(txn) {
       const incomes = Array.isArray(farmData.incomes) ? farmData.incomes.slice() : [];
       const incomeId = 'inc_fin_' + txn.id;
       if (!incomes.some((x) => x.id === incomeId)) {
-        incomes.push({ id: incomeId, date: txn.date, category: 'M-Pesa / Bank', amount: txn.amount, note: txn.note || 'Received into Finance', linkedFinanceId: txn.id });
+        incomes.push({ id: incomeId, date: txn.date, category: txn.category || 'M-Pesa / Bank', amount: txn.amount, note: txn.note || 'Received into Finance', linkedFinanceId: txn.id });
         t.set(farmRef, Object.assign({}, farmData, { incomes }), { merge: true });
       }
     }
@@ -462,23 +502,45 @@ exports.mpesaB2CTimeout = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (
 // `?key=...` here only takes effect once you've re-run that registration
 // script after setting MPESA_WEBHOOK_SECRET. See SETUP-SECURITY.md.
 exports.c2bValidation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
-  if (!checkWebhookSecret(req, res)) return;
+  const ok = webhookKeyMatches(req);
+  await logC2BCall('c2bValidation', req, ok);
+  if (!ok) {
+    logger.warn('Webhook called with a missing/incorrect key', { path: req.path });
+    res.status(403).send('forbidden');
+    return;
+  }
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });
 
 // Safaricom calls this automatically whenever someone pays the till
-// directly from their own phone (not through our STK push flow above).
+// directly from their own phone (not through our STK push flow above). By
+// default we treat every till payment as an egg sale, since that's what the
+// till is mainly used for: dividing the amount by the same per-egg price the
+// app itself uses (EGG_UNIT_VALUE_KSH) gives an egg count, which becomes
+// both the note and the linked Income's category — the user can still edit
+// the category/note/count afterwards on the Income page, this is only the
+// default.
 exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
-  if (!checkWebhookSecret(req, res)) return;
+  const ok = webhookKeyMatches(req);
+  await logC2BCall('c2bConfirmation', req, ok);
+  if (!ok) {
+    logger.warn('Webhook called with a missing/incorrect key', { path: req.path });
+    res.status(403).send('forbidden');
+    return;
+  }
   try {
     const b = req.body || {};
     const payer = [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ');
+    const amount = Number(b.TransAmount || 0);
+    const eggsCount = Math.max(0, Math.round(amount / EGG_UNIT_VALUE_KSH));
+    const who = payer || b.MSISDN || 'a customer';
     await addTransactionIfNew({
       id: 'c2b_' + (b.TransID || Date.now()),
       date: isoDateFromMpesaTimestamp(b.TransTime) || new Date().toISOString().slice(0, 10),
       type: 'deposit',
-      amount: Number(b.TransAmount || 0),
-      note: 'Received from ' + (b.MSISDN || 'a customer') + (payer ? ' (' + payer + ')' : '') + ' — via kenokipfarm',
+      amount: amount,
+      category: 'Egg Sales',
+      note: eggsCount + (eggsCount === 1 ? ' egg' : ' eggs') + ' — from ' + who + ' via Till',
       source: 'mpesa-c2b',
     });
   } catch (err) {

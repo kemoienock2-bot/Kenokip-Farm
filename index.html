@@ -5220,7 +5220,7 @@ var qrcode = (function(){
     initDirectorySync();
     initMessagesSync();
     initOwnProfileSync();
-    if(isAdminLevel()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); }
+    if(isAdminLevel()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); initC2BLogSync(); }
     if(isAdminLevel() && mpesaEnabled) initMpesaQueriesSync();
     if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
     captureAccessLog();
@@ -5268,6 +5268,16 @@ var qrcode = (function(){
     db.collection('accessLogs').orderBy('at','desc').limit(200).onSnapshot(function(snap){
       accessLogs = [];
       snap.forEach(function(doc){ accessLogs.push(Object.assign({id:doc.id}, doc.data())); });
+      if(ui.section==='team') render();
+    }, function(){});
+  }
+  /* ---- Till (C2B) webhook activity log (administrator only) ---- */
+  function initC2BLogSync(){
+    if(c2bLogSyncStarted || !db || !isAdminLevel()) return;
+    c2bLogSyncStarted = true;
+    db.collection('c2bLog').orderBy('at','desc').limit(50).onSnapshot(function(snap){
+      c2bLog = [];
+      snap.forEach(function(doc){ c2bLog.push(Object.assign({id:doc.id}, doc.data())); });
       if(ui.section==='team') render();
     }, function(){});
   }
@@ -5527,6 +5537,18 @@ var qrcode = (function(){
         '<button class="btn sm" data-action="access-log-page:next" '+(accessLogPage>=totalLogPages-1?'disabled':'')+'>Next</button>'+
       '</div>' : '';
 
+    // Till (C2B) webhook activity — lets the admin actually see, from
+    // inside the app, whether Safaricom's direct-till-payment calls are
+    // reaching us at all, and whether they were accepted or rejected (a
+    // rejected row almost always means the C2B URLs need re-registering
+    // with the current webhook key — see SETUP-SECURITY.md / SETUP-MPESA.md).
+    var c2bRows = c2bLog.map(function(l){
+      var when = (l.at && l.at.toDate) ? fmtDate(l.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      var statusPill = l.accepted ? '<span class="pill" style="background:var(--good-tint); color:var(--good)">Accepted</span>' : '<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Rejected</span>';
+      var who = l.payer || l.msisdn || '—';
+      return '<tr><td>'+when+'</td><td>'+esc(l.endpoint||'—')+'</td><td>'+statusPill+'</td><td class="num">'+(l.amount!=null?fmtMoney(l.amount):'—')+'</td><td>'+esc(who)+'</td></tr>';
+    }).join('');
+
     // Anyone (besides the administrator, who writes their own from Team
     // Directory) still missing a saved About — covers the team added before
     // this existed. New team members get one automatically now (see
@@ -5562,6 +5584,10 @@ var qrcode = (function(){
         '<p class="hint" style="margin-top:-6px">Location needs the person to allow it when their browser asks, and — on iPhone/Android — Location Services turned on for that browser at the device level. "Location denied" means one of those was off, not a fault in the app.</p>'+
         '<div class="table-wrap">'+(accessRows ? '<table><thead><tr><th>Email</th><th>Role</th><th>When</th><th>Location</th><th>Device</th></tr></thead><tbody>'+accessRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No sign-ins recorded yet.</div></div>')+'</div>'+
         logPagerHtml+
+      '</div>'+
+      '<div class="card"><div class="card-title"><h3>Till payment webhook activity</h3><span class="hint">Last '+c2bLog.length+' Safaricom call'+(c2bLog.length===1?'':'s')+' — visible only to you</span></div>'+
+        '<p class="hint" style="margin-top:-6px">Every time Safaricom calls our Till (C2B) webhook — whether we accepted it or not — shows up here. If a real till payment never appears in Finance/Income, check here first: nothing at all means Safaricom isn\'t reaching us (the C2B URLs likely need re-registering), while a "Rejected" row means it arrived but was turned away, usually because the webhook key doesn\'t match what was last registered.</p>'+
+        '<div class="table-wrap">'+(c2bRows ? '<table><thead><tr><th>When</th><th>Endpoint</th><th>Status</th><th class="num">Amount</th><th>From</th></tr></thead><tbody>'+c2bRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No Till webhook calls recorded yet.</div></div>')+'</div>'+
       '</div>';
   }
 
@@ -8923,6 +8949,8 @@ var qrcode = (function(){
   var pendingSignoffUnsubAdmin = null;
   var accessLogs = [];
   var accessLogPage = 0;
+  var c2bLogSyncStarted = false;
+  var c2bLog = []; // Till (C2B) webhook calls, newest first — see initC2BLogSync
   var securityEvents = [];
   var securityEventPage = 0;
   var messages = [];

@@ -49,15 +49,40 @@ async function main() {
   if (envName !== 'production') {
     console.warn('MPESA_ENV in c2b.env is NOT "production" — if your till is live, this registration will not receive real customer payments. Set MPESA_ENV=production in c2b.env and re-run this if that\'s not intentional.');
   }
-  const result = await registerC2BUrls({
-    env: envName,
-    consumerKey,
-    consumerSecret,
-    shortcode,
-    confirmationUrl: base + '/c2bConfirmation' + qs,
-    validationUrl: base + '/c2bValidation' + qs,
-  });
-  console.log('C2B URLs registered:', result);
+  const confirmationUrl = base + '/c2bConfirmation' + qs;
+  const validationUrl = base + '/c2bValidation' + qs;
+  // Printed before the call (not just on failure) so you always have these
+  // to hand — you'll need the exact same two URLs if Safaricom support ends
+  // up updating the registration for you (see the "already registered"
+  // handling below).
+  console.log('Confirmation URL:', confirmationUrl);
+  console.log('Validation URL:  ', validationUrl);
+
+  try {
+    const result = await registerC2BUrls({
+      env: envName,
+      consumerKey,
+      consumerSecret,
+      shortcode,
+      confirmationUrl,
+      validationUrl,
+    });
+    console.log('C2B URLs registered:', result);
+  } catch (err) {
+    // Safaricom's registerurl call only ever succeeds ONCE per shortcode in
+    // production — a real till/paybill that already has URLs on file (even
+    // old ones, even wrong ones) gets this exact error on every later
+    // attempt, no matter what you're trying to change them to. There is no
+    // API call that updates or clears an existing registration — Safaricom
+    // has to do that on their end.
+    if (/already registered/i.test(String(err && err.message))) {
+      console.error('\nSafaricom says this shortcode already has C2B URLs on file, and will not let the API change them — this is expected, not a bug here.');
+      console.error('Next step: contact Safaricom API/Daraja support (apisupport@safaricom.co.ke, or your Daraja portal support channel) and ask them to update the Confirmation and Validation URLs already registered for shortcode ' + shortcode + ' to the two URLs printed above.');
+      console.error('Once they confirm it\'s updated, you do NOT need to run this script again for that change to take effect.');
+      process.exit(1);
+    }
+    throw err;
+  }
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

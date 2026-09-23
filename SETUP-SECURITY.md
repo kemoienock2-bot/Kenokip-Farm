@@ -138,6 +138,23 @@ actually turns the protection on.
    protecting you the moment you deploy, so there's no harm in coming back
    to it later.
 
+   **If step 4 fails with `"URLs are already registered"` (error code
+   500.003.1001):** this is Safaricom's own limitation, not a bug — in
+   production, `registerurl` only ever succeeds ONCE per shortcode, ever.
+   If your till/paybill already has URLs on file (even old ones from before
+   this security step existed), the API refuses to change them, no matter
+   what you resubmit. There is no API call that updates or clears an
+   existing registration; only Safaricom can do that on their end. The
+   updated `register-c2b` script now prints the exact Confirmation and
+   Validation URLs it was about to submit even when this happens — copy
+   those two URLs and email them to Safaricom API/Daraja support
+   (apisupport@safaricom.co.ke, or your Daraja portal's support channel),
+   asking them to update the URLs already registered for your shortcode to
+   those two. Once they confirm it's done, you do not need to run the
+   script again — the change takes effect on Safaricom's side immediately.
+   While you're waiting on them, till/paybill payments still won't
+   auto-record (same as the note above), but everything else is unaffected.
+
 ## Fingerprint / Face + PIN unlock for Finance
 
 From **Settings → Your account**, once this update is deployed:
