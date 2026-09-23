@@ -1394,6 +1394,7 @@ var qrcode = (function(){
     income:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.4"/><line x1="8.3" y1="12" x2="15.7" y2="12"/><line x1="12" y1="8.3" x2="12" y2="15.7"/></svg>',
     settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>',
     plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    refresh:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>',
     chevronLeft:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 9 12 15 19"/></svg>',
     chevronRight:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 15 12 9 19"/></svg>',
     home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9.5h12V10"/><path d="M10 19.5V14h4v5.5"/></svg>',
@@ -5453,6 +5454,25 @@ var qrcode = (function(){
         : '<div class="empty" style="margin-top:12px">'+ICONS.empty+'<div>No Finance unlock attempts recorded yet.</div></div>')+
     '</div>';
   }
+  // Admin-triggered "push update to everyone" — bumps meta/appUpdate's
+  // pushedAt so every open device's onSnapshot listener (see initArtifact)
+  // fires and shows the mandatory refresh prompt within moments, instead of
+  // each device waiting for its own periodic service-worker check. This
+  // doesn't create or fetch a new version by itself — it's meant to be
+  // clicked right after a real deploy has actually gone out, to make sure
+  // everyone picks it up promptly rather than whenever their app happens to
+  // notice on its own.
+  function pushAppUpdateToEveryone(){
+    if(!db){ toast('Not connected — try again once you\'re back online.'); return; }
+    db.collection('meta').doc('appUpdate').set({
+      pushedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      pushedBy: (currentUser && (currentUser.name || currentUser.email)) || 'Admin'
+    }, {merge:true}).then(function(){
+      toast('Update pushed — everyone with the app open will see a refresh prompt shortly.');
+    }).catch(function(){
+      toast('Could not push the update — check your connection and try again.');
+    });
+  }
   function teamPanel(){
     if(!isAdminLevel()) return '<div class="empty">'+ICONS.empty+'<div>Only the administrator can manage the team.</div></div>';
     var teamSorted = teamUsers.slice().sort(function(a,b){ return (a.email||'').localeCompare(b.email||''); });
@@ -5514,7 +5534,11 @@ var qrcode = (function(){
     // stay there.
     var missingAboutUsers = teamUsers.filter(function(u){ return u.uid!==currentUser.uid && !u.about; });
 
-    return (pending.length && isAdmin() ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
+    return '<div class="card"><div class="card-title"><h3>App updates</h3><span class="hint">Push a refresh to every device</span></div>'+
+        '<p class="hint">Use this right after a new version of the app has actually gone out (check Settings → About this app for the version number). Everyone with the app open — team members and anyone viewing as a guest — will see a mandatory "Update available" prompt within moments, instead of waiting for their own app to notice on its own. This only tells devices to refresh; it doesn\'t publish anything by itself.</p>'+
+        '<button type="button" class="btn primary" data-action="push-app-update">'+ICONS.refresh+'Push update to everyone</button>'+
+      '</div>'+
+      (pending.length && isAdmin() ? '<div class="card"><div class="card-title"><h3>Pending Finance approvals</h3><span class="hint">'+pending.length+' waiting on you</span></div>'+
         '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Note</th><th>Proposed by</th><th></th></tr></thead><tbody>'+pendingRows+'</tbody></table></div>'+
         pagerHtml('team-pending-finance', pendingPage.pageCount, pendingPage.page)+
       '</div>' : '')+
@@ -7401,6 +7425,28 @@ var qrcode = (function(){
         localMode = true;
         setSyncStatus('err');
       });
+      // Admin "push update to everyone" — see meta/appUpdate in
+      // firestore.rules and the Team page's button (pushAppUpdateToEveryone
+      // below). Every device, signed in or guest, watches this doc; the
+      // hasPendingWrites check skips the pusher's own optimistic local echo
+      // (which briefly carries a null placeholder timestamp) so only the
+      // real, server-confirmed change is ever compared/acted on. The very
+      // first snapshot after load just establishes the current baseline —
+      // it must never itself pop the refresh prompt, or every fresh page
+      // load would show it once for free.
+      (function(){
+        var lastAppUpdateTS;
+        db.collection('meta').doc('appUpdate').onSnapshot(function(snap){
+          if(!snap.exists || snap.metadata.hasPendingWrites) return;
+          var ts = snap.data().pushedAt;
+          var tsKey = (ts && ts.toMillis) ? ts.toMillis() : (ts || null);
+          if(lastAppUpdateTS === undefined){ lastAppUpdateTS = tsKey; return; }
+          if(tsKey !== lastAppUpdateTS){
+            lastAppUpdateTS = tsKey;
+            if(window.__triggerAppUpdatePopup) window.__triggerAppUpdatePopup();
+          }
+        }, function(){ /* best-effort — offline is fine, the service-worker-based check still works */ });
+      })();
       if(firebase.auth){
         // Sign-ins are remembered on this device (Firebase's normal
         // default), so reloading the page — or closing the app and
@@ -7514,6 +7560,7 @@ var qrcode = (function(){
       case 'nav': goToSection(a1); break;
       case 'view-photo': openPhotoLightbox(a1); break;
       case 'close-photo-lightbox': closePhotoLightbox(); break;
+      case 'push-app-update': pushAppUpdateToEveryone(); break;
       // "← Back to Overview" link on a partitioned section's sub-page
       // (Flock/Eggs/Money/Health) — the dropdown itself (data-change, see
       // handleChange) covers switching to any other view; this is just a
@@ -9044,6 +9091,17 @@ var qrcode = (function(){
         watchForSignIn();
         revealIfReady();
       }
+
+      // Bridge for the admin "Push update to everyone" button (Team page):
+      // that button just bumps a Firestore doc, and the app's own realtime
+      // listener on it (see meta/appUpdate in initArtifact, inside the main
+      // app script) calls this exact same function — same overlay, same
+      // "wait until past sign-in" gating, same one-way-out-is-Refresh
+      // behavior, just triggered by an admin's click instead of a real
+      // service-worker update. Guarded with a typeof check anywhere it's
+      // called from, since very old browsers without serviceWorker support
+      // never reach this script at all.
+      window.__triggerAppUpdatePopup = onUpdateDetected;
 
       // Fires once the freshly-installed service worker actually takes over
       // this page. hadControllerAtLoad tells a real update (a worker was
