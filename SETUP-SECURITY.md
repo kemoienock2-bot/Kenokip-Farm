@@ -94,10 +94,13 @@ your Finance/Income, even though no real money moved. It could NOT let
 anyone take money out or see your real M-Pesa PIN — just plant a fake
 income entry.
 
-**The fix:** every webhook URL now optionally requires a `?key=...` that
+**The fix:** every webhook URL now optionally requires a secret value that
 only you know, checked before anything is recorded. Until you set it up,
 everything works exactly as before (nothing breaks) — this step is what
-actually turns the protection on.
+actually turns the protection on. STK/B2C webhooks carry it as `?key=...`
+in the URL; the C2B ones carry it as part of the URL's path instead (see
+step 4) — different because of how each kind of URL reaches Safaricom (see
+the note inside step 4).
 
 1. Pick a long random value — anything works, e.g. run this once and copy
    the result:
@@ -117,7 +120,15 @@ actually turns the protection on.
    (payouts) automatically include the key — nothing else to do for those.
 4. For the till/paybill "someone pays you directly" path (C2B), the URLs
    were registered with Safaricom once, up front — they need re-registering
-   with the key attached:
+   with the key attached. **Note:** unlike STK/B2C, the C2B key is appended
+   as a URL *path* segment (`.../c2bConfirmation/<key>`), not `?key=...`.
+   That's deliberate: Safaricom's C2B registration stores this URL once for
+   your whole shortcode, and is widely reported to silently drop everything
+   after `?` from what it stores — so a `?key=...` version can look
+   perfectly correct on both ends and still never actually arrive on a real
+   payment. A path segment can't be dropped that way. `registerC2BUrls.js`
+   handles this automatically; you don't need to do anything differently
+   here, just be aware the printed URLs won't have a `?` in them.
    - Open `functions/c2b.env` (the file you already made for the original
      M-Pesa setup — see `SETUP-MPESA.md` if you don't have one yet).
    - Add this line, using the SAME value from step 1:

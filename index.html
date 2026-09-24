@@ -819,6 +819,22 @@
   .app-update-head-text strong{ display:block; font-size:14px; color:var(--ink); }
   .app-update-head-text span{ display:block; font-size:11.5px; color:var(--ink-3); margin-top:2px; line-height:1.35; }
   .app-update-card button{ width:100%; justify-content:center; }
+
+  /* ---- "Session Timeout" screen — shown after being signed out due to
+     inactivity or a long stretch offline (see startIdleTimer/sessionExpiryCheck
+     below). Sits just under the app-update overlay (which takes priority if
+     both ever somehow line up) and completely replaces the normal sign-in
+     gate until "Go to Sign in" is clicked — same "you can't just dismiss
+     this" idea as the update popup, but explaining what happened instead of
+     silently dumping someone back at the sign-in form. ---- */
+  .session-timeout-backdrop{ position:fixed; inset:0; z-index:999998; background:var(--surface); display:flex; align-items:center; justify-content:center; padding:24px 16px; animation:app-update-fade-in .25s ease; }
+  .session-timeout-backdrop[hidden]{ display:none; }
+  .session-timeout-card{ width:100%; max-width:420px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .session-timeout-icon{ width:56px; height:56px; border-radius:50%; background:var(--accent-tint); color:var(--accent-strong); display:flex; align-items:center; justify-content:center; }
+  .session-timeout-icon svg{ width:28px; height:28px; }
+  .session-timeout-card h1{ margin:0; font-size:20px; color:var(--ink); }
+  .session-timeout-card p{ margin:0; font-size:13.5px; color:var(--ink-3); line-height:1.5; }
+  .session-timeout-card button{ margin-top:6px; min-width:160px; justify-content:center; }
 </style>
 </head>
 <body>
@@ -828,6 +844,7 @@
 </div>
 
 <div id="auth-gate" class="auth-gate" hidden></div>
+<div id="session-timeout-backdrop" class="session-timeout-backdrop" hidden></div>
 <div id="photo-lightbox" class="photo-lightbox" hidden data-action="close-photo-lightbox"><button type="button" class="photo-lightbox-close" data-action="close-photo-lightbox">&times;</button><img id="photo-lightbox-img" src="" alt=""></div>
 <div class="app" id="app">
   <nav class="rail" id="rail"></nav>
@@ -5037,25 +5054,36 @@ var qrcode = (function(){
     return '<div class="auth-split">'+authGatePhotoPanelHtml()+'<div class="auth-form-panel">'+formHtml+'</div></div>';
   }
 
-  /* ---- Inactivity sign-out, for every signed-in role ---- Resets on real
-     activity (mouse/keyboard/touch/scroll), same idea as a normal idle
-     timer, just checked against a stored timestamp with Date.now() rather
-     than one long-running setTimeout — a background tab can get its timers
-     throttled or paused by the browser, so this re-checks on a short
-     interval and whenever the tab regains visibility, which catches time
-     that passed while it was in the background too. The last-activity time
-     lives in localStorage (keyed by uid) so it survives a page reload —
+  /* ---- Inactivity / offline sign-out, for every signed-in role AND guests
+     ---- Resets on real activity (mouse/keyboard/touch/scroll), same idea as
+     a normal idle timer, just checked against a stored timestamp with
+     Date.now() rather than one long-running setTimeout — a background tab
+     can get its timers throttled or paused by the browser, so this
+     re-checks on a short interval and whenever the tab regains visibility,
+     which catches time that passed while it was in the background too. The
+     last-activity time lives in localStorage (keyed by uid, or "guest" for
+     someone viewing without an account) so it survives a page reload —
      reloading with nothing else happening does NOT reset the clock.
+     Separately, going offline for the same length of time ALSO ends the
+     session, even if someone's still actively tapping around — tracked with
+     its own "offline since" timestamp rather than folded into the activity
+     one, since the two are meant to be independent triggers.
      The threshold isn't the same for everyone: the Administrator and
-     Financial Staff handle money, so they keep the tight 10-minute
-     timeout that was always here. Every other role (Supervisor, Vet,
-     Farmhand) used to have no timeout at all and stayed signed in
-     indefinitely — they now sign out after 5 hours of inactivity instead,
-     long enough to never interrupt an actual work session. */
-  function idleTimeoutApplies(){ return !!currentUser; }
+     Financial Staff handle money, so they keep the tight 10-minute timeout
+     that was always here. Everyone else — Supervisor, Vet, Farmhand, and
+     now guests too (guests never had ANY timeout before) — signs out after
+     15 minutes instead, of either inactivity or being offline.
+     Ending the session doesn't just quietly drop back to the sign-in form —
+     it shows the full-screen "Session Timeout" explainer (see
+     showSessionTimeoutScreen below) first, same spirit as the app-update
+     overlay: tell the person what happened instead of leaving them
+     wondering why they're suddenly looking at a login screen. */
+  function idleTimeoutApplies(){ return !!currentUser || guestMode; }
   function sessionLimitMs(){ return (isAdminLevel() || isFinancialStaffUser()) ? SESSION_LIMIT_MS : OTHER_ROLES_SESSION_LIMIT_MS; }
-  function sessionLimitLabel(){ return (isAdminLevel() || isFinancialStaffUser()) ? '10 minutes' : '5 hours'; }
+  function sessionLimitLabel(){ return (isAdminLevel() || isFinancialStaffUser()) ? '10 minutes' : '15 minutes'; }
+  function sessionKeyId(){ return currentUser ? currentUser.uid : 'guest'; }
   function lastActivityKey(uid){ return 'kenokip-last-activity-'+uid; }
+  function offlineSinceKey(uid){ return 'kenokip-offline-since-'+uid; }
   // Lets an already-signed-in account keep working offline past its ID
   // token's 1-hour lifetime (see the onAuthStateChanged catch above) —
   // only ever a fallback for a device that has successfully signed in
@@ -5076,34 +5104,79 @@ var qrcode = (function(){
   }
   var lastActivityWriteAt = 0;
   function markSessionActivity(){
-    if(!currentUser || !idleTimeoutApplies()) return;
+    if(!idleTimeoutApplies()) return;
     var now = Date.now();
     if(now - lastActivityWriteAt < 5000) return; // throttle localStorage writes
     lastActivityWriteAt = now;
-    try{ localStorage.setItem(lastActivityKey(currentUser.uid), String(now)); }catch(e){}
+    try{ localStorage.setItem(lastActivityKey(sessionKeyId()), String(now)); }catch(e){}
+  }
+  // Tracks how long the device has been continuously offline, independent of
+  // whether someone's still tapping around — that's the whole point of a
+  // separate "offline" trigger rather than just letting it fall under plain
+  // inactivity. Started/stopped alongside the idle timer itself.
+  function markOfflineStart(){
+    if(!idleTimeoutApplies()) return;
+    var key = offlineSinceKey(sessionKeyId());
+    try{ if(!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now())); }catch(e){}
+  }
+  function clearOfflineStart(){
+    try{ localStorage.removeItem(offlineSinceKey(sessionKeyId())); }catch(e){}
+  }
+  // The one place that actually ends a timed-out session — handles a real
+  // signed-in account and a guest differently (a guest never had a Firebase
+  // user to sign out of in the first place), then shows the full-screen
+  // explainer so the person understands why they're suddenly at a sign-in
+  // screen instead of wondering if something broke.
+  function endTimedSession(reasonText){
+    stopIdleTimer();
+    try{
+      localStorage.removeItem(lastActivityKey(sessionKeyId()));
+      localStorage.removeItem(offlineSinceKey(sessionKeyId()));
+    }catch(e){}
+    showSessionTimeoutScreen(reasonText);
+    if(currentUser){ firebase.auth().signOut(); }
+    else if(guestMode){ guestMode = false; readOnly = false; render(); }
   }
   function sessionExpiryCheck(){
-    if(!currentUser || !idleTimeoutApplies()) return;
-    var key = lastActivityKey(currentUser.uid);
-    var last = Number(localStorage.getItem(key) || 0);
+    if(!idleTimeoutApplies()) return;
+    var limitMs = sessionLimitMs();
+    var actKey = lastActivityKey(sessionKeyId());
+    var last = Number(localStorage.getItem(actKey) || 0);
     if(!last){
       last = Date.now();
-      try{ localStorage.setItem(key, String(last)); }catch(e){}
+      try{ localStorage.setItem(actKey, String(last)); }catch(e){}
     }
-    if(Date.now() - last >= sessionLimitMs()){
+    if(Date.now() - last >= limitMs){
       var label = sessionLimitLabel();
-      stopIdleTimer();
-      try{ localStorage.removeItem(key); }catch(e){}
-      toast('Signed out after '+label+' of inactivity'+((isAdminLevel()||isFinancialStaffUser())?' — for the safety of financial data.':'.'));
-      firebase.auth().signOut();
+      endTimedSession('It looks like you\'ve been inactive for '+label+', so we\'ve signed you out to keep your account secure. Don\'t worry, you can sign back in and pick up right where you left off.');
+      return;
+    }
+    // Offline check — separate clock, same limit. navigator.onLine is a
+    // best-effort browser signal (it can occasionally read "online" on a
+    // connection that's actually dead), so this is a reasonable proxy for
+    // "no real connectivity for a while", not a guarantee.
+    if(typeof navigator!=='undefined' && navigator.onLine===false){
+      markOfflineStart();
+      var offKey = offlineSinceKey(sessionKeyId());
+      var offlineSince = Number(localStorage.getItem(offKey) || 0);
+      if(offlineSince && Date.now() - offlineSince >= limitMs){
+        var offLabel = sessionLimitLabel();
+        endTimedSession('It looks like this device has been offline for '+offLabel+', so we\'ve signed you out to keep your account secure. Don\'t worry, you can sign back in and pick up right where you left off.');
+        return;
+      }
+    } else {
+      clearOfflineStart();
     }
   }
   function startIdleTimer(){
     stopIdleTimer();
     if(!idleTimeoutApplies()) return;
+    if(typeof navigator!=='undefined' && navigator.onLine===false) markOfflineStart(); else clearOfflineStart();
     sessionExpiryCheck();
     idleTimer = setInterval(sessionExpiryCheck, 15000);
     document.addEventListener('visibilitychange', sessionExpiryCheck);
+    window.addEventListener('online', clearOfflineStart);
+    window.addEventListener('offline', markOfflineStart);
     ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
       document.addEventListener(evt, markSessionActivity, {passive:true});
     });
@@ -5112,9 +5185,38 @@ var qrcode = (function(){
     clearInterval(idleTimer);
     idleTimer = null;
     document.removeEventListener('visibilitychange', sessionExpiryCheck);
+    window.removeEventListener('online', clearOfflineStart);
+    window.removeEventListener('offline', markOfflineStart);
     ['mousemove','keydown','click','touchstart','scroll'].forEach(function(evt){
       document.removeEventListener(evt, markSessionActivity);
     });
+  }
+  // Full-screen "Session Timeout" explainer — replaces the sign-in gate
+  // entirely (rather than just toasting and dropping back to it) until
+  // "Go to Sign in" is clicked, same one-way-out idea as the app-update
+  // overlay near the end of this file. hideSessionTimeoutScreen() is what
+  // finally reveals the normal sign-in form again.
+  function showSessionTimeoutScreen(reasonText){
+    var el = document.getElementById('session-timeout-backdrop');
+    if(!el) return;
+    el.innerHTML =
+      '<div class="session-timeout-card" role="alertdialog" aria-live="assertive" aria-label="Session timeout">' +
+        '<div class="session-timeout-icon">'+ICONS.warning+'</div>' +
+        '<h1>Session Timeout</h1>' +
+        '<p>'+esc(reasonText)+'</p>' +
+        '<button type="button" class="btn primary" id="session-timeout-signin-btn">Go to Sign in</button>' +
+      '</div>';
+    el.hidden = false;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('session-timeout-signin-btn').addEventListener('click', hideSessionTimeoutScreen);
+  }
+  function hideSessionTimeoutScreen(){
+    var el = document.getElementById('session-timeout-backdrop');
+    if(!el || el.hidden) return;
+    el.hidden = true;
+    el.innerHTML = '';
+    document.body.style.overflow = '';
+    render();
   }
 
   /* ---- Finance portal: a separate 2-minute *activity-based* idle lock,
@@ -5542,11 +5644,16 @@ var qrcode = (function(){
     // reaching us at all, and whether they were accepted or rejected (a
     // rejected row almost always means the C2B URLs need re-registering
     // with the current webhook key — see SETUP-SECURITY.md / SETUP-MPESA.md).
+    var KEY_SOURCE_LABELS = { query: 'In URL (?key=)', path: 'In URL (path)', none: 'Not received at all' };
     var c2bRows = c2bLog.map(function(l){
       var when = (l.at && l.at.toDate) ? fmtDate(l.at.toDate(),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
       var statusPill = l.accepted ? '<span class="pill" style="background:var(--good-tint); color:var(--good)">Accepted</span>' : '<span class="pill" style="background:var(--bad-tint); color:var(--bad)">Rejected</span>';
       var who = l.payer || l.msisdn || '—';
-      return '<tr><td>'+when+'</td><td>'+esc(l.endpoint||'—')+'</td><td>'+statusPill+'</td><td class="num">'+(l.amount!=null?fmtMoney(l.amount):'—')+'</td><td>'+esc(who)+'</td></tr>';
+      // Only meaningful for a Rejected row: tells apart "Safaricom never even
+      // sent a key" (a URL/registration problem — see keySource:'none') from
+      // "it sent one, but it didn't match" (a MPESA_WEBHOOK_SECRET mismatch).
+      var keyCell = l.accepted ? '—' : esc(KEY_SOURCE_LABELS[l.keySource] || 'Unknown');
+      return '<tr><td>'+when+'</td><td>'+esc(l.endpoint||'—')+'</td><td>'+statusPill+'</td><td>'+keyCell+'</td><td class="num">'+(l.amount!=null?fmtMoney(l.amount):'—')+'</td><td>'+esc(who)+'</td></tr>';
     }).join('');
 
     // Anyone (besides the administrator, who writes their own from Team
@@ -5586,8 +5693,8 @@ var qrcode = (function(){
         logPagerHtml+
       '</div>'+
       '<div class="card"><div class="card-title"><h3>Till payment webhook activity</h3><span class="hint">Last '+c2bLog.length+' Safaricom call'+(c2bLog.length===1?'':'s')+' — visible only to you</span></div>'+
-        '<p class="hint" style="margin-top:-6px">Every time Safaricom calls our Till (C2B) webhook — whether we accepted it or not — shows up here. If a real till payment never appears in Finance/Income, check here first: nothing at all means Safaricom isn\'t reaching us (the C2B URLs likely need re-registering), while a "Rejected" row means it arrived but was turned away, usually because the webhook key doesn\'t match what was last registered.</p>'+
-        '<div class="table-wrap">'+(c2bRows ? '<table><thead><tr><th>When</th><th>Endpoint</th><th>Status</th><th class="num">Amount</th><th>From</th></tr></thead><tbody>'+c2bRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No Till webhook calls recorded yet.</div></div>')+'</div>'+
+        '<p class="hint" style="margin-top:-6px">Every time Safaricom calls our Till (C2B) webhook — whether we accepted it or not — shows up here. If a real till payment never appears in Finance/Income, check here first. Nothing at all means Safaricom isn\'t reaching us at all (the C2B URLs likely need re-registering). A "Rejected" row with Key = "Not received at all" means the call arrived but carried no key whatsoever — that\'s a URL/registration problem, not a wrong-value problem. A "Rejected" row with Key = "In URL (…)" means a key DID arrive but doesn\'t match MPESA_WEBHOOK_SECRET.</p>'+
+        '<div class="table-wrap">'+(c2bRows ? '<table><thead><tr><th>When</th><th>Endpoint</th><th>Status</th><th>Key</th><th class="num">Amount</th><th>From</th></tr></thead><tbody>'+c2bRows+'</tbody></table>' : '<div class="empty">'+ICONS.empty+'<div>No Till webhook calls recorded yet.</div></div>')+'</div>'+
       '</div>';
   }
 
@@ -7834,7 +7941,7 @@ var qrcode = (function(){
       case 'auth-gate-signin': authGateMode = 'signin'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-forgot': authGateMode = 'forgot'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
       case 'auth-gate-back': authGateMode = 'welcome'; authGateError = ''; authGateNotice = ''; updateAuthGate(); break;
-      case 'auth-gate-guest': guestMode = true; readOnly = true; ui.section = 'overview'; navHistory = []; saveUIPref(); render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
+      case 'auth-gate-guest': guestMode = true; readOnly = true; ui.section = 'overview'; navHistory = []; saveUIPref(); startIdleTimer(); render(); toast('Viewing as a guest — read-only, Finance hidden.'); break;
       case 'open-add-finance':
         if(!canProposeFinance()){ toast('Sign in as the administrator or financial staff to add Finance entries.'); break; }
         openModal(financeFormHtml());
@@ -8957,7 +9064,7 @@ var qrcode = (function(){
   var messagesViewAll = false;
   var idleTimer = null;
   var SESSION_LIMIT_MS = 10*60*1000;
-  var OTHER_ROLES_SESSION_LIMIT_MS = 5*60*60*1000;
+  var OTHER_ROLES_SESSION_LIMIT_MS = 15*60*1000; // also applies to guests now — see idleTimeoutApplies()
   var financePortalUnlocked = false; // in-memory only — re-locks on reload, and re-asks after 2 minutes idle
   var financePortalIdleTimer = null;
   // Finance Guard: the fingerprint/Face + personal PIN unlock option, and
