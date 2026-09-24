@@ -244,9 +244,32 @@ function checkWebhookSecret(req, res) {
 // Team page after a real till payment and see whether Safaricom even
 // reached us, and if so what we did with it. Never throws: a logging
 // failure must never break the actual webhook response Safaricom needs.
+// Firebase's own JSON body-parsing (what fills in req.body) is applied by
+// the Functions Framework for the function's own exact path — the extra
+// path segment C2B's key now lives in (see extractProvidedKeyInfo above)
+// bypasses it, so req.body can come back empty on a real Safaricom call
+// even though the key on that same request is read and matched just fine
+// (req.path isn't affected the same way). req.rawBody, though, is captured
+// by Firebase at the raw HTTP layer before any of that routing/parsing
+// happens, so it's always present regardless — this falls back to parsing
+// it ourselves whenever req.body didn't come through, which is what
+// actually fixed a real till payment logging as "Accepted" with no amount.
+function resolveC2BBody(req) {
+  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length) {
+    return { body: req.body, bodySource: 'req.body', rawBodyBytes: req.rawBody ? req.rawBody.length : null };
+  }
+  if (req.rawBody && req.rawBody.length) {
+    try {
+      return { body: JSON.parse(req.rawBody.toString('utf8')), bodySource: 'rawBody-fallback', rawBodyBytes: req.rawBody.length };
+    } catch (e) { /* not JSON — fall through */ }
+  }
+  return { body: req.body || {}, bodySource: 'empty', rawBodyBytes: req.rawBody ? req.rawBody.length : null };
+}
+
 async function logC2BCall(endpoint, req, accepted, extra) {
   try {
-    const b = req.body || {};
+    const resolved = resolveC2BBody(req);
+    const b = resolved.body;
     const keyInfo = extractProvidedKeyInfo(req);
     await db.collection('c2bLog').add(Object.assign({
       at: admin.firestore.FieldValue.serverTimestamp(),
@@ -259,6 +282,14 @@ async function logC2BCall(endpoint, req, accepted, extra) {
       // 'query' or 'path' with still-Rejected means a real value arrived
       // but didn't match MPESA_WEBHOOK_SECRET (a secret-mismatch problem).
       keySource: keyInfo.source,
+      // How the payload below was obtained — 'req.body' (Firebase's own
+      // parsing worked normally), 'rawBody-fallback' (Firebase's own
+      // parsing came back empty, so this was parsed from req.rawBody
+      // instead — see resolveC2BBody), or 'empty' (neither had anything,
+      // a genuinely bodyless call). Tells apart "our fallback saved this
+      // call" from "there was truly nothing to read".
+      bodySource: resolved.bodySource,
+      rawBodyBytes: resolved.rawBodyBytes,
       transId: b.TransID || null,
       amount: b.TransAmount != null ? Number(b.TransAmount) : null,
       msisdn: b.MSISDN || null,
@@ -572,7 +603,7 @@ exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (
     return;
   }
   try {
-    const b = req.body || {};
+    const b = resolveC2BBody(req).body;
     const payer = [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ');
     const amount = Number(b.TransAmount || 0);
     const eggsCount = Math.max(0, Math.round(amount / EGG_UNIT_VALUE_KSH));
