@@ -180,13 +180,48 @@ function requireAdminLevelRole(request) {
   return request.auth;
 }
 
+// Where the webhook key actually came from on THIS request. Checked in two
+// places, in order:
+//   1. The query string (?key=...) — how the STK/B2C callback URLs work,
+//      and how C2B originally worked here too. Confirmed reliable for
+//      STK/B2C, because those callback URLs are handed to Safaricom fresh
+//      inside each individual API call and echoed straight back.
+//   2. A trailing URL PATH segment (.../c2bConfirmation/<key>) — added
+//      because Safaricom's C2B URL *registration* (a one-time, stored
+//      setting per shortcode, unlike STK/B2C's per-request callback URL) is
+//      widely reported to silently drop query strings from the
+//      Confirmation/ValidationURL it stores, while it can't drop part of
+//      the path — that's the address itself. If C2B keeps getting rejected
+//      even right after confirming the secret matches on both ends, this is
+//      almost always why: the ?key=... Safaricom was GIVEN during
+//      registration never actually comes back on the real webhook call.
+//      registerC2BUrls.js registers using this path form for exactly that
+//      reason (see its own comments).
+// Skips the bare function name itself ("c2bConfirmation" with nothing
+// appended) so a URL with no key at all doesn't accidentally "match" its
+// own route name.
+function extractProvidedKeyInfo(req) {
+  if (req.query && req.query.key) {
+    return { value: String(req.query.key), source: 'query' };
+  }
+  var pathOnly = String(req.path || (req.originalUrl || '').split('?')[0] || '');
+  var segments = pathOnly.split('/').filter(Boolean);
+  if (segments.length) {
+    var last = segments[segments.length - 1];
+    if (!/^c2b(Validation|Confirmation)$/i.test(last)) {
+      try { return { value: decodeURIComponent(last), source: 'path' }; } catch (e) { return { value: last, source: 'path' }; }
+    }
+  }
+  return { value: '', source: 'none' };
+}
+
 // See the MPESA_WEBHOOK_SECRET comment above. Pure check, no side effects —
 // split out from checkWebhookSecret() so the C2B logger below can record
 // whether a call was accepted or rejected before a response is sent.
 function webhookKeyMatches(req) {
   const configured = sval(MPESA_WEBHOOK_SECRET);
   if (!configured) return true; // not set up yet on this deployment — don't break anything
-  const provided = (req.query && req.query.key) || '';
+  const provided = extractProvidedKeyInfo(req).value;
   return timingSafeStringEqual(provided, configured);
 }
 
@@ -212,10 +247,18 @@ function checkWebhookSecret(req, res) {
 async function logC2BCall(endpoint, req, accepted, extra) {
   try {
     const b = req.body || {};
+    const keyInfo = extractProvidedKeyInfo(req);
     await db.collection('c2bLog').add(Object.assign({
       at: admin.firestore.FieldValue.serverTimestamp(),
       endpoint: endpoint,
       accepted: !!accepted,
+      // Where the key came from on this call (or 'none' if neither the
+      // query string nor the path carried one at all) — the single most
+      // useful thing here when a call is Rejected: 'none' means Safaricom
+      // dropped it entirely (a registration/URL-format problem), while
+      // 'query' or 'path' with still-Rejected means a real value arrived
+      // but didn't match MPESA_WEBHOOK_SECRET (a secret-mismatch problem).
+      keySource: keyInfo.source,
       transId: b.TransID || null,
       amount: b.TransAmount != null ? Number(b.TransAmount) : null,
       msisdn: b.MSISDN || null,

@@ -35,7 +35,18 @@ async function main() {
     process.exit(1);
   }
   const webhookSecret = env('MPESA_WEBHOOK_SECRET', '');
-  const qs = webhookSecret ? ('?key=' + encodeURIComponent(webhookSecret)) : '';
+  // As a trailing PATH segment (.../c2bConfirmation/<key>), not a query
+  // string (?key=...) like the STK/B2C callback URLs use. Those work fine
+  // as query strings because Safaricom is handed that exact URL fresh
+  // inside each individual STK/B2C API call and just echoes it back. C2B is
+  // different: registerurl STORES this URL once on Safaricom's side for the
+  // whole shortcode, and that storage is widely reported to silently drop
+  // everything after "?" — so a C2B webhook that keeps getting rejected
+  // even once both sides definitely agree on the same secret almost always
+  // means the key never arrived at all, not that it was wrong. A path
+  // segment can't be silently dropped the same way — it's part of the
+  // address itself — so that's what gets registered here.
+  const suffix = webhookSecret ? ('/' + encodeURIComponent(webhookSecret)) : '';
   if (!webhookSecret) {
     console.warn('MPESA_WEBHOOK_SECRET is blank in c2b.env — registering WITHOUT the extra protection. See SETUP-SECURITY.md.');
   }
@@ -49,8 +60,8 @@ async function main() {
   if (envName !== 'production') {
     console.warn('MPESA_ENV in c2b.env is NOT "production" — if your till is live, this registration will not receive real customer payments. Set MPESA_ENV=production in c2b.env and re-run this if that\'s not intentional.');
   }
-  const confirmationUrl = base + '/c2bConfirmation' + qs;
-  const validationUrl = base + '/c2bValidation' + qs;
+  const confirmationUrl = base + '/c2bConfirmation' + suffix;
+  const validationUrl = base + '/c2bValidation' + suffix;
   // Printed before the call (not just on failure) so you always have these
   // to hand — you'll need the exact same two URLs if Safaricom support ends
   // up updating the registration for you (see the "already registered"
