@@ -51,6 +51,15 @@ Object.assign(exports, receipts.triggers);
 // Weekly digest push (eggs/income/expenses totals) — see digest.js.
 Object.assign(exports, require('./digest')(admin, db));
 
+// Dates of birth — dedicated Birthday PIN, self/administrator-set DOBs kept
+// out of the broadly-readable users/{uid} doc, and the daily birthday
+// reminder — see privacyGuard.js.
+Object.assign(exports, require('./privacyGuard')(admin, db).triggers);
+
+// Team recognition ("Kudos") — congratulations + an optional reward note,
+// to one team member or everyone at once — see kudos.js.
+Object.assign(exports, require('./kudos')(admin, db).triggers);
+
 const MPESA_CONSUMER_KEY = defineSecret('MPESA_CONSUMER_KEY');
 const MPESA_CONSUMER_SECRET = defineSecret('MPESA_CONSUMER_SECRET');
 const MPESA_SHORTCODE = defineSecret('MPESA_SHORTCODE');

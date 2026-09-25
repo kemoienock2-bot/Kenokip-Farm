@@ -975,3 +975,6 @@ module.exports = function (admin, db) {
 module.exports.JOB_TITLES = JOB_TITLES;
 module.exports.GENDERS = GENDERS;
 module.exports.JOB_TITLE_LABELS = JOB_TITLE_LABELS;
+// Exposed as a plain function (not a callable) so kudos.js can build the
+// same "Role(Name)" label sendMessage already uses, without duplicating it.
+module.exports.roleLabelFor = roleLabelFor;

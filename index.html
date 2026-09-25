@@ -488,14 +488,14 @@
      shape for every kind of alert, just recolored: red for a plain Urgent
      message, warm gold for "needs your signature" (see .urgent-alert-box.signoff). */
   .urgent-alert-box{ display:flex; gap:12px; align-items:flex-start; background:linear-gradient(160deg, var(--bad-tint), var(--surface)); border:1px solid var(--bad); color:var(--bad); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); animation:urgent-pop .22s cubic-bezier(.2,.8,.3,1.1); }
-  .urgent-alert-box.signoff, .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,75%,92%), var(--surface)); border-color:hsl(38,65%,55%); color:hsl(30,70%,32%); }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-box.signoff, :root:not([data-theme="light"]) .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); } }
-  :root[data-theme="dark"] .urgent-alert-box.signoff, :root[data-theme="dark"] .urgent-alert-box.hatch{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); }
+  .urgent-alert-box.signoff, .urgent-alert-box.hatch, .urgent-alert-box.birthday, .urgent-alert-box.kudos{ background:linear-gradient(160deg, hsl(38,75%,92%), var(--surface)); border-color:hsl(38,65%,55%); color:hsl(30,70%,32%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-box.signoff, :root:not([data-theme="light"]) .urgent-alert-box.hatch, :root:not([data-theme="light"]) .urgent-alert-box.birthday, :root:not([data-theme="light"]) .urgent-alert-box.kudos{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); } }
+  :root[data-theme="dark"] .urgent-alert-box.signoff, :root[data-theme="dark"] .urgent-alert-box.hatch, :root[data-theme="dark"] .urgent-alert-box.birthday, :root[data-theme="dark"] .urgent-alert-box.kudos{ background:linear-gradient(160deg, hsl(38,45%,20%), var(--surface)); border-color:hsl(38,55%,45%); color:hsl(40,80%,80%); }
   .urgent-alert-icon{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.5); flex:none; font-size:18px; }
-  .urgent-alert-box.signoff .urgent-alert-icon, .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,80%,88%); }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-icon{ background:rgba(0,0,0,.25); } :root:not([data-theme="light"]) .urgent-alert-box.signoff .urgent-alert-icon, :root:not([data-theme="light"]) .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,40%,28%); } }
+  .urgent-alert-box.signoff .urgent-alert-icon, .urgent-alert-box.hatch .urgent-alert-icon, .urgent-alert-box.birthday .urgent-alert-icon, .urgent-alert-box.kudos .urgent-alert-icon{ background:hsl(38,80%,88%); }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .urgent-alert-icon{ background:rgba(0,0,0,.25); } :root:not([data-theme="light"]) .urgent-alert-box.signoff .urgent-alert-icon, :root:not([data-theme="light"]) .urgent-alert-box.hatch .urgent-alert-icon, :root:not([data-theme="light"]) .urgent-alert-box.birthday .urgent-alert-icon, :root:not([data-theme="light"]) .urgent-alert-box.kudos .urgent-alert-icon{ background:hsl(38,40%,28%); } }
   :root[data-theme="dark"] .urgent-alert-icon{ background:rgba(0,0,0,.25); }
-  :root[data-theme="dark"] .urgent-alert-box.signoff .urgent-alert-icon, :root[data-theme="dark"] .urgent-alert-box.hatch .urgent-alert-icon{ background:hsl(38,40%,28%); }
+  :root[data-theme="dark"] .urgent-alert-box.signoff .urgent-alert-icon, :root[data-theme="dark"] .urgent-alert-box.hatch .urgent-alert-icon, :root[data-theme="dark"] .urgent-alert-box.birthday .urgent-alert-icon, :root[data-theme="dark"] .urgent-alert-box.kudos .urgent-alert-icon{ background:hsl(38,40%,28%); }
   .urgent-alert-box svg{ width:20px; height:20px; flex:none; }
   .urgent-alert-text{ flex:1; font-size:13.5px; color:var(--ink); padding-top:2px; }
   .urgent-alert-text strong{ display:block; margin-bottom:3px; color:inherit; }
@@ -1451,7 +1451,8 @@ var qrcode = (function(){
     verify:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12.5l2 2 4-4.5"/></svg>',
     statement:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h8l4 4v16H7z"/><path d="M15 2v4h4"/><path d="M9 11h8M9 14h8M9 17h5"/></svg>',
     directory:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10.5" r="2.3"/><path d="M5.3 16.3c.6-1.9 2-2.9 3.7-2.9s3.1 1 3.7 2.9"/><path d="M14.5 8.5h4M14.5 12h4M14.5 15.5h4"/></svg>',
-    camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>'
+    camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>',
+    cake:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7"/><path d="M4 21h16"/><path d="M4 17c1.2 1 2.4 1 3.5 0s2.3-1 3.5 0 2.4 1 3.5 0 2.3-1 3.5 0"/><line x1="8" y1="12" x2="8" y2="8"/><line x1="12" y1="12" x2="12" y2="7"/><line x1="16" y1="12" x2="16" y2="8"/><circle cx="12" cy="4" r="1"/></svg>'
   };
 
   /* ---- PICS: colorful illustrated icon set --------------------------------
@@ -4896,7 +4897,11 @@ var qrcode = (function(){
       '<div style="margin-bottom:14px">'+notifRowHtml+
         '<p class="hint" style="margin-top:6px">This lets an <strong>Urgent</strong> message pop up as a notification on this device while the app or browser is running in the background (another tab, minimized, or your phone locked with it still open) — not while it\'s fully closed. Needs to be turned on once per device.</p>'+
       '</div>'+
+      '<div style="margin-bottom:14px"><button type="button" class="btn" data-action="open-set-own-dob">'+ICONS.cake+' '+(myDob?'Change your birthday':'Set your birthday')+'</button>'+
+        (myDob ? ' <span class="hint">Currently: '+esc(fmtDate(new Date(myDob+'T00:00:00')))+'</span>' : ' <span class="hint">Kept private — see Team Directory for who else can see it.</span>')+
+      '</div>'+
       (canSeeFinance() ? authAppSectionHTML() : '')+
+      (isAdmin() ? birthdayPinSectionHTML() : '')+
       (isAdmin() ? awayToggleHTML() : '')+
       '<div style="display:flex; gap:10px; flex-wrap:wrap">'+
         '<button class="btn" data-action="open-change-password">Change password</button>'+
@@ -4976,6 +4981,29 @@ var qrcode = (function(){
         '<div class="field-row" style="max-width:160px"><label>Confirm PIN</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin2" required></div>'+
         '<button class="btn" type="submit">'+(gs && gs.pinSet ? 'Change PIN' : 'Set PIN')+'</button>'+
       '</form>'+
+    '</div>';
+  }
+  // Dedicated Birthday PIN — administrator only, entirely separate from the
+  // Finance PIN above (its own hash, its own lockout — see privacyGuard.js).
+  // This is what's asked for in Team Directory before anyone else's date of
+  // birth unmasks; yours and your own account's Finance PIN are unaffected
+  // either way.
+  function birthdayPinSectionHTML(){
+    var bgs = birthdayGuardStatus;
+    return '<div style="margin-bottom:14px; padding:12px; border:1px solid var(--border, #ddd); border-radius:10px">'+
+      '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px"><span class="inline-ico" style="width:18px; height:18px">'+ICONS.cake+'</span><strong>Birthday PIN</strong></div>'+
+      '<p class="hint">A separate, dedicated PIN — not your Finance PIN, not your sign-in password — needed to reveal any team member\'s date of birth in Team Directory. Nobody else knows it.</p>'+
+      (bgs===null ? '<p class="hint">Loading…</p>' : (
+        (bgs.pinSet ? '<p class="hint">✓ A PIN is set.</p>' : '')+
+        (bgs.locked
+          ? '<p class="hint" style="color:var(--bad, #b3261e)">🔒 Locked after repeated wrong attempts.</p>'+
+            '<button type="button" class="btn sm" data-action="clear-birthday-lock">Clear lock</button>'
+          : '<form data-form="set-birthday-pin" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap">'+
+              '<div class="field-row" style="max-width:160px"><label>'+(bgs.pinSet ? 'New PIN' : 'PIN')+' (4–8 digits)</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin" required></div>'+
+              '<div class="field-row" style="max-width:160px"><label>Confirm PIN</label><input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="pin2" required></div>'+
+              '<button class="btn" type="submit">'+(bgs.pinSet ? 'Change PIN' : 'Set PIN')+'</button>'+
+            '</form>')
+      ))+
     '</div>';
   }
 
@@ -5309,6 +5337,10 @@ var qrcode = (function(){
     financeRevealed = false;
     financePortalUnlocked = false;
     stopFinancePortalTimer();
+    birthdaysRevealed = false;
+    teamBirthdays = null;
+    myDob = null;
+    myDobLoaded = false;
     guestMode = false;
     readOnly = false;
     // Always land on Overview right after signing in — simple, predictable,
@@ -5325,6 +5357,8 @@ var qrcode = (function(){
     if(isAdminLevel()){ initAdminLogsSync(); initSecurityEventsSync(); initPendingSignoffsAdminSync(); initC2BLogSync(); }
     if(isAdminLevel() && mpesaEnabled) initMpesaQueriesSync();
     if(canSeeFinance()){ financeGuardStatus = null; refreshFinanceGuardStatus(); }
+    if(isAdmin()){ birthdayGuardStatus = null; refreshBirthdayGuardStatus(); }
+    refreshMyDob();
     captureAccessLog();
     startIdleTimer();
     if(typeof Notification!=='undefined' && Notification.permission==='granted') registerForPush();
@@ -5441,6 +5475,30 @@ var qrcode = (function(){
       render();
     }).catch(function(){ financeGuardStatusLoading = false; });
   }
+  // Same idea, for the dedicated Birthday PIN (privacyGuard.js) — whether
+  // it's set up yet and whether it's currently locked out. Administrator
+  // only; nobody else has this PIN at all.
+  function refreshBirthdayGuardStatus(){
+    if(!currentUser || !isAdmin() || birthdayGuardStatusLoading) return;
+    birthdayGuardStatusLoading = true;
+    firebase.functions().httpsCallable('getBirthdayGuardStatus')().then(function(res){
+      birthdayGuardStatus = res.data;
+      birthdayGuardStatusLoading = false;
+      render();
+    }).catch(function(){ birthdayGuardStatusLoading = false; });
+  }
+  // This account's own date of birth — any signed-in account may read its
+  // own back, no PIN needed (see getMyDob in privacyGuard.js). Fetched once
+  // per sign-in; re-fetched after saving a change (see the 'set-own-dob'
+  // form handler).
+  function refreshMyDob(){
+    if(!currentUser) return;
+    firebase.functions().httpsCallable('getMyDob')().then(function(res){
+      myDob = (res.data && res.data.dob) || null;
+      myDobLoaded = true;
+      render();
+    }).catch(function(){ myDobLoaded = true; });
+  }
   function staffFormHtml(){
     return '<div class="modal-head"><h3>Add team member</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">Creates a sign-in for an employee. Share the email and password with them directly — there\'s no self-registration.</p>'+
@@ -5460,6 +5518,10 @@ var qrcode = (function(){
         '<option value="female">Female</option>'+
         '<option value="male">Male</option>'+
       '</select><span class="hint">Just picks their default profile icon before they upload a real photo — they can change this themselves later too.</span></div>'+
+      (isAdmin()
+        ? '<div class="field-row" style="margin-top:12px"><label>Date of birth (optional)</label><input class="field" type="date" name="dob"></div>'+
+          '<span class="hint">Kept private — they can set/fix this themselves too, and only you, with your dedicated Birthday PIN, can reveal it in Team Directory afterward.</span>'
+        : '<p class="hint" style="margin-top:12px">Date of birth can be added afterward, by the administrator or by the person themselves.</p>')+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Create account</button></div>'+
     '</form>';
   }
@@ -5504,6 +5566,30 @@ var qrcode = (function(){
         '<option value="female" '+(currentGender==='female'?'selected':'')+'>Female</option>'+
         '<option value="male" '+(currentGender==='male'?'selected':'')+'>Male</option>'+
       '</select></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
+  // Your own date of birth — self-service, no PIN needed, it's your own
+  // data (see getMyDob/setOwnDob in privacyGuard.js). Anyone signed in can
+  // set or change this from Team Directory or Settings → Your account.
+  function setOwnDobFormHtml(){
+    return '<div class="modal-head"><h3>'+ICONS.cake+' Your birthday</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Kept private — only you can see this here, and the administrator, who needs a dedicated PIN just to reveal it.</p>'+
+    '<form data-form="set-own-dob">'+
+      '<div class="field-row"><label>Date of birth</label><input class="field" type="date" name="dob" value="'+esc(myDob||'')+'" required autofocus></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
+    '</form>';
+  }
+  // Administrator sets or fixes a team member's date of birth — e.g. from
+  // their ID, when they haven't set it themselves yet. Writing this does
+  // not need the Birthday PIN (see setStaffDob in privacyGuard.js); only
+  // reading someone else's back does.
+  function setStaffDobFormHtml(uid, name, existingDob){
+    return '<div class="modal-head"><h3>'+ICONS.cake+' '+esc(name)+'\'s birthday</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    (existingDob ? '' : '<p class="hint">Not revealed this sitting, so this starts blank — entering a date here sets/overwrites it either way.</p>')+
+    '<form data-form="set-staff-dob">'+
+      '<input type="hidden" name="uid" value="'+esc(uid)+'">'+
+      '<div class="field-row"><label>Date of birth</label><input class="field" type="date" name="dob" value="'+esc(existingDob||'')+'" required autofocus></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Save</button></div>'+
     '</form>';
   }
@@ -5856,9 +5942,32 @@ var qrcode = (function(){
       return (a.name||a.email||'').localeCompare(b.name||b.email||'');
     });
     var dirPage = paginate('directory', roster);
+    var dirAdmin = isAdmin();
+    var dirAdminLevel = isAdminLevel();
     var cards = dirPage.items.map(function(u){
       var isSelf = currentUser && u.uid===currentUser.uid;
       var roleTxt = roleLabel(u);
+      // Birthday row: always visible (and self-editable) for your own card;
+      // for everyone else's, only the administrator sees anything here at
+      // all, and even then only after the dedicated Birthday PIN reveal
+      // (see birthday-reveal-prompt) — every other role never sees another
+      // team member's date of birth anywhere in this app.
+      var dobRow = '';
+      if(isSelf){
+        dobRow = '<div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2)">'+
+          '<span class="inline-ico" style="width:14px; height:14px">'+ICONS.cake+'</span>'+
+          (myDob ? esc(fmtDate(new Date(myDob+'T00:00:00'))) : '<span class="hint">Birthday not set</span>')+
+          ' <button type="button" class="linklike" data-action="open-set-own-dob" style="font-size:12.5px">'+(myDob?'Edit':'Add')+'</button>'+
+        '</div>';
+      } else if(dirAdmin){
+        var dv = teamBirthdays && teamBirthdays[u.uid];
+        dobRow = '<div style="margin-top:6px; display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2)">'+
+          '<span class="inline-ico" style="width:14px; height:14px">'+ICONS.cake+'</span>'+
+          (birthdaysRevealed
+            ? ((dv ? esc(fmtDate(new Date(dv+'T00:00:00'))) : '<span class="hint">Not set</span>') + ' <button type="button" class="linklike" data-action="open-set-staff-dob:'+u.uid+'" style="font-size:12.5px">Edit</button>')
+            : '<span class="hint">Hidden</span>')+
+        '</div>';
+      }
       return '<div class="card" style="display:flex; gap:14px; align-items:flex-start">'+
         avatarHTML(u, 56)+
         '<div style="flex:1; min-width:0">'+
@@ -5867,13 +5976,19 @@ var qrcode = (function(){
             (isSelf ? '<span class="hint">(you)</span>' : '')+
           '</div>'+
           (u.about ? '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(u.about)+'</p>' : '<p style="margin:6px 0 0; white-space:pre-wrap; color:var(--ink-2); font-size:13.5px">'+esc(defaultAboutForRole(u))+'</p>')+
+          dobRow+
+          (!isSelf && dirAdminLevel ? '<button type="button" class="btn sm" style="margin-top:8px" data-action="open-kudos:'+esc(u.uid)+'">🎉 Congratulate</button>' : '')+
         '</div>'+
       '</div>';
     }).join('');
+    var birthdayEyeBtn = dirAdmin
+      ? '<button class="icon-btn" style="margin-left:6px" data-action="'+(birthdaysRevealed?'birthday-reveal-hide':'birthday-reveal-prompt')+'" title="'+(birthdaysRevealed?'Hide birthdays':'Show birthdays')+'">'+(birthdaysRevealed?ICONS.eyeOff:ICONS.eye)+'</button>'
+      : '';
     return '<div class="card"><div class="card-title"><h3>Your profile</h3><span class="hint">Photo &amp; About — visible to the whole team</span></div>'+
         profileEditFormHTML()+
       '</div>'+
-      '<div class="card-title" style="margin-top:4px"><h3>Everyone on the farm</h3><span class="hint">'+roster.length+' member'+(roster.length===1?'':'s')+'</span></div>'+
+      '<div class="card-title" style="margin-top:4px"><h3>Everyone on the farm'+birthdayEyeBtn+'</h3><span class="hint">'+roster.length+' member'+(roster.length===1?'':'s')+'</span></div>'+
+      (dirAdmin && !birthdaysRevealed ? '<div class="hint" style="margin-bottom:10px">Birthdays are masked on screen — tap <span class="inline-ico">'+ICONS.eye+'</span> to reveal them (needs your Birthday PIN).</div>' : '')+
       '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px">'+cards+'</div>'+
       pagerHtml('directory', dirPage.pageCount, dirPage.page);
   }
@@ -5951,10 +6066,17 @@ var qrcode = (function(){
     var msg = urgentAlertQueue[0];
     var isSignoff = msg.kind==='signoff-request';
     var isHatch = msg.kind==='hatch';
+    var isBirthday = msg.kind==='birthday-wish' || msg.kind==='birthday-announcement';
+    var isKudos = msg.kind==='kudos';
+    var celebrationClass = isHatch?' hatch':(isBirthday?' birthday':(isKudos?' kudos':''));
+    var icon = isSignoff?ICONS.signature:isHatch?'🐣':isBirthday?'🎂':isKudos?'🎉':ICONS.warning;
+    var lead = isSignoff?'Waiting on your signature — ':isHatch?'Chicks hatched! — '
+      :msg.kind==='birthday-wish'?'Happy Birthday! — ':msg.kind==='birthday-announcement'?'Birthday today — '
+      :isKudos?'Congratulations! — ':'Urgent message from ';
     el.hidden = false;
-    el.innerHTML = '<div class="urgent-alert-box'+(isSignoff?' signoff':'')+(isHatch?' hatch':'')+'">'+
-      '<span class="urgent-alert-icon">'+(isSignoff?ICONS.signature:isHatch?'🐣':ICONS.warning)+'</span>'+
-      '<div class="urgent-alert-text"><strong>'+(isSignoff?'Waiting on your signature — ':isHatch?'Chicks hatched! — ':'Urgent message from ')+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
+    el.innerHTML = '<div class="urgent-alert-box'+(isSignoff?' signoff':'')+celebrationClass+'">'+
+      '<span class="urgent-alert-icon">'+icon+'</span>'+
+      '<div class="urgent-alert-text"><strong>'+lead+esc(msg.fromLabel||'a team member')+'</strong>'+esc((msg.body||'').slice(0,180))+'</div>'+
       '<div class="urgent-alert-actions">'+
         '<button class="btn sm primary" data-action="urgent-alert-view">View</button>'+
         '<button class="btn sm ghost" data-action="urgent-alert-dismiss">Dismiss</button>'+
@@ -5963,7 +6085,7 @@ var qrcode = (function(){
   function triggerUrgentAlert(msg){
     urgentAlertQueue.push(msg);
     renderUrgentAlert();
-    if(msg.kind==='signoff-request' || msg.kind==='hatch') playChickSound(); else playRoosterSound();
+    if(msg.kind==='signoff-request' || msg.kind==='hatch' || msg.kind==='birthday-wish' || msg.kind==='birthday-announcement' || msg.kind==='kudos') playChickSound(); else playRoosterSound();
     showBackgroundAlert(msg);
   }
   // Surfaces whatever urgent items were already waiting — a signature
@@ -5990,7 +6112,7 @@ var qrcode = (function(){
     qualifying.forEach(function(m){ urgentAlertQueue.push(m); });
     renderUrgentAlert();
     // One sound for the whole batch, not one per pending item.
-    if(qualifying.some(function(m){ return m.kind==='signoff-request' || m.kind==='hatch'; })) playChickSound(); else playRoosterSound();
+    if(qualifying.some(function(m){ return m.kind==='signoff-request' || m.kind==='hatch' || m.kind==='birthday-wish' || m.kind==='birthday-announcement' || m.kind==='kudos'; })) playChickSound(); else playRoosterSound();
     showBackgroundAlert(qualifying[0]);
   }
   // The soft, nothing-to-do egg notification — bottom-corner toast, hen
@@ -6020,7 +6142,9 @@ var qrcode = (function(){
   function showBackgroundAlert(msg){
     if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
     if(!document.hidden) return; // in-page banner + sound already cover the foreground case
-    var title = msg.kind==='hatch' ? '🐣 Chicks hatched!' : msg.kind==='signoff-request' ? 'Waiting on your signature' : 'Urgent — '+(msg.fromLabel||'a team member');
+    var title = msg.kind==='hatch' ? '🐣 Chicks hatched!' : msg.kind==='signoff-request' ? 'Waiting on your signature'
+      : msg.kind==='birthday-wish' ? '🎂 Happy Birthday!' : msg.kind==='birthday-announcement' ? '🎂 Birthday today'
+      : msg.kind==='kudos' ? '🎉 Congratulations!' : 'Urgent — '+(msg.fromLabel||'a team member');
     var opts = {
       body: (msg.body||'').slice(0,180),
       icon: './icons/icon-192.png',
@@ -6160,6 +6284,8 @@ var qrcode = (function(){
     if(m.kind==='hatch') return '<span class="pill" style="background:hsl(44,80%,90%); color:hsl(38,70%,26%)">🐣 Chicks hatched</span>';
     if(m.kind==='egg-activity') return '<span class="pill" style="background:hsl(44,70%,90%); color:hsl(30,55%,28%)">🥚 Egg activity</span>';
     if(m.kind==='digest') return '<span class="pill" style="background:hsl(200,55%,92%); color:hsl(205,60%,30%)">📊 Weekly digest</span>';
+    if(m.kind==='birthday-wish' || m.kind==='birthday-announcement') return '<span class="pill" style="background:hsl(44,80%,90%); color:hsl(38,70%,26%)">🎂 Birthday</span>';
+    if(m.kind==='kudos') return '<span class="pill" style="background:hsl(44,80%,90%); color:hsl(38,70%,26%)">🎉 Kudos'+(m.reward?' + reward':'')+'</span>';
     return '';
   }
   function messageRowHtml(m){
@@ -6202,9 +6328,57 @@ var qrcode = (function(){
     }).join('');
     return '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px">'+
         '<button class="btn primary" data-action="open-compose-message">'+ICONS.plus+'New message</button>'+
+        (isAdminLevel() ? '<button class="btn" data-action="open-kudos:all">🎉 Congratulate the team</button>' : '')+
         (isAdminLevel() ? '<button class="btn" data-action="toggle-messages-view">'+(showAll?'Show my messages':'Show all team messages')+'</button>' : '')+
       '</div>'+
       (sectionsHtml || '<div class="empty">'+ICONS.empty+'<div>No messages yet.</div></div>');
+  }
+  // Ready-made sentences the administrator can pick from when sending
+  // Kudos, instead of writing one from scratch every time — still just a
+  // starting point in the message textarea, editable before sending.
+  // {name} is swapped for the recipient's first name client-side.
+  var KUDOS_INDIVIDUAL_TEMPLATES = [
+    'Great job, {name}! Your hard work on the farm hasn\'t gone unnoticed — thank you for everything you do. 🌟',
+    '{name}, you went above and beyond recently and it made a real difference. Well done! 👏',
+    'A big thank you to {name} for the excellent work lately — Kenokip Farm is lucky to have you. 🙌',
+    '{name}, your dedication and attention to detail continue to impress. Keep up the great work! 💪',
+    'Kudos to {name} for stepping up and getting the job done so well. We appreciate you! 🎉'
+  ];
+  var KUDOS_GROUP_TEMPLATES = [
+    'Amazing teamwork, everyone! What we accomplished together shows exactly why Kenokip Farm is special. 🙌',
+    'Great job, team! Your combined effort and hard work really paid off — thank you all. 🌟',
+    'To the whole Kenokip Farm team: well done on a fantastic effort. I\'m proud of what we\'ve built together. 👏',
+    'Everyone pulled together and it showed — thank you, team, for your commitment and hard work. 🎉',
+    'Outstanding work, team! Let\'s keep this momentum going — you should all be proud. 💪'
+  ];
+  var KUDOS_REWARD_OPTIONS = [
+    'A bonus in your next pay',
+    'An extra day off',
+    'Airtime / data bundle',
+    'A small gift from the farm',
+    'Public recognition at the next team meeting'
+  ];
+  function kudosFormHtml(toUid, toName){
+    var isGroup = toUid==='all';
+    var firstName = (toName||'').split(' ')[0] || 'them';
+    var templates = (isGroup ? KUDOS_GROUP_TEMPLATES : KUDOS_INDIVIDUAL_TEMPLATES).map(function(t){
+      return t.split('{name}').join(firstName);
+    });
+    var templateOptions = '<option value="">Choose a ready-made sentence… (optional)</option>'+
+      templates.map(function(t){ return '<option value="'+esc(t)+'">'+esc(t.length>72?t.slice(0,72)+'…':t)+'</option>'; }).join('');
+    var rewardOptions = '<option value="">No reward this time</option>'+
+      KUDOS_REWARD_OPTIONS.map(function(r){ return '<option value="'+esc(r)+'">'+esc(r)+'</option>'; }).join('')+
+      '<option value="__custom__">Something else…</option>';
+    return '<div class="modal-head"><h3>🎉 Congratulate '+(isGroup?'the team':esc(toName))+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<p class="hint">Sent as a message from you'+(isGroup?' to everyone':' to '+esc(toName))+' — pick a ready sentence below or write your own.</p>'+
+    '<form data-form="send-kudos">'+
+      '<input type="hidden" name="to" value="'+esc(toUid)+'">'+
+      '<div class="field-row"><label>Ready-made sentence (optional)</label><select class="field" data-change="kudos-template-pick">'+templateOptions+'</select></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Message</label><textarea class="field" id="kudos-message" name="message" rows="4" maxlength="500" placeholder="Write your congratulations…" required autofocus></textarea></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Reward (optional)</label><select class="field" name="rewardChoice" data-change="kudos-reward-pick">'+rewardOptions+'</select></div>'+
+      '<div class="field-row" id="kudos-reward-custom-row" style="margin-top:8px; display:none"><label>Describe the reward</label><input class="field" type="text" name="rewardCustom" maxlength="200" placeholder="e.g. KSh 500 airtime"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Send'+(isGroup?' to everyone':'')+'</button></div>'+
+    '</form>';
   }
 
   /* ============================= FINANCE (administrator + financial staff, approval-gated) ============================= */
@@ -6605,6 +6779,7 @@ var qrcode = (function(){
   // wrong PIN here just shakes and clears, no strike against the shared
   // 3-attempt lockout.
   function financeRevealQuickPinHtml(){
+    revealPinMode = 'finance';
     revealPinBuffer = '';
     revealPinBusy = false;
     var pinLen = (financeGuardStatus && financeGuardStatus.pinLength) || 4;
@@ -6623,6 +6798,37 @@ var qrcode = (function(){
       '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
       '<div class="quickpin-title">Show amounts</div>'+
       '<div class="quickpin-sub">Enter your Finance PIN</div>'+
+      '<div class="quickpin-dots" id="revealpin-dots">'+dotsHtml+'</div>'+
+      '<div class="quickpin-status" id="revealpin-status">&nbsp;</div>'+
+      padHtml+
+      '<div class="quickpin-links"><button type="button" class="linklike" data-action="close-modal">Cancel</button><span></span></div>'+
+    '</div></div>';
+  }
+  // Same pad, same buffer/keyboard plumbing (see revealPinMode), for
+  // revealing a team member's date of birth instead of Finance amounts —
+  // administrator only, verified via getTeamBirthdays (privacyGuard.js),
+  // which unmasks every date of birth in Team Directory at once, the same
+  // way revealing Finance amounts unmasks every figure on that page.
+  function birthdayRevealQuickPinHtml(){
+    revealPinMode = 'birthday';
+    revealPinBuffer = '';
+    revealPinBusy = false;
+    var pinLen = (birthdayGuardStatus && birthdayGuardStatus.pinLength) || 4;
+    var dotsHtml = '';
+    for(var i=0;i<pinLen;i++) dotsHtml += '<div class="quickpin-dot"></div>';
+    var padHtml = '<div class="quickpin-pad">'+
+      [1,2,3,4,5,6,7,8,9].map(function(k){ return '<button type="button" class="quickpin-key" data-action="revealpin-key:'+k+'">'+k+'</button>'; }).join('')+
+      '<span></span>'+
+      '<button type="button" class="quickpin-key" data-action="revealpin-key:0">0</button>'+
+      '<button type="button" class="quickpin-key ghost" data-action="revealpin-backspace" aria-label="Backspace">⌫</button>'+
+    '</div>';
+    return '<div class="quickpin-fullscreen">'+
+      QUICKPIN_SCENE_HENS+
+      '<div class="quickpin-card">'+
+      '<button class="modal-close" data-action="close-modal" style="position:absolute; top:14px; right:14px; z-index:2; color:#EAF6F1">'+ICONS.close+'</button>'+
+      '<div class="quickpin-avatar-ring">'+avatarHTML(currentUser||{}, 84)+'</div>'+
+      '<div class="quickpin-title">Show birthdays</div>'+
+      '<div class="quickpin-sub">Enter your Birthday PIN</div>'+
       '<div class="quickpin-dots" id="revealpin-dots">'+dotsHtml+'</div>'+
       '<div class="quickpin-status" id="revealpin-status">&nbsp;</div>'+
       padHtml+
@@ -6648,7 +6854,9 @@ var qrcode = (function(){
   }
   function revealPinPressDigit(d){
     if(revealPinBusy) return;
-    var pinLen = (financeGuardStatus && financeGuardStatus.pinLength) || 4;
+    var pinLen = revealPinMode==='birthday'
+      ? ((birthdayGuardStatus && birthdayGuardStatus.pinLength) || 4)
+      : ((financeGuardStatus && financeGuardStatus.pinLength) || 4);
     if(revealPinBuffer.length >= pinLen) return;
     revealPinBuffer += String(d);
     revealPinRenderDots();
@@ -6664,8 +6872,15 @@ var qrcode = (function(){
     revealPinBusy = true;
     revealPinSetStatus('Checking…');
     var pinVal = revealPinBuffer;
-    firebase.functions().httpsCallable('verifyFinancePinReveal')({ pin: pinVal }).then(function(){
-      financeRevealed = true;
+    var call = revealPinMode==='birthday'
+      ? firebase.functions().httpsCallable('getTeamBirthdays')({ pin: pinVal }).then(function(res){
+          teamBirthdays = (res.data && res.data.dobs) || {};
+          birthdaysRevealed = true;
+        })
+      : firebase.functions().httpsCallable('verifyFinancePinReveal')({ pin: pinVal }).then(function(){
+          financeRevealed = true;
+        });
+    call.then(function(){
       closeModal();
       render();
     }).catch(function(err){
@@ -8064,6 +8279,25 @@ var qrcode = (function(){
         financeRevealed = false;
         render();
         break;
+      case 'clear-birthday-lock':
+        if(!isAdmin()) break;
+        firebase.functions().httpsCallable('clearBirthdayLock')().then(function(){
+          toast('Birthday PIN lock cleared.');
+          refreshBirthdayGuardStatus();
+        }).catch(function(err){ toast((err&&err.message)||'Could not clear that lock.'); });
+        break;
+      case 'birthday-reveal-prompt':
+        if(!isAdmin()) break;
+        if(birthdayGuardStatus===null) refreshBirthdayGuardStatus();
+        if(birthdayGuardStatus && !birthdayGuardStatus.pinSet){ toast('Set up your Birthday PIN first, in Settings → Your account.'); break; }
+        if(birthdayGuardStatus && birthdayGuardStatus.locked){ toast('Birthday viewing is locked after repeated wrong attempts — clear it from Settings → Your account.'); break; }
+        openModal(birthdayRevealQuickPinHtml());
+        break;
+      case 'birthday-reveal-hide':
+        birthdaysRevealed = false;
+        teamBirthdays = null;
+        render();
+        break;
       case 'open-add-staff':
         if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
         openModal(staffFormHtml());
@@ -8096,6 +8330,22 @@ var qrcode = (function(){
         var editNameUser = teamUsers.find(function(x){ return x.uid===a1; });
         if(!editNameUser) break;
         openModal(editStaffNameFormHtml(a1, editNameUser.name, editNameUser.gender));
+        break;
+      }
+      case 'open-set-own-dob':
+        if(!currentUser) break;
+        openModal(setOwnDobFormHtml());
+        break;
+      case 'open-set-staff-dob': {
+        if(!isAdmin()) break;
+        var dobUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!dobUser) break;
+        // Prefilled only if already revealed this sitting (see
+        // birthday-reveal-prompt) — entering a value you can already see
+        // isn't a new "reveal"; if it isn't revealed yet, the field just
+        // starts blank and the administrator can still set/overwrite it.
+        var existingDob = (teamBirthdays && teamBirthdays[a1]) || '';
+        openModal(setStaffDobFormHtml(a1, dobUser.name || (dobUser.email?dobUser.email.split('@')[0]:'this team member'), existingDob));
         break;
       }
       case 'open-change-role': {
@@ -8147,6 +8397,14 @@ var qrcode = (function(){
         if(!currentUser){ toast('Sign in first.'); break; }
         openModal(composeMessageFormHtml());
         break;
+      case 'open-kudos': {
+        if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
+        if(a1==='all'){ openModal(kudosFormHtml('all', null)); break; }
+        var kudosUser = teamUsers.find(function(x){ return x.uid===a1; });
+        if(!kudosUser){ toast("That team member's account no longer exists."); break; }
+        openModal(kudosFormHtml(a1, kudosUser.name || (kudosUser.email?kudosUser.email.split('@')[0]:'them')));
+        break;
+      }
       case 'toggle-messages-view':
         if(!isAdminLevel()) break;
         messagesViewAll = !messagesViewAll;
@@ -8213,6 +8471,16 @@ var qrcode = (function(){
     if(name==='egg-size-input'){
       var totalInput2 = document.getElementById('egg-total-input');
       if(totalInput2) totalInput2.value = eggSizeFieldsSum();
+      return;
+    }
+    if(name==='kudos-template-pick'){
+      var kudosMsgBox = document.getElementById('kudos-message');
+      if(kudosMsgBox && el.value) kudosMsgBox.value = el.value;
+      return;
+    }
+    if(name==='kudos-reward-pick'){
+      var kudosCustomRow = document.getElementById('kudos-reward-custom-row');
+      if(kudosCustomRow) kudosCustomRow.style.display = el.value==='__custom__' ? 'block' : 'none';
       return;
     }
     if(name==='removal-reason'){
@@ -8717,6 +8985,7 @@ var qrcode = (function(){
     if(name==='add-staff'){
       if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
       var sName = (val('name')||'').trim(), sEmail = (val('email')||'').trim().toLowerCase(), sPassword = val('password')||'', sRoleChoice = val('roleChoice'), sGender = val('gender')||'unspecified';
+      var sDob = val('dob')||'';
       var sIsCoAdmin = sRoleChoice === 'coadmin';
       var sJobTitle = sIsCoAdmin ? null : sRoleChoice;
       // Saved as real data from the moment the account exists (the obvious
@@ -8725,8 +8994,16 @@ var qrcode = (function(){
       var sAbout = defaultAboutForRole(sIsCoAdmin ? {role:'coadmin'} : {role:'employee', jobTitle:sJobTitle});
       var sPayload = {name:sName, email:sEmail, password:sPassword, gender:sGender, about:sAbout, role: sIsCoAdmin ? 'coadmin' : 'employee'};
       if(!sIsCoAdmin) sPayload.jobTitle = sJobTitle;
-      firebase.functions().httpsCallable('createStaffAccount')(sPayload).then(function(){
+      firebase.functions().httpsCallable('createStaffAccount')(sPayload).then(function(res){
         closeModal(); toast('Account created — share the email and password with them.');
+        // Date of birth goes through setStaffDob (privateProfiles/{uid}),
+        // never createStaffAccount itself — that call only ever touches
+        // users/{uid}, which every signed-in account can read.
+        if(sDob && res.data && res.data.uid){
+          firebase.functions().httpsCallable('setStaffDob')({uid:res.data.uid, dob:sDob}).catch(function(){
+            toast('Account created, but the birthday didn\'t save — set it from Team Directory.');
+          });
+        }
       }).catch(function(err){ toast((err&&err.message)||'Could not create the account.'); });
       return;
     }
@@ -8757,6 +9034,40 @@ var qrcode = (function(){
       firebase.functions().httpsCallable('updateOwnProfile')({about:ownAbout, gender:ownGender}).then(function(){
         toast('Saved.');
       }).catch(function(err){ toast((err&&err.message)||'Could not save this.'); });
+      return;
+    }
+    if(name==='set-own-dob'){
+      if(!currentUser){ toast('Sign in first.'); return; }
+      var ownDob = val('dob')||'';
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(ownDob)){ toast('Enter a valid date.'); return; }
+      firebase.functions().httpsCallable('setOwnDob')({dob:ownDob}).then(function(res){
+        myDob = (res.data && res.data.dob) || ownDob;
+        closeModal(); toast('Birthday saved.'); render();
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that date.'); });
+      return;
+    }
+    if(name==='set-staff-dob'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var sdUid = val('uid'), sdDob = val('dob')||'';
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(sdDob)){ toast('Enter a valid date.'); return; }
+      firebase.functions().httpsCallable('setStaffDob')({uid:sdUid, dob:sdDob}).then(function(){
+        if(teamBirthdays) teamBirthdays[sdUid] = sdDob; // keep the already-revealed view in sync without a re-reveal
+        closeModal(); toast('Birthday saved.'); render();
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that date.'); });
+      return;
+    }
+    if(name==='send-kudos'){
+      if(!isAdminLevel()){ toast('Only the administrator can do this.'); return; }
+      var kTo = val('to');
+      var kMessage = (val('message')||'').trim();
+      if(!kMessage){ toast('Write a congratulation message first.'); return; }
+      var kRewardChoice = val('rewardChoice')||'';
+      var kReward = kRewardChoice==='__custom__' ? (val('rewardCustom')||'').trim() : kRewardChoice;
+      var kPayload = {to:kTo, message:kMessage};
+      if(kReward) kPayload.reward = kReward;
+      firebase.functions().httpsCallable('sendKudos')(kPayload).then(function(){
+        closeModal(); toast('Sent!');
+      }).catch(function(err){ toast((err&&err.message)||'Could not send that.'); });
       return;
     }
     if(name==='compose-message'){
@@ -8951,6 +9262,19 @@ var qrcode = (function(){
       }).catch(function(err){ toast((err&&err.message)||'Could not save that PIN.'); });
       return;
     }
+    if(name==='set-birthday-pin'){
+      if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
+      var newBPin = (val('pin')||'').trim();
+      var newBPin2 = (val('pin2')||'').trim();
+      if(!/^\d{4,8}$/.test(newBPin)){ toast('Use a 4 to 8 digit PIN.'); return; }
+      if(newBPin!==newBPin2){ toast('Those two PINs don\'t match.'); return; }
+      firebase.functions().httpsCallable('setBirthdayPin')({ pin: newBPin }).then(function(){
+        toast('Your Birthday PIN is set.');
+        refreshBirthdayGuardStatus();
+        try{ form.reset(); }catch(e){}
+      }).catch(function(err){ toast((err&&err.message)||'Could not save that PIN.'); });
+      return;
+    }
     if(name==='clear-finance-lock'){
       if(!isAdmin()){ toast('Only the administrator can do this.'); return; }
       var clearCode = (val('code')||'').trim();
@@ -9091,6 +9415,26 @@ var qrcode = (function(){
   // and can in principle be open at a different moment than the portal gate.
   var revealPinBuffer = '';
   var revealPinBusy = false;
+  // Which reveal the PIN pad above (revealpin-dots) is currently for —
+  // 'finance' (Finance amounts, administrator only within that flow) or
+  // 'birthday' (other team members' dates of birth, administrator only).
+  // Both share the exact same pad/buffer/keyboard-listener plumbing since
+  // only one can ever be open at a time; only revealPinSubmit and
+  // revealPinPressDigit branch on it, to know which PIN length and which
+  // Cloud Function apply.
+  var revealPinMode = 'finance';
+  // Birthday privacy: myDob is this signed-in account's own date of birth
+  // (fetched via getMyDob — never stored on users/{uid}, see
+  // privateProfiles/{uid} in firestore.rules). birthdaysRevealed/
+  // teamBirthdays are administrator-only and populated only after a
+  // successful Birthday PIN check (getTeamBirthdays) — cleared back on
+  // every fresh page load, same masking pattern as financeRevealed.
+  var myDob = null;
+  var myDobLoaded = false;
+  var birthdaysRevealed = false;
+  var teamBirthdays = null;
+  var birthdayGuardStatus = null;
+  var birthdayGuardStatusLoading = false;
   var artifactApi = null;
   var saveTimer = null;
 

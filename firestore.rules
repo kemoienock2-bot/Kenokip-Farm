@@ -136,6 +136,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Dates of birth. Nobody — not even the account owner — reads or writes
+    // this directly from the client; only privacyGuard.js's Cloud Functions
+    // touch it via the Admin SDK. Same reasoning as `security/{uid}` above:
+    // deliberately a separate collection from `users/{uid}` (which any
+    // signed-in account can read, for the team roster/messaging) so a date
+    // of birth can never leak out through that broader rule. Reading it back
+    // — your own via getMyDob, or (administrator only) anyone's via
+    // getTeamBirthdays behind the dedicated Birthday PIN — always goes
+    // through a Cloud Function, never a direct Firestore read.
+    match /privateProfiles/{uid} {
+      allow read, write: if false;
+    }
+
     // Finance security alerts (failed Finance-portal attempts, lockouts,
     // and the administrator clearing a lock). Same shape as accessLogs —
     // administrator-only, and only financeGuard.js's Cloud Functions may
