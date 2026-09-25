@@ -24,6 +24,8 @@
       { "source": "/mpesaAccountBalanceTimeout", "function": { "functionId": "mpesaAccountBalanceTimeout", "region": "us-central1" } },
       { "source": "/mpesaTransactionStatusResult", "function": { "functionId": "mpesaTransactionStatusResult", "region": "us-central1" } },
       { "source": "/mpesaTransactionStatusTimeout", "function": { "functionId": "mpesaTransactionStatusTimeout", "region": "us-central1" } },
+      { "source": "/c2bConfirmation/**", "function": { "functionId": "c2bConfirmation", "region": "us-central1" } },
+      { "source": "/c2bValidation/**", "function": { "functionId": "c2bValidation", "region": "us-central1" } },
       { "source": "/c2bConfirmation", "function": { "functionId": "c2bConfirmation", "region": "us-central1" } },
       { "source": "/c2bValidation", "function": { "functionId": "c2bValidation", "region": "us-central1" } }
     ]
