@@ -1,0 +1,22 @@
+Copyright (c) 2026 Kenokip Farm. All rights reserved.
+
+This repository and its contents (including but not limited to the
+application source code, design, text, and original images) are the
+proprietary property of Kenokip Farm.
+
+No part of this software may be copied, modified, distributed,
+sublicensed, or used, in whole or in part, without the prior written
+permission of Kenokip Farm, except as expressly permitted by applicable
+law.
+
+Third-party components included with this project (for example, the
+Firebase SDK and any packages under functions/node_modules) remain the
+property of their respective owners and are used here under their own
+separate licenses; this notice does not extend any rights to those
+components beyond what their own licenses already grant.
+
+This project is made available in a public repository for reference and
+deployment purposes only. Public visibility of the source code does not
+constitute a grant of license to use, copy, or redistribute it.
+
+For permission requests, contact the copyright holder directly.

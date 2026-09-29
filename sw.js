@@ -2,10 +2,13 @@
 // Minimal cache-first app shell so Chrome will treat this as an installable,
 // offline-capable PWA. Bump CACHE_NAME whenever you replace these files on
 // the server so returning visitors pick up the update instead of a stale copy.
-var CACHE_NAME = 'kenokip-farm-v58';
+var CACHE_NAME = 'kenokip-farm-v59';
 var APP_SHELL = [
   './',
   './index.html',
+  './styles.css',
+  './app.js',
+  './js/qrcode-lib.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
