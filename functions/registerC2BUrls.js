@@ -1,15 +1,23 @@
-// Run this ONCE per environment, after `firebase deploy --only functions`
-// has given you your real function URLs:
+// Run this ONCE PER SHORTCODE per environment, after
+// `firebase deploy --only functions` has given you your real function URLs:
 //
 //   cd functions
 //   npm install
 //   copy c2b.env.example c2b.env      (fill in the real values)
-//   npm run register-c2b
+//   npm run register-c2b              (registers the Till)
+//   npm run register-c2b-paybill      (registers the Paybill too, if you want
+//                                       direct Paybill payments detected —
+//                                       fill in the Payouts/Paybill section
+//                                       of c2b.env first)
 //
 // This tells Safaricom where to send a webhook whenever someone pays your
-// Till/Paybill directly. You do not need to run this for the "Add via
+// Till or Paybill directly. You do not need to run this for the "Add via
 // M-Pesa" (STK Push) flow — only for automatic detection of payments other
-// people make on their own.
+// people make on their own. Each shortcode has to be registered separately —
+// Safaricom's registerurl call only accepts the shortcode your OWN API
+// credentials are tied to (see daraja.js's registerC2BUrls for the exact
+// error this gives otherwise), so the Till and Paybill each need their own
+// run of this script, using their own Consumer Key/Secret.
 //
 // IMPORTANT: this reads from "c2b.env", not ".env" — Firebase's own deploy
 // step auto-loads any file literally named ".env" (or ".env.<project-id>")
@@ -25,13 +33,20 @@ function env(name, fallback) {
 }
 
 async function main() {
+  // First CLI argument picks which shortcode to register: "till" (default,
+  // also what a bare `node registerC2BUrls.js` with no argument still does —
+  // matches every earlier run of this script) or "paybill".
+  const account = (process.argv[2] || 'till').trim().toLowerCase();
+  const isPaybill = account === 'paybill';
   const envName = env('MPESA_ENV', 'sandbox');
   const base = env('MPESA_CALLBACK_BASE_URL');
-  const shortcode = env('MPESA_SHORTCODE');
-  const consumerKey = env('MPESA_CONSUMER_KEY');
-  const consumerSecret = env('MPESA_CONSUMER_SECRET');
+  const shortcode = isPaybill ? env('MPESA_PAYOUT_SHORTCODE') : env('MPESA_SHORTCODE');
+  const consumerKey = isPaybill ? env('MPESA_PAYOUT_CONSUMER_KEY') : env('MPESA_CONSUMER_KEY');
+  const consumerSecret = isPaybill ? env('MPESA_PAYOUT_CONSUMER_SECRET') : env('MPESA_CONSUMER_SECRET');
   if (!base || !shortcode || !consumerKey || !consumerSecret) {
-    console.error('Fill in functions/c2b.env first — see c2b.env.example.');
+    console.error(isPaybill
+      ? 'Fill in the Payouts (Paybill) section of functions/c2b.env first — see c2b.env.example.'
+      : 'Fill in functions/c2b.env first — see c2b.env.example.');
     process.exit(1);
   }
   const webhookSecret = env('MPESA_WEBHOOK_SECRET', '');
@@ -56,9 +71,9 @@ async function main() {
   // which registers these URLs with Safaricom's sandbox system while real
   // customers pay through production. Nothing calls this back, ever, and
   // there's no error to find — it just silently never arrives.
-  console.log(`Registering against Safaricom ${envName.toUpperCase()} for shortcode ${shortcode}.`);
+  console.log(`Registering against Safaricom ${envName.toUpperCase()} for ${isPaybill ? 'Paybill' : 'Till'} shortcode ${shortcode}.`);
   if (envName !== 'production') {
-    console.warn('MPESA_ENV in c2b.env is NOT "production" — if your till is live, this registration will not receive real customer payments. Set MPESA_ENV=production in c2b.env and re-run this if that\'s not intentional.');
+    console.warn(`MPESA_ENV in c2b.env is NOT "production" — if your ${isPaybill ? 'Paybill' : 'Till'} is live, this registration will not receive real customer payments. Set MPESA_ENV=production in c2b.env and re-run this if that's not intentional.`);
   }
   const confirmationUrl = base + '/c2bConfirmation' + suffix;
   const validationUrl = base + '/c2bValidation' + suffix;

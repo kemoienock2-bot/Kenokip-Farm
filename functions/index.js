@@ -117,9 +117,21 @@ const MPESA_SECURITY_CREDENTIAL = defineSecret('MPESA_SECURITY_CREDENTIAL');
 const MPESA_PAYOUT_CONSUMER_KEY = defineSecret('MPESA_PAYOUT_CONSUMER_KEY');
 const MPESA_PAYOUT_CONSUMER_SECRET = defineSecret('MPESA_PAYOUT_CONSUMER_SECRET');
 const MPESA_PAYOUT_SHORTCODE = defineSecret('MPESA_PAYOUT_SHORTCODE'); // Kenokip Farm's Paybill: 1307475
+// Only needed if the Paybill ALSO sends its own STK Push prompts (see
+// initiateDeposit's `account` branch below) — a completely separate
+// passkey from MPESA_PASSKEY (the Till's), since STK's password is built
+// from shortcode+passkey+timestamp and Safaricom issues one passkey per
+// shortcode/app, same as everything else here. Not needed at all for B2C/
+// Balance/Status — those don't use a passkey.
+const MPESA_PAYOUT_PASSKEY = defineSecret('MPESA_PAYOUT_PASSKEY');
 
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET, MPESA_STORE_NUMBER];
 const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT, MPESA_SECURITY_CREDENTIAL, MPESA_PAYOUT_CONSUMER_KEY, MPESA_PAYOUT_CONSUMER_SECRET, MPESA_PAYOUT_SHORTCODE]);
+// initiateDeposit can send its STK Push from either account (see the
+// `account` field it reads below), so it needs both credential sets —
+// unlike B2C_SECRETS it does NOT need the Initiator/B2C secrets, since
+// collecting via STK never touches B2C at all.
+const DEPOSIT_SECRETS = ALL_SECRETS.concat([MPESA_PAYOUT_CONSUMER_KEY, MPESA_PAYOUT_CONSUMER_SECRET, MPESA_PAYOUT_SHORTCODE, MPESA_PAYOUT_PASSKEY]);
 
 // Kill-switch for the "Send via M-Pesa" payout feature (initiateWithdrawal
 // below). Leave this false until Safaricom has actually enabled B2C API
@@ -389,7 +401,14 @@ async function addTransactionIfNew(txn) {
 // This is a deposit (money coming in), so — same as any other deposit —
 // it doesn't need the administrator's approval even when Financial Staff
 // starts it.
-exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }, async (request) => {
+//
+// `account` picks which of the two shortcodes gets paid: 'till' (default —
+// the ordinary collections account) or 'paybill' (Paybill 1307475). These
+// are two separate real M-Pesa balances — see the note on PAYOUTS_ENABLED
+// above — so money sent to one is NOT automatically available from the
+// other. The callback URL carries the choice through as `?acct=...` so
+// mpesaStkCallback below can label the resulting Finance entry correctly.
+exports.initiateDeposit = onCall({ secrets: DEPOSIT_SECRETS, region: 'us-central1' }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in first.');
   }
@@ -400,33 +419,47 @@ exports.initiateDeposit = onCall({ secrets: ALL_SECRETS, region: 'us-central1' }
   }
   const amount = Number(request.data && request.data.amount);
   const phone = normalizePhone(request.data && request.data.phone);
+  const account = (request.data && request.data.account === 'paybill') ? 'paybill' : 'till';
   if (!amount || amount <= 0) throw new HttpsError('invalid-argument', 'Enter a valid amount.');
   if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
 
   const webhookKey = sval(MPESA_WEBHOOK_SECRET);
-  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback` + (webhookKey ? `?key=${encodeURIComponent(webhookKey)}` : '');
+  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback?acct=${account}` + (webhookKey ? `&key=${encodeURIComponent(webhookKey)}` : '');
+  const stkParams = account === 'paybill' ? {
+    env: sval(MPESA_ENV, 'sandbox'),
+    consumerKey: sval(MPESA_PAYOUT_CONSUMER_KEY),
+    consumerSecret: sval(MPESA_PAYOUT_CONSUMER_SECRET),
+    shortcode: sval(MPESA_PAYOUT_SHORTCODE),
+    passkey: sval(MPESA_PAYOUT_PASSKEY),
+    accountType: 'paybill',
+    phone,
+    amount,
+    callbackUrl,
+    accountRef: 'KenokipFarm',
+    description: 'Kenokip Farm deposit',
+  } : {
+    env: sval(MPESA_ENV, 'sandbox'),
+    consumerKey: sval(MPESA_CONSUMER_KEY),
+    consumerSecret: sval(MPESA_CONSUMER_SECRET),
+    shortcode: sval(MPESA_SHORTCODE),
+    storeNumber: sval(MPESA_STORE_NUMBER),
+    passkey: sval(MPESA_PASSKEY),
+    accountType: sval(MPESA_ACCOUNT_TYPE, 'till'),
+    phone,
+    amount,
+    callbackUrl,
+    accountRef: 'KenokipFarm',
+    description: 'Kenokip Farm deposit',
+  };
   try {
-    const result = await stkPush({
-      env: sval(MPESA_ENV, 'sandbox'),
-      consumerKey: sval(MPESA_CONSUMER_KEY),
-      consumerSecret: sval(MPESA_CONSUMER_SECRET),
-      shortcode: sval(MPESA_SHORTCODE),
-      storeNumber: sval(MPESA_STORE_NUMBER),
-      passkey: sval(MPESA_PASSKEY),
-      accountType: sval(MPESA_ACCOUNT_TYPE, 'till'),
-      phone,
-      amount,
-      callbackUrl,
-      accountRef: 'KenokipFarm',
-      description: 'Kenokip Farm deposit',
-    });
+    const result = await stkPush(stkParams);
     return {
       ok: true,
       message: 'Check ' + phone + ' now — enter your M-Pesa PIN there to complete the deposit.',
       checkoutRequestId: result.CheckoutRequestID,
     };
   } catch (err) {
-    logger.error('STK push failed', err);
+    logger.error('STK push failed', err, { account });
     throw new HttpsError('internal', 'Could not reach M-Pesa. Try again in a moment.');
   }
 });
@@ -438,6 +471,12 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
   try {
     const stk = req.body && req.body.Body && req.body.Body.stkCallback;
     if (!stk) { res.status(200).send('ignored'); return; }
+    // Which shortcode this particular push went out on — carried through
+    // from initiateDeposit's `?acct=...` query param so a Paybill deposit
+    // is never mistaken for Till income in Finance (they're separate real
+    // M-Pesa balances). Missing/unrecognized defaults to 'till', matching
+    // every deposit sent before this parameter existed.
+    const acct = (req.query && req.query.acct === 'paybill') ? 'paybill' : 'till';
     if (stk.ResultCode === 0) {
       const items = (stk.CallbackMetadata && stk.CallbackMetadata.Item) || [];
       const get = (name) => { const it = items.find((i) => i.Name === name); return it ? it.Value : undefined; };
@@ -449,11 +488,11 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
         date: isoDateFromMpesaTimestamp(get('TransactionDate')) || new Date().toISOString().slice(0, 10),
         type: 'deposit',
         amount: amount,
-        note: 'Received via kenokipfarm (M-Pesa' + (receipt ? ' ' + receipt : '') + (phone ? ', ' + phone : '') + ')',
-        source: 'mpesa-stk',
+        note: 'Received via kenokipfarm' + (acct === 'paybill' ? ' Paybill' : '') + ' (M-Pesa' + (receipt ? ' ' + receipt : '') + (phone ? ', ' + phone : '') + ')',
+        source: acct === 'paybill' ? 'mpesa-stk-paybill' : 'mpesa-stk',
       });
     } else {
-      logger.info('STK push not completed: ' + stk.ResultDesc);
+      logger.info('STK push not completed: ' + stk.ResultDesc, { account: acct });
     }
   } catch (err) {
     logger.error('mpesaStkCallback error', err);
@@ -615,15 +654,35 @@ exports.c2bValidation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (re
   res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 });
 
-// Safaricom calls this automatically whenever someone pays the till
-// directly from their own phone (not through our STK push flow above). By
-// default we treat every till payment as an egg sale, since that's what the
-// till is mainly used for: dividing the amount by the same per-egg price the
-// app itself uses (EGG_UNIT_VALUE_KSH) gives an egg count, which becomes
-// both the note and the linked Income's category — the user can still edit
-// the category/note/count afterwards on the Income page, this is only the
-// default.
-exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+// Which real account a C2B call landed on. Safaricom includes the actual
+// receiving shortcode as BusinessShortCode on every C2B Validation/
+// Confirmation call, so — unlike STK Push's callback, which carries no
+// shortcode at all and needed the `?acct=...` query-param workaround in
+// mpesaStkCallback above — C2B can tell Till and Paybill apart directly
+// from the payload itself. Anything that doesn't match the Paybill's
+// registered shortcode defaults to 'till', matching every C2B payment ever
+// received before the Paybill could receive them at all.
+function classifyC2BShortcode(businessShortCode) {
+  const code = String(businessShortCode || '').trim();
+  const payoutCode = sval(MPESA_PAYOUT_SHORTCODE);
+  if (code && payoutCode && code === payoutCode) return 'paybill';
+  return 'till';
+}
+
+// Safaricom calls this automatically whenever someone pays the Till or
+// Paybill directly from their own phone (not through our STK push flow
+// above) — assuming both have had their C2B URLs registered via
+// `npm run register-c2b` / `npm run register-c2b-paybill` (see
+// SETUP-MPESA.md). For the Till, we default every payment to an egg sale,
+// since that's what the Till is mainly used for: dividing the amount by the
+// same per-egg price the app itself uses (EGG_UNIT_VALUE_KSH) gives an egg
+// count, which becomes both the note and the linked Income's category. A
+// Paybill payment isn't assumed to be any particular product — it's logged
+// as plain income with no forced category, since the Paybill has no single
+// "usual" reason customers would pay it directly the way the Till does.
+// Either way, the user can still edit the category/note/count afterwards on
+// the Income page — this is only the default.
+exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET, MPESA_PAYOUT_SHORTCODE] }, async (req, res) => {
   const ok = webhookKeyMatches(req);
   await logC2BCall('c2bConfirmation', req, ok);
   if (!ok) {
@@ -633,19 +692,31 @@ exports.c2bConfirmation = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (
   }
   try {
     const b = resolveC2BBody(req).body;
+    const acct = classifyC2BShortcode(b.BusinessShortCode);
     const payer = [b.FirstName, b.MiddleName, b.LastName].filter(Boolean).join(' ');
     const amount = Number(b.TransAmount || 0);
-    const eggsCount = Math.max(0, Math.round(amount / EGG_UNIT_VALUE_KSH));
     const who = payer || b.MSISDN || 'a customer';
-    await addTransactionIfNew({
-      id: 'c2b_' + (b.TransID || Date.now()),
-      date: isoDateFromMpesaTimestamp(b.TransTime) || new Date().toISOString().slice(0, 10),
-      type: 'deposit',
-      amount: amount,
-      category: 'Egg Sales',
-      note: eggsCount + (eggsCount === 1 ? ' egg' : ' eggs') + ' — from ' + who + ' via Till',
-      source: 'mpesa-c2b',
-    });
+    if (acct === 'paybill') {
+      await addTransactionIfNew({
+        id: 'c2b_' + (b.TransID || Date.now()),
+        date: isoDateFromMpesaTimestamp(b.TransTime) || new Date().toISOString().slice(0, 10),
+        type: 'deposit',
+        amount: amount,
+        note: 'Received from ' + who + ' via Paybill (M-Pesa' + (b.TransID ? ' ' + b.TransID : '') + ')',
+        source: 'mpesa-c2b-paybill',
+      });
+    } else {
+      const eggsCount = Math.max(0, Math.round(amount / EGG_UNIT_VALUE_KSH));
+      await addTransactionIfNew({
+        id: 'c2b_' + (b.TransID || Date.now()),
+        date: isoDateFromMpesaTimestamp(b.TransTime) || new Date().toISOString().slice(0, 10),
+        type: 'deposit',
+        amount: amount,
+        category: 'Egg Sales',
+        note: eggsCount + (eggsCount === 1 ? ' egg' : ' eggs') + ' — from ' + who + ' via Till',
+        source: 'mpesa-c2b',
+      });
+    }
   } catch (err) {
     logger.error('c2bConfirmation error', err);
   }

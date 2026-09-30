@@ -319,7 +319,7 @@
         // as final. Bracketed bits are placeholders for details only the
         // administrator can fill in.
         about:{
-          bio:"Enock Kiplangat Kemoi — known as Kenokip — runs Kenokip Farm, a poultry-keeping operation that has grown from a personal record-keeping effort into a real team operation with its own Supervisor, Vet, Financial Staff, and Farmhand roles. What began as tracking birds, eggs, and money by hand is now run through this purpose-built ledger, with real M-Pesa integration and proper financial controls behind it. [Add: where the farm is based, how and when it got started, and anything else you'd like people to know.]",
+          bio:"Enock Kemoi — known as Kenokip — runs Kenokip Farm, a poultry-keeping operation that has grown from a personal record-keeping effort into a real team operation with its own Supervisor, Vet, Financial Staff, and Farmhand roles. What began as tracking birds, eggs, and money by hand is now run through this purpose-built ledger, with real M-Pesa integration and proper financial controls behind it. [Add: where the farm is based, how and when it got started, and anything else you'd like people to know.]",
           mission:"To run a transparent, well-organized poultry operation — where every bird, egg, shilling, and team member is accounted for — using modern tools to replace guesswork and paper records with real data anyone on the team can trust.",
           vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
         }
@@ -2427,7 +2427,9 @@
     }
     if(t.type!=='deposit') return null;
     var methodLabel = t.source==='mpesa-stk' ? 'M-Pesa (sent from the app)'
+      : t.source==='mpesa-stk-paybill' ? 'M-Pesa (sent from the app, Paybill)'
       : t.source==='mpesa-c2b' ? 'M-Pesa (paid directly to the Till)'
+      : t.source==='mpesa-c2b-paybill' ? 'M-Pesa (paid directly to the Paybill)'
       : 'Manual entry';
     return {
       title: 'PAYMENT RECEIPT',
@@ -5558,7 +5560,11 @@
     return '<div class="modal-head"><h3>Add via M-Pesa</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
     '<p class="hint">Enter an amount and the Safaricom number to pay from. You\'ll get the normal M-Pesa prompt on that phone — enter your PIN there, not here. The balance updates itself once M-Pesa confirms it.</p>'+
     '<form data-form="mpesa-deposit">'+
-      '<div class="field-row"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required autofocus></div>'+
+      (mpesaPaybillStkEnabled ? '<div class="field-row"><label>Receiving account</label><select class="field" name="account">'+
+        '<option value="till">Till (usual)</option>'+
+        '<option value="paybill">Paybill</option>'+
+      '</select></div>' : '')+
+      '<div class="field-row" style="margin-top:12px"><label>Amount (KES)</label><input class="field" type="number" min="1" step="1" name="amount" required autofocus></div>'+
       '<div class="field-row" style="margin-top:12px"><label>Phone number</label><input class="field" type="tel" name="phone" placeholder="0712345678" value="'+esc(state.settings.ownerPhone||'')+'" required></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit" id="mpesa-deposit-submit">Send M-Pesa prompt</button></div>'+
     '</form>';
@@ -7732,10 +7738,11 @@
       if(!canProposeFinance()){ toast('Only the administrator, co-administrator, or financial staff can start M-Pesa deposits.'); return; }
       if(!mpesaEnabled){ toast('M-Pesa isn\'t set up on this deployment yet.'); return; }
       var mAmount = Number(val('amount')||0), mPhone = (val('phone')||'').trim();
+      var mAccount = (mpesaPaybillStkEnabled ? (val('account')||'till') : 'till').trim();
       var submitBtn = document.getElementById('mpesa-deposit-submit');
       if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Sending prompt…'; }
       mutate(function(s){ s.settings.ownerPhone = mPhone; });
-      firebase.functions().httpsCallable('initiateDeposit')({ amount: mAmount, phone: mPhone }).then(function(res){
+      firebase.functions().httpsCallable('initiateDeposit')({ amount: mAmount, phone: mPhone, account: mAccount }).then(function(res){
         closeModal();
         toast((res.data && res.data.message) || 'Check your phone for the M-Pesa prompt.');
       }).catch(function(err){
@@ -7964,6 +7971,13 @@
   // and the M-Pesa Business team correspondence). Flip both flags back to
   // true together once B2C is confirmed working.
   var mpesaPayoutsEnabled = true;
+  // Separate kill-switch for STK Push FROM the Paybill (a collection, not a
+  // payout — money coming in, not going out — so it's lower-risk than
+  // mpesaPayoutsEnabled above, but still needs MPESA_PAYOUT_PASSKEY set on
+  // the backend before it'll actually work). Once that secret is set and
+  // deployed, flip this to true to show the account picker in "Add via
+  // M-Pesa" — see HOW-TO-APPLY-DUAL-ACCOUNT.md.
+  var mpesaPaybillStkEnabled = true;
   var financeSyncStarted = false;
   var directorySyncStarted = false;
   var logsSyncStarted = false;
