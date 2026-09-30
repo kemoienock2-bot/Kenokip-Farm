@@ -9,8 +9,9 @@
 // Run from inside the functions folder:
 //   node test-b2c.js
 //
-// It reads your Consumer Key/Secret/Shortcode/Environment from c2b.env
-// (the same file register-c2b.js uses — not sensitive enough on its own to
+// It reads the PAYOUT (Paybill) Consumer Key/Secret/Shortcode/Environment
+// from c2b.env's MPESA_PAYOUT_* fields (the same file register-c2b.js uses
+// for its own, separate Till fields — not sensitive enough on its own to
 // re-type each time), then asks you to paste the Initiator Name and
 // Security Credential fresh each run.
 
@@ -28,17 +29,17 @@ function ask(rl, question) {
 
 async function main() {
   const envName = env('MPESA_ENV', 'sandbox');
-  const shortcode = env('MPESA_SHORTCODE');
-  const consumerKey = env('MPESA_CONSUMER_KEY');
-  const consumerSecret = env('MPESA_CONSUMER_SECRET');
+  const shortcode = env('MPESA_PAYOUT_SHORTCODE');
+  const consumerKey = env('MPESA_PAYOUT_CONSUMER_KEY');
+  const consumerSecret = env('MPESA_PAYOUT_CONSUMER_SECRET');
   const callbackBase = env('MPESA_CALLBACK_BASE_URL');
   if (!shortcode || !consumerKey || !consumerSecret || !callbackBase) {
-    console.error('Fill in functions/c2b.env first (Consumer Key/Secret, Shortcode, Callback Base URL) — see c2b.env.example.');
+    console.error('Fill in functions/c2b.env first (Payout Consumer Key/Secret, Payout Shortcode, Callback Base URL) — see c2b.env.example.');
     process.exit(1);
   }
-  console.log(`Testing against Safaricom ${envName.toUpperCase()} for shortcode ${shortcode}.`);
+  console.log(`Testing against Safaricom ${envName.toUpperCase()} for Paybill ${shortcode}.`);
   if (envName !== 'production') {
-    console.warn('MPESA_ENV in c2b.env is not "production" — this will hit the sandbox API, not your real till.');
+    console.warn('MPESA_ENV in c2b.env is not "production" — this will hit the sandbox API, not your real Paybill.');
   }
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });

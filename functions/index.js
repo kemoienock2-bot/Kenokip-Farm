@@ -101,20 +101,40 @@ const MPESA_B2C_CERT = defineSecret('MPESA_B2C_CERT'); // the Safaricom public c
 // is set, it's used as-is and MPESA_B2C_CERT isn't needed at all.
 const MPESA_SECURITY_CREDENTIAL = defineSecret('MPESA_SECURITY_CREDENTIAL');
 
+// Payout account — separate from everything above. Kenokip Farm receives
+// deposits on a Till (MPESA_SHORTCODE/MPESA_CONSUMER_KEY/SECRET above) but
+// sends money out from a different account, Paybill 1307475. Safaricom ties
+// a Daraja app's Consumer Key/Secret, and an Initiator's B2C rights, to one
+// specific shortcode each — there's no way to authenticate a payout against
+// a shortcode your credentials aren't actually issued for (same "Bad
+// Request - Kindly use your own ShortCode" rule daraja.js already notes for
+// C2B registration). So collecting on one shortcode and paying out from
+// another needs a second, fully independent credential set, not just a
+// second value for MPESA_SHORTCODE.
+// MPESA_INITIATOR_NAME / MPESA_INITIATOR_PASSWORD / MPESA_B2C_CERT /
+// MPESA_SECURITY_CREDENTIAL above are the Paybill's Initiator identity —
+// created via the Paybill's own Org Portal, not the Till's.
+const MPESA_PAYOUT_CONSUMER_KEY = defineSecret('MPESA_PAYOUT_CONSUMER_KEY');
+const MPESA_PAYOUT_CONSUMER_SECRET = defineSecret('MPESA_PAYOUT_CONSUMER_SECRET');
+const MPESA_PAYOUT_SHORTCODE = defineSecret('MPESA_PAYOUT_SHORTCODE'); // Kenokip Farm's Paybill: 1307475
+
 const ALL_SECRETS = [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_ENV, MPESA_CALLBACK_BASE_URL, MPESA_ACCOUNT_TYPE, MPESA_WEBHOOK_SECRET, MPESA_STORE_NUMBER];
-const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT, MPESA_SECURITY_CREDENTIAL]);
+const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_B2C_CERT, MPESA_SECURITY_CREDENTIAL, MPESA_PAYOUT_CONSUMER_KEY, MPESA_PAYOUT_CONSUMER_SECRET, MPESA_PAYOUT_SHORTCODE]);
 
 // Kill-switch for the "Send via M-Pesa" payout feature (initiateWithdrawal
-// below). Safaricom's Business team confirmed this shortcode's Till is a
-// Buy-Goods Till, and told us B2C on it is limited (possibly USSD-only, per
-// their own two emails, which didn't fully agree with each other) — either
-// way it's not something a Till reliably does through the Daraja API. Until
-// that's resolved (a One Account shortcode from Safaricom, or written
-// confirmation from apisupport@safaricom.co.ke that automated B2C actually
-// works here), flip this to false rather than let every payout attempt fail
-// against Safaricom with a confusing error. Flip it back to true once B2C is
-// actually confirmed working end-to-end — no redeploy of anything else
-// needed, just this one flag plus `firebase deploy --only functions`.
+// below). Leave this false until Safaricom has actually enabled B2C API
+// access on the Paybill (1307475) specifically — a business approval on top
+// of just having the Paybill number itself (see SETUP-B2C.md) — AND you've
+// confirmed the Paybill actually has enough of its own balance to pay out
+// from. Note that money landing in the Till does NOT automatically become
+// available in the Paybill — they're separate M-Pesa accounts unless
+// Safaricom's back office has specifically linked the Till to the Paybill
+// as an Agent/Store relationship (ask Safaricom or check the Org Portal if
+// you're not sure); otherwise the farm needs its own process for moving
+// float from the Till into the Paybill before payouts can draw on it. Flip
+// this to true once B2C is confirmed working end-to-end for the Paybill —
+// no redeploy of anything else needed, just this one flag plus
+// `firebase deploy --only functions`.
 const PAYOUTS_ENABLED = false;
 
 // A pre-generated SecurityCredential is a long base64 blob (a few hundred
@@ -510,9 +530,9 @@ exports.initiateWithdrawal = onCall({ secrets: B2C_SECRETS, region: 'us-central1
     const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await b2cSend({
       env: sval(MPESA_ENV, 'sandbox'),
-      consumerKey: sval(MPESA_CONSUMER_KEY),
-      consumerSecret: sval(MPESA_CONSUMER_SECRET),
-      shortcode: sval(MPESA_SHORTCODE),
+      consumerKey: sval(MPESA_PAYOUT_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_PAYOUT_CONSUMER_SECRET),
+      shortcode: sval(MPESA_PAYOUT_SHORTCODE),
       initiatorName,
       securityCredential,
       phone,
@@ -705,9 +725,9 @@ exports.checkAccountBalance = onCall({ secrets: B2C_SECRETS, region: 'us-central
     const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await accountBalanceQuery({
       env: sval(MPESA_ENV, 'sandbox'),
-      consumerKey: sval(MPESA_CONSUMER_KEY),
-      consumerSecret: sval(MPESA_CONSUMER_SECRET),
-      shortcode: sval(MPESA_SHORTCODE),
+      consumerKey: sval(MPESA_PAYOUT_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_PAYOUT_CONSUMER_SECRET),
+      shortcode: sval(MPESA_PAYOUT_SHORTCODE),
       initiatorName, securityCredential,
       resultUrl: `${callbackBase}/mpesaAccountBalanceResult${webhookQs}`,
       timeoutUrl: `${callbackBase}/mpesaAccountBalanceTimeout${webhookQs}`,
@@ -787,9 +807,9 @@ exports.checkTransactionStatus = onCall({ secrets: B2C_SECRETS, region: 'us-cent
     const securityCredential = resolveSecurityCredential({ precomputed: precomputedCred, initiatorPassword, certPem });
     const result = await transactionStatusQuery({
       env: sval(MPESA_ENV, 'sandbox'),
-      consumerKey: sval(MPESA_CONSUMER_KEY),
-      consumerSecret: sval(MPESA_CONSUMER_SECRET),
-      shortcode: sval(MPESA_SHORTCODE),
+      consumerKey: sval(MPESA_PAYOUT_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_PAYOUT_CONSUMER_SECRET),
+      shortcode: sval(MPESA_PAYOUT_SHORTCODE),
       initiatorName, securityCredential, transactionId,
       resultUrl: `${callbackBase}/mpesaTransactionStatusResult${webhookQs}`,
       timeoutUrl: `${callbackBase}/mpesaTransactionStatusTimeout${webhookQs}`,

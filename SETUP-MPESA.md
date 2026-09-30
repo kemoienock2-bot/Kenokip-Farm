@@ -1,4 +1,13 @@
-# Setting up automatic M-Pesa deposits
+# Setting up automatic M-Pesa deposits (Till — receiving)
+
+> **Two separate M-Pesa accounts:** Kenokip Farm receives money on a Till
+> (this document) and sends money out from a separate Paybill, 1307475 (see
+> `SETUP-B2C.md`). They're two different Safaricom shortcodes with their own
+> separate credentials — nothing in this file changes because the Paybill
+> exists, and nothing in `SETUP-B2C.md` changes because the Till exists.
+> Money that lands in the Till does **not** automatically become available
+> in the Paybill — see the note at the top of `SETUP-B2C.md` before you rely
+> on payouts.
 
 > **Where you are right now:** `MPESA_ENV` is set to `sandbox`, which is
 > exactly why "Add via M-Pesa" errors out when you try it with your real
@@ -18,8 +27,7 @@
 2. Once approved, Safaricom gives you **production** values for the same
    kind of things you already have: a Consumer Key, Consumer Secret, and a
    Passkey — these are different from your sandbox ones, so don't reuse
-   them. Your **Shortcode** becomes your real Till number (you already know
-   it).
+   them. Your **Shortcode** becomes your real Till number.
 3. Update the secrets with the new production values:
    ```
    firebase functions:secrets:set MPESA_CONSUMER_KEY
@@ -28,15 +36,16 @@
    firebase functions:secrets:set MPESA_PASSKEY
    firebase functions:secrets:set MPESA_ENV
    ```
-   For `MPESA_ENV`, type `production`. Leave `MPESA_ACCOUNT_TYPE` as `till`
-   — that doesn't change.
+   For `MPESA_ENV`, type `production`. For `MPESA_SHORTCODE`, type your real
+   Till number. Leave `MPESA_ACCOUNT_TYPE` as `till` — that doesn't change.
 4. Redeploy: `firebase deploy --only functions`
 5. **Re-register the C2B URLs for production** — this is the step that turns
    on "someone paid the Till directly" detection. From `pwa-build/functions`,
    edit `c2b.env` (or copy `c2b.env.example` again if you don't have one) so
-   it has your new production `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`,
-   `MPESA_SHORTCODE`, `MPESA_ENV=production`, and the same
-   `MPESA_CALLBACK_BASE_URL` as before, then:
+   its collections section has your new production `MPESA_CONSUMER_KEY`,
+   `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE` (your real Till number),
+   `MPESA_ENV=production`, and the same `MPESA_CALLBACK_BASE_URL` as before,
+   then:
    ```
    npm run register-c2b
    ```
@@ -47,22 +56,22 @@
 This is entirely a credentials/registration change — the same Cloud
 Functions code handles both sandbox and production already, so there's
 nothing to redeploy on the code side beyond the one `firebase deploy`
-above. **B2C ("Send via M-Pesa")** is a separate approval from Safaricom on
-top of this — see `SETUP-B2C.md` — going live here doesn't turn that on by
-itself.
+above. **B2C ("Send via M-Pesa")** runs against the separate Paybill
+account and its own credentials — see `SETUP-B2C.md` — going live here
+doesn't touch that at all.
 
 ---
 
 This adds two things to the Finance section, both feeding the same real-time balance you already have:
 
 1. **Add via M-Pesa** button (owner-only) — you tap it, enter an amount and your phone number, and get the *real* Safaricom "enter your PIN" prompt on your own phone. Nothing is typed into the app itself.
-2. **Automatic detection** of anyone paying your Till/Paybill directly from their own phone — no button needed, it just shows up.
+2. **Automatic detection** of anyone paying your Till directly from their own phone — no button needed, it just shows up.
 
 Both need a small backend (Firebase Cloud Functions) because the Safaricom API credentials can't live in the public app. The code for it is already written and tested for syntax — it's in the `functions/` folder in the zip alongside this guide. What's left is account/paperwork steps only you can do, then a deploy.
 
 ## 1. Your Till number ✅ done
 
-You've already got your own Buy Goods Till — good, that's the hard real-world step out of the way. The code is wired for a Till by default (`MPESA_ACCOUNT_TYPE=till`); if it later turns out to be a Paybill instead, just set that one value to `paybill` and redeploy.
+You've already got your own Buy Goods Till — good, that's the hard real-world step out of the way. The code is wired for a Till by default (`MPESA_ACCOUNT_TYPE=till`); if it later turns out to be a Paybill instead, just set that one value to `paybill` and redeploy. (This is separate from the Paybill 1307475 used for payouts — see the note at the top of this file.)
 
 ## 2. Create a free Safaricom developer account
 
@@ -127,13 +136,13 @@ This is a one-time registration so Safaricom knows to notify your backend. From 
 copy c2b.env.example c2b.env
 ```
 
-Fill in `c2b.env` with the same values you set as secrets above, then:
+Fill in `c2b.env`'s **collections** section (the Till fields) with the same values you set as secrets above, then:
 
 ```
 npm run register-c2b
 ```
 
-(This file is deliberately not named `.env` — Firebase's deploy step auto-loads any file actually named `.env` as real Cloud Functions environment variables, which collides with the secrets of the same name and breaks deployment.)
+(This file is deliberately not named `.env` — Firebase's deploy step auto-loads any file actually named `.env` as real Cloud Functions environment variables, which collides with the secrets of the same name and breaks deployment. `c2b.env` also has a separate **payouts** section for the Paybill — see `SETUP-B2C.md` — leave that blank for this step.)
 
 You only need to do this again if you switch from sandbox to production, or ever redeploy to a different shortcode.
 
@@ -149,4 +158,4 @@ git push
 
 ## What still stays manual, on purpose
 
-Sending money out (to a phone, paybill, till, or bank account) stays as a manual log entry, as you chose — Safaricom's send-money API needs a separate business approval on top of all this, and there's no public API at all for sending to arbitrary bank accounts. If you want to revisit that later, this backend is the right place to add it.
+Sending money out to a phone stays as a manual log entry unless you set up "Send via M-Pesa" from the Paybill — see `SETUP-B2C.md`. There's no public API at all for sending to arbitrary bank accounts or paybills other than your own, so those stay manual either way.

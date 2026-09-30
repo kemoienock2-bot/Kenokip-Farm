@@ -3,7 +3,21 @@
 This covers the two things added together: an authenticator-app code
 (Google Authenticator, Authy, or similar) required to reveal masked Finance
 figures and to send money, and the "Send via M-Pesa" button itself, which
-pushes real money out of the farm's till/paybill to someone's phone.
+pushes real money out to someone's phone from Kenokip Farm's Paybill,
+**1307475** — a separate M-Pesa account from the Till that "Add via M-Pesa"
+deposits and direct Till payments use (see `SETUP-MPESA.md`).
+
+> **Important — separate accounts, separate money.** The Till and the
+> Paybill are two different M-Pesa merchant accounts with two different
+> balances. Money customers pay into the Till does **not** automatically
+> show up in the Paybill for payouts to draw on — unless Safaricom's back
+> office has specifically linked the Till to the Paybill as an Agent/Store
+> relationship (ask Safaricom, or check the M-Pesa Org Portal, if you're not
+> sure whether that's the case for your accounts). If they're not linked,
+> you'll need your own process for moving money from the Till into the
+> Paybill (e.g. withdrawing it and depositing it again) before "Send via
+> M-Pesa" has anything to actually pay out with — the app has no way to do
+> that transfer for you, since Safaricom doesn't expose an API for it.
 
 ## Part 1 — the authenticator app (works right away, no setup needed)
 
@@ -53,15 +67,26 @@ regularly pay people out, not just collect payments.
 
 What you need, before this can go live:
 
-1. **B2C enabled for your shortcode.** Contact Safaricom (or your Daraja
-   developer account's support channel) and ask specifically for
-   **B2C API access** for your till/paybill number. This is a business
-   decision on their side — there's nothing I can do from the app to
-   trigger or speed this up.
-2. **An Initiator Name and Initiator password.** Once B2C is enabled,
-   you (or whoever administers your Daraja organization account) sets these
-   up in the M-Pesa Org Portal — this is the "API operator" identity B2C
-   payouts run as.
+1. **A Daraja app for the Paybill, with B2C enabled.** Create an app at
+   https://developer.safaricom.co.ke tied to Paybill 1307475 (this gives you
+   a Consumer Key and Consumer Secret for it — separate from the Till's
+   app/credentials in `SETUP-MPESA.md`), then contact Safaricom (or your
+   Daraja developer account's support channel) and ask specifically for
+   **B2C API access** for that Paybill. This is a business decision on
+   their side — there's nothing I can do from the app to trigger or speed
+   this up. Set the new secrets once you have the sandbox (or, once
+   approved, production) Consumer Key/Secret:
+   ```
+   firebase functions:secrets:set MPESA_PAYOUT_CONSUMER_KEY
+   firebase functions:secrets:set MPESA_PAYOUT_CONSUMER_SECRET
+   firebase functions:secrets:set MPESA_PAYOUT_SHORTCODE
+   ```
+   For `MPESA_PAYOUT_SHORTCODE`, type `1307475`.
+2. **An Initiator Name and Initiator password, for the Paybill.** Once B2C
+   is enabled, you (or whoever administers the Paybill's Daraja organization
+   account) sets these up in **the Paybill's own M-Pesa Org Portal** — this
+   is the "API operator" identity B2C payouts run as, and it has to be
+   created against the Paybill specifically, not the Till.
 3. **The right public certificate for your environment.** Safaricom
    encrypts your initiator password into what they call a "security
    credential" using their own public certificate, which is different for
@@ -88,8 +113,9 @@ What you need, before this can go live:
    and set `MPESA_SECURITY_CREDENTIAL` to that string instead — see the
    note below.
 
-Once you have all three, set the new secrets the same way you set the
-original M-Pesa ones:
+Once you have the Initiator Name, Initiator password, and certificate
+(items 2–3 above), set the new secrets the same way you set the Paybill's
+Consumer Key/Secret above:
 
 ```
 firebase functions:secrets:set MPESA_INITIATOR_NAME

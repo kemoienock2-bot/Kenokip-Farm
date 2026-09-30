@@ -1,21 +1,26 @@
 # Account Balance, Transaction Status, and a payment QR code
 
-Three small additions to Finance, all reusing credentials you've already set
-up — nothing new to buy or apply for from Safaricom for any of them.
+Three small additions to Finance. The first two reuse the Paybill's payout
+credentials from `SETUP-B2C.md` (nothing new to buy or apply for beyond
+that); the QR code reuses the Till's ordinary collections credentials from
+`SETUP-MPESA.md`.
 
 ## What each one does
 
 - **Check M-Pesa balance** — asks Safaricom directly what's currently
-  sitting in the till/paybill's own M-Pesa account, right there in the app,
-  instead of having to log into the M-Pesa Org Portal to look. Administrator
-  and Co-Administrator only (same people who can already see Finance's
-  running balance in the app itself).
+  sitting in the **Paybill's** own M-Pesa working account (the one payouts
+  draw from), right there in the app, instead of having to log into the
+  M-Pesa Org Portal to look. This is about the payout side, not the Till's
+  receiving balance — the app already tracks every Till payment in
+  Finance/Income as it happens. Administrator and Co-Administrator only
+  (same people who can already see Finance's running balance in the app
+  itself).
 - **Check transaction status** — paste in an M-Pesa receipt code (from a
   text message or a customer's screenshot) and Safaricom reports back its
   current state. Useful for "the customer says they paid but I don't see
   it" situations. Administrator and Co-Administrator only.
 - **Payment QR code** — generates a scannable code a customer points their
-  own M-Pesa app at to pay your till directly, with the amount already
+  own M-Pesa app at to pay your **Till** directly, with the amount already
   filled in if you choose to set one. No typing your till number out loud,
   no manual entry mistakes on their end. Available to the same people who
   can already start an M-Pesa deposit (Administrator, Co-Administrator, or
