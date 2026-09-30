@@ -319,7 +319,7 @@
         // as final. Bracketed bits are placeholders for details only the
         // administrator can fill in.
         about:{
-          bio:"Enock Kemoi — known as Kenokip — runs Kenokip Farm, a poultry-keeping operation that has grown from a personal record-keeping effort into a real team operation with its own Supervisor, Vet, Financial Staff, and Farmhand roles. What began as tracking birds, eggs, and money by hand is now run through this purpose-built ledger, with real M-Pesa integration and proper financial controls behind it. [Add: where the farm is based, how and when it got started, and anything else you'd like people to know.]",
+          bio:"Enock Kiplangat Kemoi — known as Kenokip — runs Kenokip Farm, a poultry-keeping operation that has grown from a personal record-keeping effort into a real team operation with its own Supervisor, Vet, Financial Staff, and Farmhand roles. What began as tracking birds, eggs, and money by hand is now run through this purpose-built ledger, with real M-Pesa integration and proper financial controls behind it. [Add: where the farm is based, how and when it got started, and anything else you'd like people to know.]",
           mission:"To run a transparent, well-organized poultry operation — where every bird, egg, shilling, and team member is accounted for — using modern tools to replace guesswork and paper records with real data anyone on the team can trust.",
           vision:"To grow Kenokip Farm into a model for how a small poultry business can operate with the discipline and accountability of a much larger one, while staying rooted in good, honest farming."
         }
@@ -7963,7 +7963,7 @@
   // Till's B2C-via-API access with Safaricom is unresolved (see SETUP-B2C.md
   // and the M-Pesa Business team correspondence). Flip both flags back to
   // true together once B2C is confirmed working.
-  var mpesaPayoutsEnabled = false;
+  var mpesaPayoutsEnabled = true;
   var financeSyncStarted = false;
   var directorySyncStarted = false;
   var logsSyncStarted = false;

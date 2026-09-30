@@ -135,7 +135,7 @@ const B2C_SECRETS = ALL_SECRETS.concat([MPESA_INITIATOR_NAME, MPESA_INITIATOR_PA
 // this to true once B2C is confirmed working end-to-end for the Paybill —
 // no redeploy of anything else needed, just this one flag plus
 // `firebase deploy --only functions`.
-const PAYOUTS_ENABLED = false;
+const PAYOUTS_ENABLED = true;
 
 // A pre-generated SecurityCredential is a long base64 blob (a few hundred
 // characters) — same threshold used for the certificate check, so a leftover
