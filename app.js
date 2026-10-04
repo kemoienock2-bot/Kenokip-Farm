@@ -89,6 +89,15 @@
     team:'<svg viewBox="0 0 48 48"><circle cx="24" cy="10" r="5.5" fill="#5B4B96"/><path d="M15 24 q0 -9 9 -9 q9 0 9 9 Z" fill="#5B4B96"/><circle cx="10" cy="28" r="4.4" fill="#8D7BC4"/><path d="M3 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="38" cy="28" r="4.4" fill="#8D7BC4"/><path d="M31 40 q0 -7.4 7 -7.4 q7 0 7 7.4 Z" fill="#8D7BC4"/><circle cx="24" cy="26" r="5.6" fill="#402F72"/><path d="M15 40 q0 -9.4 9 -9.4 q9 0 9 9.4 Z" fill="#402F72"/></svg>',
     overview:'<svg viewBox="0 0 48 48"><circle cx="37" cy="9" r="4.4" fill="#E8B93D"/><path d="M6 40 V24 L16 16 L26 24 V40 Z" fill="#B9740E"/><path d="M6 24 L16 16 L26 24" stroke="#8F590A" stroke-width="2.2" fill="none" stroke-linejoin="round"/><rect x="12" y="30" width="6" height="10" fill="#F0DBA0"/><rect x="30" y="20" width="4" height="7" fill="#3E8E5A"/><rect x="36" y="16" width="4" height="11" fill="#E8B93D"/><rect x="42" y="23" width="4" height="4" fill="#7A4F86"/></svg>',
     flockNav:'<svg viewBox="0 0 48 48"><path d="M18 38 Q16 24 28 21 Q40 18 43 27 Q45 32 39 35 L39 40 Z" fill="#A6431F"/><ellipse cx="27" cy="32" rx="6" ry="7" fill="#EDD9B8"/><path d="M39 22 Q44 19 47 22 Q45 25 41 26 Z" fill="#1B1B1B"/><circle cx="29" cy="17" r="5.6" fill="#B5502A"/><path d="M28 12 q1 -3 2 0 q1 -2.6 2 .4" fill="#D6273C"/><path d="M33 16 L39 17.3 L33 19.6 Z" fill="#F2A93D"/><circle cx="31" cy="16.2" r="1" fill="#241a12"/><path d="M20 40 l-1 3 M20 40 l2.4 2.6 M28 41 l-1 3 M28 41 l2.4 2.6" stroke="#E8973D" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="10" cy="35" rx="7.5" ry="6.2" fill="#F5C94D"/><ellipse cx="6" cy="35.5" rx="2.6" ry="3.6" fill="#E8B93D"/><circle cx="12" cy="26" r="5.4" fill="#FBE07A"/><path d="M17 25 L22 26.6 L17 28.6 Z" fill="#F2994A"/><circle cx="14.3" cy="25" r="0.9" fill="#3A2705"/><path d="M4 41 l0 2 M10 41.5 l0 2" stroke="#E8973D" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    // ---- Other Livestock icons (added for the Dairy Cattle / Goats &
+    // Sheep / Pigs / Rabbits records) — kept simple and schematic, same as
+    // a placeholder rather than attempting the hand-drawn detail of the
+    // poultry set above. Easy to swap for real art later.
+    cattle:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="30" rx="16" ry="11" fill="#E8E2D6"/><ellipse cx="14" cy="27" rx="4.5" ry="5.5" fill="#3A2E26"/><ellipse cx="30" cy="33" rx="5" ry="6" fill="#3A2E26"/><circle cx="24" cy="17" r="8.5" fill="#F0EADC"/><path d="M17 12 Q15 6 19 5 Q19 10 21 12" fill="#F0EADC"/><path d="M31 12 Q33 6 29 5 Q29 10 27 12" fill="#F0EADC"/><ellipse cx="24" cy="21" rx="5.5" ry="4" fill="#3A2E26"/><circle cx="20" cy="15" r="1.1" fill="#241a12"/><circle cx="28" cy="15" r="1.1" fill="#241a12"/></svg>',
+    goatsheep:'<svg viewBox="0 0 48 48"><ellipse cx="23" cy="31" rx="15" ry="10" fill="#EFEADF"/><ellipse cx="33" cy="32" rx="4.5" ry="5.5" fill="#D9D2C1"/><circle cx="23" cy="17" r="8" fill="#FBF8F1"/><path d="M18 11 Q14 6 17 4 Q20 8 20 12" fill="#D9D2C1" stroke="#B9AF95" stroke-width="1"/><path d="M28 11 Q32 6 29 4 Q26 8 26 12" fill="#D9D2C1" stroke="#B9AF95" stroke-width="1"/><ellipse cx="18" cy="20" rx="3" ry="4" fill="#FBF8F1"/><ellipse cx="28" cy="20" rx="3" ry="4" fill="#FBF8F1"/><circle cx="20" cy="17" r="1" fill="#241a12"/><circle cx="26" cy="17" r="1" fill="#241a12"/></svg>',
+    pigs:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="29" rx="16" ry="11" fill="#E8A2A8"/><ellipse cx="10" cy="26" rx="3.5" ry="4.5" fill="#D98892"/><ellipse cx="38" cy="26" rx="3.5" ry="4.5" fill="#D98892"/><circle cx="24" cy="18" r="8.5" fill="#EDB3B9"/><ellipse cx="24" cy="21" rx="4.5" ry="3.4" fill="#C97983"/><circle cx="22" cy="21" r="0.9" fill="#7A3A42"/><circle cx="26" cy="21" r="0.9" fill="#7A3A42"/><circle cx="18" cy="15" r="1" fill="#241a12"/><circle cx="30" cy="15" r="1" fill="#241a12"/></svg>',
+    rabbits:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="33" rx="13" ry="9" fill="#EDE7DA"/><ellipse cx="24" cy="18" rx="7.5" ry="7" fill="#F2EEE3"/><path d="M19 12 Q16 -2 21 2 Q22 9 22 13" fill="#F2EEE3" stroke="#D9D2C1" stroke-width="1"/><path d="M29 12 Q32 -2 27 2 Q26 9 26 13" fill="#F2EEE3" stroke="#D9D2C1" stroke-width="1"/><circle cx="21" cy="18" r="1" fill="#241a12"/><circle cx="27" cy="18" r="1" fill="#241a12"/><ellipse cx="24" cy="21.5" rx="1.6" ry="1.2" fill="#D98892"/></svg>',
+    livestockNav:'<svg viewBox="0 0 48 48"><rect x="6" y="20" width="36" height="20" rx="2" fill="#8B5E34"/><path d="M4 22 L24 8 L44 22 Z" fill="#A6431F"/><rect x="18" y="28" width="7" height="12" fill="#5C3420"/><circle cx="33" cy="31" r="4.5" fill="#EFEADF"/><circle cx="31.5" cy="30" r="0.8" fill="#241a12"/><circle cx="34.5" cy="30" r="0.8" fill="#241a12"/></svg>',
     // Default profile-avatar placeholders, shown before someone uploads a
     // real photo (see avatarHTML) — deliberately abstract color-block
     // silhouettes rather than any skin-toned rendering, the same approach
@@ -312,8 +321,8 @@
           TZS:{symbol:'TSh',rate:19.9,decimals:0},
           EUR:{symbol:'€',rate:0.0071,decimals:2}
         },
-        expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Equipment & Housing','Utilities','Transport','Other'],
-        incomeCategories:['Egg Sales','Bird Sales','M-Pesa / Bank','Manure','Other'],
+        expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Livestock Purchase','Equipment & Housing','Utilities','Transport','Other'],
+        incomeCategories:['Egg Sales','Bird Sales','Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales','M-Pesa / Bank','Manure','Other'],
         // A first draft, written from what's known so far — meant to be
         // edited (Settings → About, administrator only) rather than treated
         // as final. Bracketed bits are placeholders for details only the
@@ -325,6 +334,17 @@
         }
       },
       flock:[], eggs:[], eggLosses:[], broodings:[], expenses:[], incomes:[], healthRecords:[], feedLogs:[], customers:[],
+      // Other Livestock (Dairy Cattle, Goats & Sheep, Pigs, Rabbits) — each
+      // keyed by species, holding its own herd (batches, same shape as
+      // Flock's) and journal (regular yield like milk, only used by
+      // species that have one — see LIVESTOCK_SPECIES). Entirely separate
+      // from the poultry arrays above, so none of this touches them.
+      livestock:{
+        cattle:{herd:[], journal:[]},
+        goatsheep:{herd:[], journal:[]},
+        pigs:{herd:[], journal:[]},
+        rabbits:{herd:[], journal:[]}
+      },
       // Stock on hand is tracked separately from feedLogs (which is a usage
       // + cost history, unchanged) — restocking adds to onHandKg, and every
       // usage entry in feedLogs subtracts from it automatically. Starts at 0
@@ -347,6 +367,14 @@
     // already saved before this existed, so it shows up properly in
     // Settings and in the "Add income" category dropdown too.
     if(merged.settings.incomeCategories.indexOf('M-Pesa / Bank')===-1) merged.settings.incomeCategories = merged.settings.incomeCategories.concat(['M-Pesa / Bank']);
+    // Same backfill idea as M-Pesa / Bank above — a farm document saved
+    // before Other Livestock existed won't have these category names yet,
+    // so sales there would have nowhere proper to file. Added even for a
+    // farm not using these species yet; unused categories are harmless.
+    ['Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales'].forEach(function(cat){
+      if(merged.settings.incomeCategories.indexOf(cat)===-1) merged.settings.incomeCategories = merged.settings.incomeCategories.concat([cat]);
+    });
+    if(merged.settings.expenseCategories.indexOf('Livestock Purchase')===-1) merged.settings.expenseCategories = merged.settings.expenseCategories.concat(['Livestock Purchase']);
     merged.settings.about = Object.assign({}, base.settings.about, (data&&data.settings&&data.settings.about)||{});
     merged.flock = Array.isArray(data&&data.flock) ? data.flock : [];
     merged.eggs = Array.isArray(data&&data.eggs) ? data.eggs : [];
@@ -360,6 +388,23 @@
     merged.feedStock = Object.assign({}, base.feedStock, (data&&data.feedStock)||{});
     merged.feedStock.restocks = Array.isArray(data&&data.feedStock&&data.feedStock.restocks) ? data.feedStock.restocks : [];
     merged.trash = Array.isArray(data&&data.trash) ? data.trash : [];
+    // Other Livestock — normalize per-species the same defensive way as
+    // every array field above, so a farm document saved before this
+    // existed (or missing just one species, e.g. synced from an older
+    // build mid-rollout) still ends up with a valid herd/journal array for
+    // all four species rather than throwing later when code reads them.
+    (function(){
+      var baseLivestock = base.livestock;
+      var incoming = (data && data.livestock) || {};
+      merged.livestock = {};
+      Object.keys(baseLivestock).forEach(function(key){
+        var src = incoming[key] || {};
+        merged.livestock[key] = {
+          herd: Array.isArray(src.herd) ? src.herd : [],
+          journal: Array.isArray(src.journal) ? src.journal : []
+        };
+      });
+    })();
     purgeOldTrash(merged);
     backfillCustomers(merged);
     return merged;
@@ -747,6 +792,7 @@
       {key:'flock', label:'Flock', icon:PICS.flockNav},
       {key:'eggs', label:'Eggs', icon:PICS.eggs},
       {key:'feed', label:'Feed', icon:PICS.feed},
+      {key:'livestock', label:'Other Livestock', icon:PICS.livestockNav},
       {key:'health', label:'Health', icon:PICS.health}
     ]},
     {key:'money-group', label:'Money', icon:PICS.finance, children:[
@@ -800,8 +846,8 @@
 
     rail.innerHTML =
       '<div class="brand">'+
-        '<img class="brand-mark" src="icons/logo-mark.png" alt="Kenokip Farm">'+
-        '<div class="brand-text"><h1>Kenokip Farm</h1><span>Poultry Keeping</span></div>'+
+        '<img class="brand-mark" src="icons/logo-mark.png" alt="'+esc(FARM_NAME)+'">'+
+        '<div class="brand-text"><h1>'+esc(FARM_NAME)+'</h1><span>Poultry Keeping</span></div>'+
       '</div>'+
       '<ul class="nav-list">'+desktopHtml+'</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
@@ -1925,6 +1971,231 @@
       '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
       '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Log feed')+'</button></div>'+
     '</form>';
+  }
+
+  /* ============================= OTHER LIVESTOCK ============================= */
+  // Dairy Cattle, Goats & Sheep, Pigs, and Rabbits share one generic
+  // herd + sales/losses pattern (plus a milk journal for Cattle) instead
+  // of each getting its own bespoke section the way Flock/Eggs did for
+  // poultry. All four live under state.livestock[key] — entirely separate
+  // arrays from the poultry ones above, so none of this touches existing
+  // data. Adding a fifth species later (e.g. bees) means adding one entry
+  // here, not writing a new section from scratch.
+  var LIVESTOCK_SPECIES = [
+    { key:'cattle', label:'Dairy Cattle', singular:'cow', plural:'cows', icon:PICS.cattle,
+      hasJournal:true, journalLabel:'Milk', journalUnit:'Litres',
+      incomeCategory:'Milk Sales', expenseCategory:'Livestock Purchase' },
+    { key:'goatsheep', label:'Goats & Sheep', singular:'animal', plural:'animals', icon:PICS.goatsheep,
+      hasJournal:false,
+      incomeCategory:'Goat & Sheep Sales', expenseCategory:'Livestock Purchase' },
+    { key:'pigs', label:'Pigs', singular:'pig', plural:'pigs', icon:PICS.pigs,
+      hasJournal:false,
+      incomeCategory:'Pig Sales', expenseCategory:'Livestock Purchase' },
+    { key:'rabbits', label:'Rabbits', singular:'rabbit', plural:'rabbits', icon:PICS.rabbits,
+      hasJournal:false,
+      incomeCategory:'Rabbit Sales', expenseCategory:'Livestock Purchase' }
+  ];
+  function livestockSpecies(key){ return LIVESTOCK_SPECIES.find(function(s){ return s.key===key; }); }
+  // Defensive the same way state.eggs etc. are read defensively elsewhere —
+  // migrateState() already guarantees this shape on load, this is just a
+  // second safety net for any code path that reaches in before that runs.
+  function livestockData(key){
+    state.livestock = state.livestock || {};
+    var d = state.livestock[key];
+    if(!d){ d = {herd:[], journal:[]}; state.livestock[key] = d; }
+    if(!Array.isArray(d.herd)) d.herd = [];
+    if(!Array.isArray(d.journal)) d.journal = [];
+    return d;
+  }
+  function currentLivestockCount(b){
+    var removed = (b.removals||[]).reduce(function(a,r){ return a+r.count; },0);
+    return Math.max(0, b.count - removed);
+  }
+  function livestockHerdTotal(key){
+    return livestockData(key).herd.reduce(function(a,b){ return a+currentLivestockCount(b); },0);
+  }
+  function livestockReasonLabel(r){ return ({sold:'Sold', died:'Died', culled:'Culled', other:'Other'})[r] || r; }
+  function sumLivestockJournal(key){
+    var r = getRange('month');
+    return livestockData(key).journal.filter(function(j){ return inRange(j.date, r.startISO, r.endISO); })
+      .reduce(function(a,j){ return a+(j.quantity||0); }, 0);
+  }
+
+  var LIVESTOCK_VIEWS = [['overview','Overview']].concat(
+    LIVESTOCK_SPECIES.reduce(function(acc, sp){
+      acc.push([sp.key+'-herd', sp.label+' — Herd']);
+      if(sp.hasJournal) acc.push([sp.key+'-journal', sp.label+' — '+sp.journalLabel+' Log']);
+      acc.push([sp.key+'-sales', sp.label+' — Sold & Lost']);
+      return acc;
+    }, [])
+  );
+
+  function livestockOverviewPanel(){
+    var cards = LIVESTOCK_SPECIES.map(function(sp){
+      var total = livestockHerdTotal(sp.key);
+      var extra = sp.hasJournal ? ('<div class="hint" style="margin-top:4px">'+sumLivestockJournal(sp.key).toLocaleString()+' '+sp.journalUnit.toLowerCase()+' this month</div>') : '';
+      return '<button type="button" class="stat-tile" style="text-align:left; cursor:pointer; border:none; width:100%" data-action="view-select:livestock:'+sp.key+'-herd">'+
+        '<div class="pic-badge">'+sp.icon+'</div>'+
+        '<div class="stat-value num">'+total.toLocaleString()+'</div>'+
+        '<div class="hint">'+sp.label+' on the farm now</div>'+extra+
+      '</button>';
+    }).join('');
+    return '<div class="grid four">'+cards+'</div>'+
+      '<div class="card" style="margin-top:14px"><div class="card-title"><h3>About this section</h3></div>'+
+      '<div class="hint">Each of these keeps its own herd count and sales/losses — and for Dairy Cattle, a milk log — separate from your poultry records, but feeding the same Finance totals. Tap a tile, or use "Viewing" below, to open one.</div></div>';
+  }
+
+  function livestockHerdPageHTML(sp){
+    var d = livestockData(sp.key);
+    var batches = d.herd.slice().sort(function(a,b){ return a.dateAdded<b.dateAdded?1:-1; });
+    var total = livestockHerdTotal(sp.key);
+    var page = paginate('livestock-herd-'+sp.key, batches);
+    var rows = page.items.map(function(b){
+      var now = currentLivestockCount(b);
+      return '<tr><td>'+fmtDate(parseISO(b.dateAdded))+'</td><td>'+esc(b.label||'—')+'</td><td class="num">'+b.count+'</td><td class="num">'+now+'</td><td>'+esc(b.source||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="btn sm" data-action="open-add-livestock-removal:'+sp.key+':'+b.id+'" '+(readOnly?'disabled':'')+'>Sale / loss</button>'+
+        '<button class="icon-btn" data-action="edit-livestock-herd:'+sp.key+':'+b.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-livestock-herd:'+sp.key+':'+b.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    return '<div class="banner">'+total.toLocaleString()+' '+(total===1?sp.singular:sp.plural)+' on the farm today.</div>'+
+      '<div class="card"><div class="card-title"><h3>'+sp.label+' herd</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+batches.length+' batch'+(batches.length===1?'':'es')+'</span>'+
+      '<button class="btn sm primary" data-action="open-add-livestock-herd:'+sp.key+'" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'Add '+sp.plural+'</button></div></div>'+
+      '<div class="table-wrap">'+
+      (batches.length ? '<table><thead><tr><th>Added</th><th>Label</th><th class="num">Started</th><th class="num">Now</th><th>Source</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No '+sp.plural+' recorded yet.</div></div>')+
+      '</div>'+pagerHtml('livestock-herd-'+sp.key, page.pageCount, page.page)+'</div>';
+  }
+  function livestockHerdFormHtml(spKey, id){
+    var sp = livestockSpecies(spKey);
+    var d = livestockData(spKey);
+    var b = id ? d.herd.find(function(x){return x.id===id;}) : null;
+    var curCost = b && b.acquisitionCost ? (b.acquisitionCost * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
+    return '<div class="modal-head"><h3>'+(b?'Edit '+sp.singular+' batch':'Add '+sp.plural)+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="livestock-herd">'+
+      '<input type="hidden" name="species" value="'+sp.key+'">'+
+      '<input type="hidden" name="id" value="'+(b?b.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Date added</label><input class="field" type="date" name="dateAdded" value="'+(b?b.dateAdded:todayISO())+'" max="'+todayISO()+'" required></div>'+
+        '<div class="field-row"><label>How many</label><input class="field" type="number" min="1" name="count" value="'+(b?b.count:'')+'" autofocus required></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Label (optional)</label><input class="field" type="text" name="label" value="'+(b?esc(b.label||''):'')+'" placeholder="e.g. breed or names"></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Source (optional)</label><input class="field" type="text" name="source" value="'+(b?esc(b.source||''):'')+'" placeholder="e.g. bought, born on farm"></div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Cost, if purchased (optional)</label><input class="field" type="number" min="0" step="0.01" name="acquisitionCost" value="'+curCost+'" placeholder="0"></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="acqCurrency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(b?'Save changes':'Add')+'</button></div>'+
+    '</form>';
+  }
+
+  function livestockSalesPageHTML(sp){
+    var d = livestockData(sp.key);
+    var entries = [];
+    d.herd.forEach(function(b){
+      (b.removals||[]).forEach(function(r){
+        entries.push(Object.assign({batchId:b.id, batchLabel:b.label||sp.label}, r));
+      });
+    });
+    entries.sort(function(a,b){ return a.date<b.date?1:-1; });
+    var page = paginate('livestock-sales-'+sp.key, entries);
+    var rows = page.items.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+livestockReasonLabel(x.reason)+'</td><td>'+esc(x.batchLabel||'—')+'</td><td>'+esc(x.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-livestock-removal:'+sp.key+':'+x.batchId+':'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-livestock-removal:'+sp.key+':'+x.batchId+':'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>'+sp.label+' — sold, died &amp; culled</h3><span class="hint">'+entries.length+' entries</span></div>'+
+      '<div class="table-wrap">'+
+      (entries.length ? '<table><thead><tr><th>Date</th><th class="num">Count</th><th>Reason</th><th>Batch</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No entries yet — use "Sale / loss" on a herd batch in the Herd page.</div></div>')+
+      '</div>'+pagerHtml('livestock-sales-'+sp.key, page.pageCount, page.page)+'</div>';
+  }
+  function livestockRemovalFormHtml(spKey, herdId, id){
+    var sp = livestockSpecies(spKey);
+    var d = livestockData(spKey);
+    var b = d.herd.find(function(x){return x.id===herdId;});
+    var x = id ? (b && (b.removals||[]).find(function(i){return i.id===id;})) : null;
+    var isSold = !x || x.reason==='sold';
+    var curCost = x && x.saleAmount ? (x.saleAmount * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
+    return '<div class="modal-head"><h3>'+(x?'Edit entry':'Sale or loss — '+(b?esc(b.label||sp.label):sp.label))+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="livestock-removal">'+
+      '<input type="hidden" name="species" value="'+sp.key+'">'+
+      '<input type="hidden" name="herdId" value="'+herdId+'">'+
+      '<input type="hidden" name="id" value="'+(x?x.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Reason</label><select class="field" name="reason" data-change="livestock-removal-reason">'+
+          '<option value="sold" '+(!x||isSold?'selected':'')+'>Sold</option>'+
+          '<option value="died" '+(x&&x.reason==='died'?'selected':'')+'>Died</option>'+
+          '<option value="culled" '+(x&&x.reason==='culled'?'selected':'')+'>Culled</option>'+
+          '<option value="other" '+(x&&x.reason==='other'?'selected':'')+'>Other</option>'+
+        '</select></div>'+
+        '<div class="field-row"><label>How many</label><input class="field" type="number" min="1" name="count" value="'+(x?x.count:'')+'" required autofocus></div>'+
+      '</div>'+
+      '<div id="livestock-sale-fields" class="field-grid" style="margin-top:12px; display:'+(isSold?'grid':'none')+'">'+
+        '<div class="field-row"><label>Sold to (optional)</label><input class="field" type="text" name="buyer" list="customer-names-list" value="'+(x?esc(x.buyer||''):'')+'" placeholder="Buyer\'s name — new or existing"></div>'+
+        '<div class="field-row"><label>Sale amount (optional)</label><input class="field" type="number" min="0" step="0.01" name="saleAmount" value="'+curCost+'" placeholder="0"></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="saleCurrency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      customerNamesDatalist()+
+      '<div class="field-row" style="margin-top:12px"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add entry')+'</button></div>'+
+    '</form>';
+  }
+
+  function livestockJournalPageHTML(sp){
+    var d = livestockData(sp.key);
+    var entries = d.journal.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var page = paginate('livestock-journal-'+sp.key, entries);
+    var rows = page.items.map(function(j){
+      return '<tr><td>'+fmtDate(parseISO(j.date))+'</td><td class="num">'+j.quantity+'</td><td>'+esc(j.note||'—')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="icon-btn" data-action="edit-livestock-journal:'+sp.key+':'+j.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+        '<button class="icon-btn" data-action="delete-livestock-journal:'+sp.key+':'+j.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+      '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>'+sp.journalLabel+' log</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+entries.length+' entries</span>'+
+      '<button class="btn sm primary" data-action="open-add-livestock-journal:'+sp.key+'" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'Log '+sp.journalLabel.toLowerCase()+'</button></div></div>'+
+      '<div class="table-wrap">'+
+      (entries.length ? '<table><thead><tr><th>Date</th><th class="num">'+sp.journalUnit+'</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No '+sp.journalLabel.toLowerCase()+' logged yet.</div></div>')+
+      '</div>'+pagerHtml('livestock-journal-'+sp.key, page.pageCount, page.page)+'</div>';
+  }
+  function livestockJournalFormHtml(spKey, id){
+    var sp = livestockSpecies(spKey);
+    var d = livestockData(spKey);
+    var j = id ? d.journal.find(function(x){return x.id===id;}) : null;
+    return '<div class="modal-head"><h3>'+(j?'Edit entry':'Log '+sp.journalLabel.toLowerCase())+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="livestock-journal">'+
+      '<input type="hidden" name="species" value="'+sp.key+'">'+
+      '<input type="hidden" name="id" value="'+(j?j.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(j?j.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+        '<div class="field-row"><label>'+sp.journalUnit+'</label><input class="field" type="number" min="0" step="0.1" name="quantity" value="'+(j?j.quantity:'')+'" autofocus required></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(j?esc(j.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(j?'Save changes':'Add entry')+'</button></div>'+
+    '</form>';
+  }
+
+  function livestockPanelBody(){
+    var view = currentView('livestock');
+    if(!view || view==='overview') return livestockOverviewPanel();
+    var parts = view.split('-');
+    var sub = parts.pop();
+    var spKey = parts.join('-');
+    var sp = livestockSpecies(spKey);
+    if(!sp) return livestockOverviewPanel();
+    if(sub==='herd') return livestockHerdPageHTML(sp);
+    if(sub==='journal' && sp.hasJournal) return livestockJournalPageHTML(sp);
+    if(sub==='sales') return livestockSalesPageHTML(sp);
+    return livestockOverviewPanel();
+  }
+  function livestockPanel(){
+    return sectionViewSwitcherHTML('livestock', LIVESTOCK_VIEWS) + livestockPanelBody();
   }
 
   /* ============================= HEALTH ============================= */
@@ -3450,6 +3721,7 @@
       case 'flock':
       case 'eggs':
       case 'feed':
+      case 'livestock':
         return isSupervisorUser() || isFarmhandUser();
       case 'health':
         return isSupervisorUser() || isVetUser();
@@ -5781,6 +6053,7 @@
     flock:{ topbar:function(){ return topbarHTML(t('title.flock','Flock'),t('sub.flock','Current inventory by age and gender'), '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), flockPhotoIcon('flockIcon')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML(t('title.eggs','Eggs'),t('sub.eggs','Daily production, tallied up'), addBtn('open-add-egg','Log eggs'), eggsPhotoIcon()); }, panel:eggsPanel },
     feed:{ topbar:function(){ return topbarHTML(t('title.feed','Feed'),t('sub.feed','Consumption, cost, and feed-per-egg'), addBtn('open-add-feed','Log feed'), flockPhotoIcon('feedIcon')); }, panel:feedPanel },
+    livestock:{ topbar:function(){ return topbarHTML(t('title.livestock','Other Livestock'),t('sub.livestock','Dairy cattle, goats & sheep, pigs, and rabbits'), '', PICS.livestockNav); }, panel:livestockPanel },
     health:{ topbar:function(){ return topbarHTML(t('title.health','Health'),t('sub.health','Vaccinations, treatments &amp; reminders'), addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
     reports:{ topbar:function(){ return topbarHTML(t('title.reports','Reports'),t('sub.reports','Print or export a period summary'), '', PICS.reports); }, panel:reportsPanel },
     expenses:{ topbar:function(){ return topbarHTML(t('title.expenses','Expenses'),t('sub.expenses','What you’re spending, by category'), currencySelectHTML()+addBtn('open-add-expense','Add expense'), PICS.expenses); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
@@ -5799,7 +6072,7 @@
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
   // functions, not a label string.
   var SECTION_LABELS = {
-    overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', health:'Health',
+    overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', livestock:'Other Livestock', health:'Health',
     reports:'Reports', expenses:'Expenses', income:'Income', customers:'Customers',
     finance:'Finance', about:'About', settings:'Settings', team:'Team', messages:'Messages', signoffs:'Pending signatures'
   };
@@ -6514,7 +6787,7 @@
   /* ============================= ACTIONS / FORMS ============================= */
   function handleAction(action){
     var parts = action.split(':');
-    var verb = parts[0], a1 = parts[1], a2 = parts[2];
+    var verb = parts[0], a1 = parts[1], a2 = parts[2], a3 = parts[3];
     switch(verb){
       case 'nav': goToSection(a1); break;
       case 'view-photo': openPhotoLightbox(a1); break;
@@ -6567,6 +6840,50 @@
             }
             if(x) trashPush(s,'eggloss',x,linked);
             s.eggLosses = s.eggLosses.filter(function(i){return i.id!==a1;});
+          });
+        });
+        break;
+      // Other Livestock — a1 is always the species key (cattle/goatsheep/
+      // pigs/rabbits); a2/a3 are the herd batch id and/or record id,
+      // matching how Flock's own actions are shaped above. Not yet wired
+      // into the 30-day Trash recovery that Egg/Flock deletes use — a
+      // reasonable fast-follow, left out here to keep this first pass
+      // smaller.
+      case 'open-add-livestock-herd': openModal(livestockHerdFormHtml(a1)); break;
+      case 'edit-livestock-herd': openModal(livestockHerdFormHtml(a1, a2)); break;
+      case 'delete-livestock-herd':
+        confirmModal('Delete this batch and its history?', function(){
+          mutate(function(s){
+            var d = (s.livestock||{})[a1]; if(!d) return;
+            var b = d.herd.find(function(x){return x.id===a2;}); if(!b) return;
+            (b.removals||[]).forEach(function(r){
+              if(r.linkedIncomeId) s.incomes = s.incomes.filter(function(i){return i.id!==r.linkedIncomeId;});
+            });
+            if(b.linkedAcqExpenseId) s.expenses = s.expenses.filter(function(x){return x.id!==b.linkedAcqExpenseId;});
+            d.herd = d.herd.filter(function(x){return x.id!==a2;});
+          });
+        });
+        break;
+      case 'open-add-livestock-removal': openModal(livestockRemovalFormHtml(a1, a2)); break;
+      case 'edit-livestock-removal': openModal(livestockRemovalFormHtml(a1, a2, a3)); break;
+      case 'delete-livestock-removal':
+        confirmModal('Delete this entry?', function(){
+          mutate(function(s){
+            var d = (s.livestock||{})[a1]; if(!d) return;
+            var b = d.herd.find(function(x){return x.id===a2;}); if(!b) return;
+            var rem = (b.removals||[]).find(function(r){return r.id===a3;});
+            if(rem && rem.linkedIncomeId) s.incomes = s.incomes.filter(function(i){return i.id!==rem.linkedIncomeId;});
+            b.removals = (b.removals||[]).filter(function(r){return r.id!==a3;});
+          });
+        });
+        break;
+      case 'open-add-livestock-journal': openModal(livestockJournalFormHtml(a1)); break;
+      case 'edit-livestock-journal': openModal(livestockJournalFormHtml(a1, a2)); break;
+      case 'delete-livestock-journal':
+        confirmModal('Delete this entry?', function(){
+          mutate(function(s){
+            var d = (s.livestock||{})[a1]; if(!d) return;
+            d.journal = (d.journal||[]).filter(function(j){return j.id!==a2;});
           });
         });
         break;
@@ -7121,6 +7438,11 @@
       if(esf) esf.style.display = el.value==='sold' ? 'grid' : 'none';
       return;
     }
+    if(name==='livestock-removal-reason'){
+      var lsf = document.getElementById('livestock-sale-fields');
+      if(lsf) lsf.style.display = el.value==='sold' ? 'grid' : 'none';
+      return;
+    }
   }
   function handleForm(name, form){
     var fd = new FormData(form);
@@ -7263,6 +7585,94 @@
       closeModal();
       if(reason==='sold'){ viewReceipt(flockReceiptOpts(batchId, newRemId)); }
       else { toast(remEditId?'Saved.':'Recorded.'); }
+      return;
+    }
+    if(name==='livestock-herd'){
+      var lsSpKey = val('species'), lsId = val('id') || null;
+      var lsCount = Math.max(1, Number(val('count')||0));
+      var lsDate = val('dateAdded'), lsLabel = val('label') || '', lsSource = val('source') || '';
+      var lsAcqRaw = Number(val('acquisitionCost')||0), lsAcqCur = val('acqCurrency');
+      var lsSp = livestockSpecies(lsSpKey);
+      mutate(function(s){
+        s.livestock = s.livestock || {};
+        var d = s.livestock[lsSpKey] = s.livestock[lsSpKey] || {herd:[], journal:[]};
+        var acqCost = lsAcqRaw>0 ? fromCurrency(lsAcqRaw, lsAcqCur) : 0;
+        var b;
+        if(lsId){ b = d.herd.find(function(x){return x.id===lsId;}); if(b){ b.count=lsCount; b.dateAdded=lsDate; b.label=lsLabel; b.source=lsSource; } }
+        else { b = {id:uid('lvb'), count:lsCount, dateAdded:lsDate, label:lsLabel, source:lsSource, removals:[]}; d.herd.push(b); }
+        if(!b) return;
+        b.acquisitionCost = acqCost;
+        s.expenses = s.expenses || [];
+        // Same linked-expense pattern Flock uses for an acquisition cost —
+        // one Expense entry stays in sync with this field, never entered
+        // twice.
+        if(acqCost>0){
+          var linkedExp = b.linkedAcqExpenseId ? s.expenses.find(function(x){return x.id===b.linkedAcqExpenseId;}) : null;
+          var expNote = 'Acquired '+lsCount+' '+(lsSp?(lsCount===1?lsSp.singular:lsSp.plural):'')+(lsSource?' — '+lsSource:'');
+          if(linkedExp){ linkedExp.date=lsDate; linkedExp.amount=acqCost; linkedExp.note=expNote; }
+          else {
+            var newExp = {id:uid('exp'), date:lsDate, category:(lsSp?lsSp.expenseCategory:'Other'), amount:acqCost, note:expNote};
+            s.expenses.push(newExp);
+            b.linkedAcqExpenseId = newExp.id;
+          }
+        } else if(b.linkedAcqExpenseId){
+          s.expenses = s.expenses.filter(function(x){return x.id!==b.linkedAcqExpenseId;});
+          b.linkedAcqExpenseId = null;
+        }
+      });
+      closeModal(); toast(lsId?'Updated.':'Added.');
+      return;
+    }
+    if(name==='livestock-removal'){
+      var lrSpKey = val('species'), lrHerdId = val('herdId'), lrId = val('id') || null;
+      var lrReason = val('reason'), lrCount = Math.max(1, Number(val('count')||0));
+      var lrDate = val('date'), lrNote = val('note') || '';
+      var lrSaleAmount = Number(val('saleAmount')||0), lrSaleCurrency = val('saleCurrency');
+      var lrBuyer = (val('buyer')||'').trim();
+      var lrSp = livestockSpecies(lrSpKey);
+      var lrError = null;
+      mutate(function(s){
+        s.livestock = s.livestock || {};
+        var d = s.livestock[lrSpKey]; if(!d) return;
+        var b = d.herd.find(function(x){return x.id===lrHerdId;}); if(!b) return;
+        b.removals = b.removals || [];
+        var rem = lrId ? b.removals.find(function(r){return r.id===lrId;}) : null;
+        // Editing gives this entry's own animals back to the pool first,
+        // same as Flock's removal form — lets raising the count work too,
+        // up to what's really available.
+        var avail = currentLivestockCount(b) + (rem ? rem.count : 0);
+        if(lrCount>avail){ lrError = 'Only '+avail+' available for this entry.'; return; }
+        if(!rem){ rem = {id:uid('lvrem')}; b.removals.push(rem); }
+        if(rem.linkedIncomeId){ s.incomes = s.incomes.filter(function(i){return i.id!==rem.linkedIncomeId;}); rem.linkedIncomeId = null; }
+        rem.date = lrDate; rem.count = lrCount; rem.reason = lrReason; rem.note = lrNote;
+        if(lrReason==='sold'){
+          rem.buyer = lrBuyer;
+          rem.customerId = resolveOrCreateCustomer(s, lrBuyer);
+          rem.saleAmount = lrSaleAmount>0 ? fromCurrency(lrSaleAmount, lrSaleCurrency) : 0;
+          rem.recordedByRole = rem.recordedByRole || roleLabel(currentUser);
+          if(lrSaleAmount>0){
+            var incRec = {id:uid('inc'), date:lrDate, category:(lrSp?lrSp.incomeCategory:'Other'), amount: rem.saleAmount, note: lrNote || ('Sale of '+lrCount+' '+(lrSp?(lrCount===1?lrSp.singular:lrSp.plural):'')), recordedByRole: roleLabel(currentUser)};
+            s.incomes.push(incRec);
+            rem.linkedIncomeId = incRec.id;
+          }
+        } else {
+          rem.buyer = null; rem.customerId = null; rem.saleAmount = 0; rem.recordedByRole = null;
+        }
+      });
+      if(lrError){ toast(lrError); return; }
+      closeModal(); toast(lrId?'Saved.':'Recorded.');
+      return;
+    }
+    if(name==='livestock-journal'){
+      var ljSpKey = val('species'), ljId = val('id') || null;
+      var ljDate = val('date'), ljQty = Math.max(0, Number(val('quantity')||0)), ljNote = val('note') || '';
+      mutate(function(s){
+        s.livestock = s.livestock || {};
+        var d = s.livestock[ljSpKey] = s.livestock[ljSpKey] || {herd:[], journal:[]};
+        if(ljId){ var j = d.journal.find(function(x){return x.id===ljId;}); if(j){ j.date=ljDate; j.quantity=ljQty; j.note=ljNote; } }
+        else { d.journal.push({id:uid('lvj'), date:ljDate, quantity:ljQty, note:ljNote}); }
+      });
+      closeModal(); toast(ljId?'Saved.':'Logged.');
       return;
     }
     if(name==='resex'){
@@ -7932,10 +8342,20 @@
   // existing while-the-tab-is-open alerts, it just can't register for the
   // fully-closed-app kind yet.
   var VAPID_KEY = 'PASTE_YOUR_VAPID_KEY_HERE';
+  // Both read from farm.config.js (window.FARM_CONFIG) when present, which
+  // is the ONE file a new deployment needs to edit — see
+  // HOW-TO-DEPLOY-FOR-A-NEW-FARM.md. Falls back to 'kenokip' so this still
+  // runs if that file is ever missing (e.g. an old cached build).
   var FARM_COLLECTION = 'farms';
-  var FARM_DOC = 'kenokip';
+  var FARM_DOC = (window.FARM_CONFIG && window.FARM_CONFIG.id) || 'kenokip';
   var FINANCE_COLLECTION = 'finance';
-  var FINANCE_DOC = 'kenokip';
+  var FINANCE_DOC = (window.FARM_CONFIG && window.FARM_CONFIG.id) || 'kenokip';
+  var FARM_NAME = (window.FARM_CONFIG && window.FARM_CONFIG.name) || 'Kenokip Farm';
+  // Picked up by renderNav() for the sidebar brand text, and here for the
+  // browser tab — the <title> in index.html itself is a static fallback
+  // for the instant before this runs. A new deployment only has to touch
+  // farm.config.js for both of these, not this file or index.html.
+  try{ document.title = FARM_NAME; }catch(e){}
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
@@ -7970,14 +8390,14 @@
   // Till's B2C-via-API access with Safaricom is unresolved (see SETUP-B2C.md
   // and the M-Pesa Business team correspondence). Flip both flags back to
   // true together once B2C is confirmed working.
-  var mpesaPayoutsEnabled = true;
+  var mpesaPayoutsEnabled = false;
   // Separate kill-switch for STK Push FROM the Paybill (a collection, not a
   // payout — money coming in, not going out — so it's lower-risk than
   // mpesaPayoutsEnabled above, but still needs MPESA_PAYOUT_PASSKEY set on
   // the backend before it'll actually work). Once that secret is set and
   // deployed, flip this to true to show the account picker in "Add via
   // M-Pesa" — see HOW-TO-APPLY-DUAL-ACCOUNT.md.
-  var mpesaPaybillStkEnabled = true;
+  var mpesaPaybillStkEnabled = false;
   var financeSyncStarted = false;
   var directorySyncStarted = false;
   var logsSyncStarted = false;

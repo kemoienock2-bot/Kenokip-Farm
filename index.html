@@ -56,6 +56,12 @@
 
 <script src="js/qrcode-lib.js"></script>
 
+<!-- Loaded before app.js on purpose: window.FARM_CONFIG must exist before
+     app.js reads it to pick which Firestore document this deployment
+     points at. The ONE file a new farm's deployment needs to edit — see
+     HOW-TO-DEPLOY-FOR-A-NEW-FARM.md. -->
+<script src="farm.config.js"></script>
+
 <script src="app.js"></script>
 
 </body>
