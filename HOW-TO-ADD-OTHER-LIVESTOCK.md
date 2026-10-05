@@ -1,10 +1,17 @@
-# Other Livestock: Dairy Cattle, Goats & Sheep, Pigs, Rabbits
+# Other Livestock: Dairy Cattle, Goats & Sheep, Pigs, Rabbits, Horses
+
+> **Update:** Horses was added as a fifth species after this was first
+> written — it works exactly like the other four (herd + sales & losses,
+> no milk-style journal). Whether this whole section even shows up in the
+> sidebar now depends on the **Farm Setup** picker — see
+> `HOW-TO-FARM-SETUP-AND-CROPS.md` for that part.
 
 ## What this adds
 
 A new section, **Other Livestock**, next to Flock in the sidebar (under
-"Farm Records"). It covers four species — Dairy Cattle, Goats & Sheep,
-Pigs, Rabbits — picked from what you asked for. Each one gets:
+"Farm Records") — shown only if Farm Setup has at least one non-poultry
+species turned on. It covers five species — Dairy Cattle, Goats & Sheep,
+Pigs, Rabbits, Horses. Each one gets:
 
 - **Herd** — add a batch (how many, when, optional label/source/cost),
   see the running count, edit or delete a batch.
@@ -39,7 +46,8 @@ var LIVESTOCK_SPECIES = [
   { key:'cattle',    label:'Dairy Cattle', hasJournal:true,  ... },
   { key:'goatsheep', label:'Goats & Sheep', hasJournal:false, ... },
   { key:'pigs',       label:'Pigs',          hasJournal:false, ... },
-  { key:'rabbits',    label:'Rabbits',        hasJournal:false, ... }
+  { key:'rabbits',    label:'Rabbits',        hasJournal:false, ... },
+  { key:'horses',     label:'Horses',         hasJournal:false, ... }
 ];
 ```
 

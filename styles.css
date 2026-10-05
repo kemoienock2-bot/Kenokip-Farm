@@ -815,3 +815,21 @@
   .session-timeout-card h1{ margin:0; font-size:20px; color:var(--ink); }
   .session-timeout-card p{ margin:0; font-size:13.5px; color:var(--ink-3); line-height:1.5; }
   .session-timeout-card button{ margin-top:6px; min-width:160px; justify-content:center; }
+
+  /* ---- Farm Setup picker (see farmSetupHTML in app.js) — the one-time
+     "what does this farm keep" screen. New class names only, so nothing
+     here touches any existing element's styling. ---- */
+  .setup-category-tile, .setup-species-tile{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; border:2px solid var(--border-soft); border-radius:var(--radius);
+    background:var(--surface); cursor:pointer; user-select:none;
+    transition:border-color .15s ease, background-color .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+  .setup-species-tile{ padding:10px 12px; border-radius:var(--radius-sm); gap:10px; font-size:13.5px; }
+  .setup-category-tile:hover, .setup-species-tile:hover{ border-color:var(--accent); transform:translateY(-1px); box-shadow:var(--shadow); }
+  .setup-category-tile input, .setup-species-tile input{ width:auto; accent-color:var(--accent-strong); flex:none; }
+  .setup-category-tile:has(input:checked), .setup-species-tile:has(input:checked){
+    border-color:var(--accent-strong); background:var(--accent-tint);
+  }
+  #farm-setup-species-block, #farm-setup-crops-note{ animation:app-update-fade-in .2s ease; }
+  .main[data-section="overview"] .card > form[data-form="farm-setup"]{ animation:app-update-fade-in .3s ease; }

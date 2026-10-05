@@ -98,6 +98,8 @@
     pigs:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="29" rx="16" ry="11" fill="#E8A2A8"/><ellipse cx="10" cy="26" rx="3.5" ry="4.5" fill="#D98892"/><ellipse cx="38" cy="26" rx="3.5" ry="4.5" fill="#D98892"/><circle cx="24" cy="18" r="8.5" fill="#EDB3B9"/><ellipse cx="24" cy="21" rx="4.5" ry="3.4" fill="#C97983"/><circle cx="22" cy="21" r="0.9" fill="#7A3A42"/><circle cx="26" cy="21" r="0.9" fill="#7A3A42"/><circle cx="18" cy="15" r="1" fill="#241a12"/><circle cx="30" cy="15" r="1" fill="#241a12"/></svg>',
     rabbits:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="33" rx="13" ry="9" fill="#EDE7DA"/><ellipse cx="24" cy="18" rx="7.5" ry="7" fill="#F2EEE3"/><path d="M19 12 Q16 -2 21 2 Q22 9 22 13" fill="#F2EEE3" stroke="#D9D2C1" stroke-width="1"/><path d="M29 12 Q32 -2 27 2 Q26 9 26 13" fill="#F2EEE3" stroke="#D9D2C1" stroke-width="1"/><circle cx="21" cy="18" r="1" fill="#241a12"/><circle cx="27" cy="18" r="1" fill="#241a12"/><ellipse cx="24" cy="21.5" rx="1.6" ry="1.2" fill="#D98892"/></svg>',
     livestockNav:'<svg viewBox="0 0 48 48"><rect x="6" y="20" width="36" height="20" rx="2" fill="#8B5E34"/><path d="M4 22 L24 8 L44 22 Z" fill="#A6431F"/><rect x="18" y="28" width="7" height="12" fill="#5C3420"/><circle cx="33" cy="31" r="4.5" fill="#EFEADF"/><circle cx="31.5" cy="30" r="0.8" fill="#241a12"/><circle cx="34.5" cy="30" r="0.8" fill="#241a12"/></svg>',
+    horses:'<svg viewBox="0 0 48 48"><path d="M30 10 Q38 8 38 18 Q38 24 33 27 L33 40 L27 40 L27 30 Q22 31 19 28 Q14 32 11 30 Q15 27 15 22 Q15 12 25 10 Q28 9 30 10 Z" fill="#6B4A2E"/><path d="M30 10 Q36 6 40 9 Q36 11 34 14" fill="#4A3220"/><circle cx="32" cy="16" r="1.1" fill="#241a12"/><path d="M19 28 L14 40 L19 40 L22 30 Z" fill="#4A3220"/></svg>',
+    cropsNav:'<svg viewBox="0 0 48 48"><ellipse cx="24" cy="40" rx="18" ry="3.4" fill="#8B5E34" opacity=".5"/><path d="M24 40 V22" stroke="#3E8E5A" stroke-width="2.6" stroke-linecap="round"/><path d="M24 24 Q14 22 13 12 Q24 13 24 24 Z" fill="#3E8E5A"/><path d="M24 24 Q34 22 35 12 Q24 13 24 24 Z" fill="#6DBB86"/><path d="M24 30 Q17 29 16 22 Q24 23 24 30 Z" fill="#3E8E5A"/><path d="M24 30 Q31 29 32 22 Q24 23 24 30 Z" fill="#6DBB86"/></svg>',
     // Default profile-avatar placeholders, shown before someone uploads a
     // real photo (see avatarHTML) — deliberately abstract color-block
     // silhouettes rather than any skin-toned rendering, the same approach
@@ -321,8 +323,22 @@
           TZS:{symbol:'TSh',rate:19.9,decimals:0},
           EUR:{symbol:'€',rate:0.0071,decimals:2}
         },
-        expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Livestock Purchase','Equipment & Housing','Utilities','Transport','Other'],
-        incomeCategories:['Egg Sales','Bird Sales','Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales','M-Pesa / Bank','Manure','Other'],
+        expenseCategories:['Feed','Vaccines & Medication','Labour','Chicks / Restocking','Livestock Purchase','Seeds & Planting','Equipment & Housing','Utilities','Transport','Other'],
+        incomeCategories:['Egg Sales','Bird Sales','Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales','Horse Sales','Crop Sales','M-Pesa / Bank','Manure','Other'],
+        // Which parts of the app this farm actually uses — shown as a
+        // one-time setup screen (see farmSetupHTML) the very first time a
+        // farm document is opened, so a brand-new deployment only sees the
+        // sections relevant to it instead of everything at once. An
+        // existing farm with real data already in it skips the screen
+        // entirely — migrateState() below auto-fills this from what's
+        // already there the first time it loads under this update, so
+        // nothing changes for a farm already in use. Editable later from
+        // Settings → Farm Setup.
+        farmSetup:{
+          completed:false,
+          categories:{ livestock:true, crops:false },
+          species:['poultry']
+        },
         // A first draft, written from what's known so far — meant to be
         // edited (Settings → About, administrator only) rather than treated
         // as final. Bracketed bits are placeholders for details only the
@@ -343,8 +359,14 @@
         cattle:{herd:[], journal:[]},
         goatsheep:{herd:[], journal:[]},
         pigs:{herd:[], journal:[]},
-        rabbits:{herd:[], journal:[]}
+        rabbits:{herd:[], journal:[]},
+        horses:{herd:[], journal:[]}
       },
+      // Crops — deliberately minimal for now (a flat dated journal, not a
+      // per-plot/batch model like Livestock's herd) since this is meant to
+      // cover "the basics" while Livestock gets the deeper build-out. See
+      // HOW-TO-ADD-CROPS.md.
+      crops:{ entries:[] },
       // Stock on hand is tracked separately from feedLogs (which is a usage
       // + cost history, unchanged) — restocking adds to onHandKg, and every
       // usage entry in feedLogs subtracts from it automatically. Starts at 0
@@ -371,10 +393,15 @@
     // before Other Livestock existed won't have these category names yet,
     // so sales there would have nowhere proper to file. Added even for a
     // farm not using these species yet; unused categories are harmless.
-    ['Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales'].forEach(function(cat){
+    ['Milk Sales','Goat & Sheep Sales','Pig Sales','Rabbit Sales','Horse Sales','Crop Sales'].forEach(function(cat){
       if(merged.settings.incomeCategories.indexOf(cat)===-1) merged.settings.incomeCategories = merged.settings.incomeCategories.concat([cat]);
     });
-    if(merged.settings.expenseCategories.indexOf('Livestock Purchase')===-1) merged.settings.expenseCategories = merged.settings.expenseCategories.concat(['Livestock Purchase']);
+    ['Livestock Purchase','Seeds & Planting'].forEach(function(cat){
+      if(merged.settings.expenseCategories.indexOf(cat)===-1) merged.settings.expenseCategories = merged.settings.expenseCategories.concat([cat]);
+    });
+    // farmSetup itself is handled below, after livestock/crops are
+    // normalized (it needs to inspect their final, already-defaulted
+    // shape to auto-detect an existing farm — see that block).
     merged.settings.about = Object.assign({}, base.settings.about, (data&&data.settings&&data.settings.about)||{});
     merged.flock = Array.isArray(data&&data.flock) ? data.flock : [];
     merged.eggs = Array.isArray(data&&data.eggs) ? data.eggs : [];
@@ -405,6 +432,33 @@
         };
       });
     })();
+    merged.crops = { entries: Array.isArray(data && data.crops && data.crops.entries) ? data.crops.entries : [] };
+    // Farm Setup — only touched here if no explicit choice was ever saved.
+    // A brand-new farm document (nothing in flock/eggs/feedLogs/livestock/
+    // crops) keeps the default completed:false, so it sees the picker. A
+    // farm that already has real data in it — i.e. every deployment that
+    // existed before this update, including this one — gets auto-marked
+    // completed with its categories/species detected from what's already
+    // there, so nothing about what they see changes today. They can still
+    // open Settings → Farm Setup later to add Crops or another species.
+    if(!(data && data.settings && data.settings.farmSetup)){
+      var hasPoultryData = merged.flock.length>0 || merged.eggs.length>0 || merged.feedLogs.length>0;
+      var detectedSpecies = hasPoultryData ? ['poultry'] : [];
+      Object.keys(merged.livestock).forEach(function(key){
+        var d = merged.livestock[key];
+        if(d.herd.length>0 || d.journal.length>0) detectedSpecies.push(key);
+      });
+      var hasCropsData = merged.crops.entries.length>0;
+      if(detectedSpecies.length || hasCropsData){
+        merged.settings.farmSetup = {
+          completed:true,
+          categories:{ livestock: detectedSpecies.length>0, crops: hasCropsData },
+          species: detectedSpecies.length ? detectedSpecies : ['poultry']
+        };
+      }
+      // else: no existing data at all — leave the default (completed:false)
+      // so a genuinely new farm document sees the setup screen.
+    }
     purgeOldTrash(merged);
     backfillCustomers(merged);
     return merged;
@@ -793,6 +847,7 @@
       {key:'eggs', label:'Eggs', icon:PICS.eggs},
       {key:'feed', label:'Feed', icon:PICS.feed},
       {key:'livestock', label:'Other Livestock', icon:PICS.livestockNav},
+      {key:'crops', label:'Crops', icon:PICS.cropsNav},
       {key:'health', label:'Health', icon:PICS.health}
     ]},
     {key:'money-group', label:'Money', icon:PICS.finance, children:[
@@ -986,8 +1041,24 @@
       '<button class="btn ghost sm" data-action="nav-home"><span class="inline-ico" style="width:15px; height:15px">'+ICONS.home+'</span>'+t('btn.backhome','Back to homepage')+'</button>'+
     '</div>';
   }
+  // Shown instead of the normal app the very first time a brand-new farm
+  // document is opened (see migrateState's auto-detect — an existing farm
+  // with real data never sees this). Intercepted here, before the normal
+  // nav/section machinery, rather than as a real SECTIONS entry, since it
+  // has to come up regardless of whatever ui.section happens to be.
+  function farmSetupPending(){
+    return !!currentUser && !(state.settings && state.settings.farmSetup && state.settings.farmSetup.completed);
+  }
   function render(){
     updateAuthGate();
+    if(farmSetupPending()){
+      renderNav();
+      var mainElSetup = document.getElementById('main-content');
+      if(mainElSetup) mainElSetup.setAttribute('data-section','overview');
+      document.getElementById('topbar').innerHTML = topbarHTML('Farm Setup','Choose what this farm tracks', '', PICS.livestockNav);
+      document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + farmSetupHTML();
+      return;
+    }
     if(!sectionAllowed(ui.section)){ ui.section = 'overview'; saveUIPref(); }
     renderNav();
     var sec = SECTIONS[ui.section] || SECTIONS.overview;
@@ -1993,8 +2064,20 @@
       incomeCategory:'Pig Sales', expenseCategory:'Livestock Purchase' },
     { key:'rabbits', label:'Rabbits', singular:'rabbit', plural:'rabbits', icon:PICS.rabbits,
       hasJournal:false,
-      incomeCategory:'Rabbit Sales', expenseCategory:'Livestock Purchase' }
+      incomeCategory:'Rabbit Sales', expenseCategory:'Livestock Purchase' },
+    { key:'horses', label:'Horses', singular:'horse', plural:'horses', icon:PICS.horses,
+      hasJournal:false,
+      incomeCategory:'Horse Sales', expenseCategory:'Livestock Purchase' }
   ];
+  // All selectable farm-setup livestock options, including Poultry — which,
+  // unlike the five above, is handled by the existing bespoke Flock/Eggs/
+  // Feed/Health sections rather than this generic module. Only used to
+  // render the Farm Setup picker (see farmSetupHTML) and to decide what's
+  // enabled in sectionEnabledByFarmSetup — Poultry itself never appears in
+  // LIVESTOCK_SPECIES or the generic herd/journal code above.
+  var ALL_LIVESTOCK_OPTIONS = [
+    { key:'poultry', label:'Poultry (Chickens)', icon:PICS.hen }
+  ].concat(LIVESTOCK_SPECIES.map(function(sp){ return {key:sp.key, label:sp.label, icon:sp.icon}; }));
   function livestockSpecies(key){ return LIVESTOCK_SPECIES.find(function(s){ return s.key===key; }); }
   // Defensive the same way state.eggs etc. are read defensively elsewhere —
   // migrateState() already guarantees this shape on load, this is just a
@@ -2196,6 +2279,123 @@
   }
   function livestockPanel(){
     return sectionViewSwitcherHTML('livestock', LIVESTOCK_VIEWS) + livestockPanelBody();
+  }
+
+  /* ============================= CROPS ============================= */
+  // Deliberately simple: one flat, dated journal (not a per-plot/batch
+  // model like Livestock's herd) — planting, harvest, and sale/loss
+  // entries all go in the same list, told apart by `type`. Good enough to
+  // "add the basics" now; a proper plot/season model (like Livestock's
+  // herd+removals) is a reasonable later upgrade once it's clear what a
+  // real crop farmer here actually needs week to week.
+  var CROP_ENTRY_TYPES = [['planted','Planted'],['harvested','Harvested'],['sold','Sold'],['lost','Lost / spoiled'],['other','Other']];
+  function cropEntryTypeLabel(t){ var m = CROP_ENTRY_TYPES.find(function(p){return p[0]===t;}); return m?m[1]:t; }
+  function cropsPanel(){
+    var entries = (state.crops||{entries:[]}).entries.slice().sort(function(a,b){ return a.date<b.date?1:-1; });
+    var page = paginate('crops-log', entries);
+    var rows = page.items.map(function(x){
+      return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td>'+esc(x.cropName||'—')+'</td><td>'+cropEntryTypeLabel(x.type)+'</td>'+
+        '<td class="num">'+(x.quantity!=null && x.quantity!=='' ? x.quantity+' '+esc(x.unit||'') : '—')+'</td>'+
+        '<td class="num">'+(x.type==='sold' && x.amount ? fmtMoney(x.amount) : '—')+'</td>'+
+        '<td>'+esc(x.note||'—')+'</td>'+
+        '<td><div class="row-actions">'+
+          '<button class="icon-btn" data-action="edit-crop:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
+          '<button class="icon-btn" data-action="delete-crop:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
+        '</div></td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-title"><h3>Crop journal</h3><div style="display:flex; align-items:center; gap:8px"><span class="hint">'+entries.length+' entries</span>'+
+      '<button class="btn sm primary" data-action="open-add-crop" '+(readOnly?'disabled':'')+'>'+ICONS.plus+'Add entry</button></div></div>'+
+      '<div class="hint" style="margin-bottom:12px">One simple log for planting, harvesting, and selling — covers the basics for now. A sale with an amount files into Income under "Crop Sales" automatically.</div>'+
+      '<div class="table-wrap">'+
+      (entries.length ? '<table><thead><tr><th>Date</th><th>Crop</th><th>Type</th><th class="num">Quantity</th><th class="num">Sale amount</th><th>Note</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="empty">'+ICONS.empty+'<div>No crop entries yet.</div></div>')+
+      '</div>'+pagerHtml('crops-log', page.pageCount, page.page)+'</div>';
+  }
+  function cropEntryFormHtml(id){
+    var x = id ? (state.crops||{entries:[]}).entries.find(function(i){return i.id===id;}) : null;
+    var isSold = x && x.type==='sold';
+    var curAmount = x && x.amount ? (x.amount * rateOf(state.settings.displayCurrency)).toFixed(2) : '';
+    return '<div class="modal-head"><h3>'+(x?'Edit entry':'Add crop entry')+'</h3><button class="modal-close" data-action="close-modal">'+ICONS.close+'</button></div>'+
+    '<form data-form="crop-entry">'+
+      '<input type="hidden" name="id" value="'+(x?x.id:'')+'">'+
+      '<div class="field-grid">'+
+        '<div class="field-row"><label>Crop</label><input class="field" type="text" name="cropName" value="'+(x?esc(x.cropName||''):'')+'" placeholder="e.g. Maize, Beans, Kale" autofocus required></div>'+
+        '<div class="field-row"><label>Type</label><select class="field" name="type" data-change="crop-type">'+
+          CROP_ENTRY_TYPES.map(function(p){ return '<option value="'+p[0]+'" '+(x?(x.type===p[0]?'selected':''):(p[0]==='planted'?'selected':''))+'>'+p[1]+'</option>'; }).join('')+
+        '</select></div>'+
+      '</div>'+
+      '<div class="field-grid" style="margin-top:12px">'+
+        '<div class="field-row"><label>Date</label><input class="field" type="date" name="date" value="'+(x?x.date:todayISO())+'" max="'+todayISO()+'" required></div>'+
+        '<div class="field-row"><label>Quantity (optional)</label><input class="field" type="number" min="0" step="0.1" name="quantity" value="'+(x&&x.quantity!=null?x.quantity:'')+'" placeholder="e.g. 40"></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Unit (optional)</label><input class="field" type="text" name="unit" value="'+(x?esc(x.unit||''):'')+'" placeholder="e.g. kg, bags, bunches"></div>'+
+      '<div id="crop-sale-fields" class="field-grid" style="margin-top:12px; display:'+(isSold?'grid':'none')+'">'+
+        '<div class="field-row"><label>Sale amount (optional)</label><input class="field" type="number" min="0" step="0.01" name="amount" value="'+curAmount+'" placeholder="0"></div>'+
+        '<div class="field-row"><label>Currency</label><select class="field" name="amountCurrency">'+currencyOptions()+'</select></div>'+
+      '</div>'+
+      '<div class="field-row" style="margin-top:12px"><label>Note</label><input class="field" type="text" name="note" value="'+(x?esc(x.note||''):'')+'" placeholder="Optional"></div>'+
+      '<div class="modal-foot"><button type="button" class="btn" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">'+(x?'Save changes':'Add entry')+'</button></div>'+
+    '</form>';
+  }
+
+  /* ============================= FARM SETUP ============================= */
+  // The one-time picker shown on a brand-new farm document (see
+  // migrateState above for when this does vs. doesn't appear), and
+  // reachable again anytime from Settings → Farm Setup to add a species or
+  // turn Crops on. Both categories can be on at once — a farm can keep
+  // animals and grow crops.
+  function farmSetupSummaryText(){
+    var fs = (state.settings && state.settings.farmSetup) || {};
+    var cats = fs.categories || {livestock:true, crops:false};
+    var species = fs.species || ['poultry'];
+    var parts = [];
+    if(cats.livestock){
+      var names = species.map(function(k){ var o = ALL_LIVESTOCK_OPTIONS.find(function(x){return x.key===k;}); return o?o.label:k; });
+      parts.push('Livestock — '+(names.length?names.join(', '):'none selected'));
+    } else parts.push('Livestock — off');
+    parts.push(cats.crops ? 'Crops — on' : 'Crops — off');
+    return parts.join(' · ');
+  }
+  function farmSetupHTML(){
+    if(!isAdminLevel()){
+      return '<div class="card" style="text-align:center; max-width:560px; margin:48px auto 0">'+
+        '<div class="card-title" style="justify-content:center"><h3>Almost ready</h3></div>'+
+        '<div class="hint">The administrator is finishing farm setup — choosing which livestock and/or crops this farm tracks. Check back shortly.</div>'+
+      '</div>';
+    }
+    var fs = (state.settings && state.settings.farmSetup) || {completed:false, categories:{livestock:true,crops:false}, species:['poultry']};
+    var cats = fs.categories || {livestock:true, crops:false};
+    var species = fs.species || ['poultry'];
+    var speciesTiles = ALL_LIVESTOCK_OPTIONS.map(function(opt){
+      var checked = species.indexOf(opt.key)!==-1;
+      return '<label class="setup-species-tile"><input type="checkbox" name="species_'+opt.key+'" '+(checked?'checked':'')+'>'+
+        '<div class="pic-badge sm">'+opt.icon+'</div><div>'+esc(opt.label)+'</div>'+
+      '</label>';
+    }).join('');
+    return '<div class="card" style="max-width:760px; margin:24px auto">'+
+      '<div class="card-title"><h3>Welcome — let\'s set up '+esc(FARM_NAME)+'</h3></div>'+
+      '<div class="hint" style="margin-bottom:16px">Pick what this farm keeps track of. You can change this anytime later from Settings → Farm Setup.</div>'+
+      '<form data-form="farm-setup">'+
+        '<div class="field-grid" style="grid-template-columns:1fr 1fr; gap:14px">'+
+          '<label class="setup-category-tile"><input type="checkbox" name="cat_livestock" data-change="farm-setup-cat" '+(cats.livestock?'checked':'')+'>'+
+            '<div class="pic-badge">'+PICS.livestockNav+'</div><div><div style="font-weight:600">Livestock</div><span class="hint">Animals you keep and sell</span></div>'+
+          '</label>'+
+          '<label class="setup-category-tile"><input type="checkbox" name="cat_crops" data-change="farm-setup-cat" '+(cats.crops?'checked':'')+'>'+
+            '<div class="pic-badge">'+PICS.cropsNav+'</div><div><div style="font-weight:600">Crops</div><span class="hint">Basic planting &amp; harvest tracking</span></div>'+
+          '</label>'+
+        '</div>'+
+        '<div id="farm-setup-species-block" style="margin-top:20px; display:'+(cats.livestock?'block':'none')+'">'+
+          '<label class="hint">Which livestock? Tick all that apply.</label>'+
+          '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin-top:8px">'+speciesTiles+'</div>'+
+        '</div>'+
+        '<div id="farm-setup-crops-note" style="margin-top:16px; display:'+(cats.crops?'block':'none')+'">'+
+          '<div class="hint">Crops starts simple — one journal for planting, harvesting, and sales. You\'ll find it under its own "Crops" page once saved.</div>'+
+        '</div>'+
+        '<div class="modal-foot" style="margin-top:22px; justify-content:flex-start">'+
+          '<button class="btn primary" type="submit">Save and continue</button>'+
+        '</div>'+
+      '</form>'+
+    '</div>';
   }
 
   /* ============================= HEALTH ============================= */
@@ -3608,6 +3808,10 @@
     var lang = (state.settings.language)||'en';
     var trashCount = visibleTrashItems().length;
     return (currentUser ? accountCardHTML() : guestAccountCardHTML())+
+    (isAdminLevel() ? '<div class="card"><div class="card-title"><h3>Farm Setup</h3><span class="hint">Which livestock &amp; crops this farm tracks</span></div>'+
+      '<div class="hint" style="margin-bottom:10px">Currently: '+esc(farmSetupSummaryText())+'</div>'+
+      '<button class="btn" data-action="reopen-farm-setup">Edit Farm Setup</button>'+
+    '</div>' : '')+
     '<div class="card"><div class="card-title"><h3>Trash</h3><span class="hint">'+trashCount+' item'+(trashCount===1?'':'s')+' — recoverable for 30 days</span></div>'+
       '<button class="btn" data-action="nav:trash">'+ICONS.trash+' Open Trash</button>'+
     '</div>'+
@@ -3710,7 +3914,29 @@
   // real restriction, not the restriction itself. The administrator and
   // anyone not signed in (guest/demo mode) are unaffected — this only
   // narrows things down for a signed-in *employee* account.
+  // Whether this farm's own setup (see farmSetupHTML / state.settings.
+  // farmSetup) even includes a given section — independent of the viewer's
+  // role, checked first by sectionAllowed below. Flock/Eggs/Feed/Health
+  // stay tied to Poultry specifically (Health's vaccination schedule is
+  // bird-specific); Livestock needs at least one non-poultry species on;
+  // Crops needs its own category on. Every other section (Finance, Team,
+  // Settings, ...) is "common" and always available — this function is
+  // only ever consulted for the farm-type-specific ones.
+  function sectionEnabledByFarmSetup(key){
+    var fs = (state.settings && state.settings.farmSetup) || {};
+    var cats = fs.categories || {livestock:true, crops:false};
+    var species = fs.species || ['poultry'];
+    if(key==='flock' || key==='eggs' || key==='feed' || key==='health'){
+      return !!cats.livestock && species.indexOf('poultry')!==-1;
+    }
+    if(key==='livestock'){
+      return !!cats.livestock && species.some(function(s){ return s!=='poultry'; });
+    }
+    if(key==='crops') return !!cats.crops;
+    return true;
+  }
   function sectionAllowed(key){
+    if(!sectionEnabledByFarmSetup(key)) return false;
     if(isAdminLevel() || !currentUser) return sectionAllowedUngated(key);
     switch(key){
       case 'finance':
@@ -3722,6 +3948,7 @@
       case 'eggs':
       case 'feed':
       case 'livestock':
+      case 'crops':
         return isSupervisorUser() || isFarmhandUser();
       case 'health':
         return isSupervisorUser() || isVetUser();
@@ -6053,7 +6280,8 @@
     flock:{ topbar:function(){ return topbarHTML(t('title.flock','Flock'),t('sub.flock','Current inventory by age and gender'), '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), flockPhotoIcon('flockIcon')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML(t('title.eggs','Eggs'),t('sub.eggs','Daily production, tallied up'), addBtn('open-add-egg','Log eggs'), eggsPhotoIcon()); }, panel:eggsPanel },
     feed:{ topbar:function(){ return topbarHTML(t('title.feed','Feed'),t('sub.feed','Consumption, cost, and feed-per-egg'), addBtn('open-add-feed','Log feed'), flockPhotoIcon('feedIcon')); }, panel:feedPanel },
-    livestock:{ topbar:function(){ return topbarHTML(t('title.livestock','Other Livestock'),t('sub.livestock','Dairy cattle, goats & sheep, pigs, and rabbits'), '', PICS.livestockNav); }, panel:livestockPanel },
+    livestock:{ topbar:function(){ return topbarHTML(t('title.livestock','Other Livestock'),t('sub.livestock','Dairy cattle, goats & sheep, pigs, rabbits, and horses'), '', PICS.livestockNav); }, panel:livestockPanel },
+    crops:{ topbar:function(){ return topbarHTML(t('title.crops','Crops'),t('sub.crops','Planting, harvest, and sales — the basics'), '', PICS.cropsNav); }, panel:cropsPanel },
     health:{ topbar:function(){ return topbarHTML(t('title.health','Health'),t('sub.health','Vaccinations, treatments &amp; reminders'), addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
     reports:{ topbar:function(){ return topbarHTML(t('title.reports','Reports'),t('sub.reports','Print or export a period summary'), '', PICS.reports); }, panel:reportsPanel },
     expenses:{ topbar:function(){ return topbarHTML(t('title.expenses','Expenses'),t('sub.expenses','What you’re spending, by category'), currencySelectHTML()+addBtn('open-add-expense','Add expense'), PICS.expenses); }, panel:function(){ return moneyBreakdownPanel(state.expenses, state.settings.expenseCategories, 'expense'); } },
@@ -6072,7 +6300,7 @@
   // confirmation toast ("Opened Flock.") since SECTIONS[key] only holds
   // functions, not a label string.
   var SECTION_LABELS = {
-    overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', livestock:'Other Livestock', health:'Health',
+    overview:'Overview', flock:'Flock', eggs:'Eggs', feed:'Feed', livestock:'Other Livestock', crops:'Crops', health:'Health',
     reports:'Reports', expenses:'Expenses', income:'Income', customers:'Customers',
     finance:'Finance', about:'About', settings:'Settings', team:'Team', messages:'Messages', signoffs:'Pending signatures'
   };
@@ -6887,6 +7115,24 @@
           });
         });
         break;
+      case 'reopen-farm-setup':
+        if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
+        confirmModal('Reopen Farm Setup? Everyone on the team will briefly see the setup screen until you save it again.', function(){
+          mutate(function(s){ s.settings.farmSetup = s.settings.farmSetup || {}; s.settings.farmSetup.completed = false; });
+        });
+        break;
+      case 'open-add-crop': openModal(cropEntryFormHtml()); break;
+      case 'edit-crop': openModal(cropEntryFormHtml(a1)); break;
+      case 'delete-crop':
+        confirmModal('Delete this entry?', function(){
+          mutate(function(s){
+            s.crops = s.crops || {entries:[]};
+            var x = (s.crops.entries||[]).find(function(i){return i.id===a1;});
+            if(x && x.linkedIncomeId) s.incomes = s.incomes.filter(function(i){return i.id!==x.linkedIncomeId;});
+            s.crops.entries = (s.crops.entries||[]).filter(function(i){return i.id!==a1;});
+          });
+        });
+        break;
       case 'view-finance-receipt': viewReceipt(financeReceiptOpts(a1)); break;
       case 'view-flock-receipt': viewReceipt(flockReceiptOpts(a1, a2)); break;
       case 'view-egg-receipt': viewReceipt(eggReceiptOpts(a1)); break;
@@ -7443,6 +7689,22 @@
       if(lsf) lsf.style.display = el.value==='sold' ? 'grid' : 'none';
       return;
     }
+    if(name==='crop-type'){
+      var csf = document.getElementById('crop-sale-fields');
+      if(csf) csf.style.display = el.value==='sold' ? 'grid' : 'none';
+      return;
+    }
+    if(name==='farm-setup-cat'){
+      var fsForm = el.closest('form');
+      if(!fsForm) return;
+      var liveCb = fsForm.querySelector('[name="cat_livestock"]');
+      var cropCb = fsForm.querySelector('[name="cat_crops"]');
+      var sBlock = document.getElementById('farm-setup-species-block');
+      var cBlock = document.getElementById('farm-setup-crops-note');
+      if(sBlock) sBlock.style.display = (liveCb && liveCb.checked) ? 'block' : 'none';
+      if(cBlock) cBlock.style.display = (cropCb && cropCb.checked) ? 'block' : 'none';
+      return;
+    }
   }
   function handleForm(name, form){
     var fd = new FormData(form);
@@ -7673,6 +7935,51 @@
         else { d.journal.push({id:uid('lvj'), date:ljDate, quantity:ljQty, note:ljNote}); }
       });
       closeModal(); toast(ljId?'Saved.':'Logged.');
+      return;
+    }
+    if(name==='farm-setup'){
+      if(!isAdminLevel()){ toast('Only the administrator can save this.'); return; }
+      var fsLivestock = !!val('cat_livestock');
+      var fsCrops = !!val('cat_crops');
+      var fsSpecies = ALL_LIVESTOCK_OPTIONS.filter(function(opt){ return !!val('species_'+opt.key); }).map(function(opt){ return opt.key; });
+      if(!fsLivestock && !fsCrops){ toast('Pick at least Livestock or Crops to continue.'); return; }
+      if(fsLivestock && !fsSpecies.length){ toast('Pick at least one livestock type, or turn Livestock off.'); return; }
+      mutate(function(s){
+        s.settings.farmSetup = { completed:true, categories:{livestock:fsLivestock, crops:fsCrops}, species: fsSpecies.length?fsSpecies:['poultry'] };
+      });
+      toast('Farm set up — welcome in!');
+      return;
+    }
+    if(name==='crop-entry'){
+      var ceId = val('id') || null;
+      var ceCropName = (val('cropName')||'').trim();
+      var ceType = val('type') || 'planted';
+      var ceDate = val('date'), ceNote = val('note') || '';
+      var ceQtyRaw = val('quantity');
+      var ceQuantity = (ceQtyRaw!=null && ceQtyRaw!=='') ? Number(ceQtyRaw) : null;
+      var ceUnit = val('unit') || '';
+      var ceAmountRaw = Number(val('amount')||0), ceAmountCurrency = val('amountCurrency');
+      if(!ceCropName){ toast('Enter a crop name.'); return; }
+      mutate(function(s){
+        s.crops = s.crops || {entries:[]};
+        if(!Array.isArray(s.crops.entries)) s.crops.entries = [];
+        var x = ceId ? s.crops.entries.find(function(i){return i.id===ceId;}) : null;
+        if(!x){ x = {id:uid('crop')}; s.crops.entries.push(x); }
+        if(x.linkedIncomeId){ s.incomes = s.incomes.filter(function(i){return i.id!==x.linkedIncomeId;}); x.linkedIncomeId = null; }
+        x.cropName = ceCropName; x.type = ceType; x.date = ceDate; x.note = ceNote;
+        x.quantity = ceQuantity; x.unit = ceUnit;
+        if(ceType==='sold'){
+          x.amount = ceAmountRaw>0 ? fromCurrency(ceAmountRaw, ceAmountCurrency) : 0;
+          if(x.amount>0){
+            var incRec = {id:uid('inc'), date:ceDate, category:'Crop Sales', amount:x.amount, note: ceNote || ('Sale of '+ceCropName), recordedByRole: roleLabel(currentUser)};
+            s.incomes.push(incRec);
+            x.linkedIncomeId = incRec.id;
+          }
+        } else {
+          x.amount = 0;
+        }
+      });
+      closeModal(); toast(ceId?'Saved.':'Added.');
       return;
     }
     if(name==='resex'){
