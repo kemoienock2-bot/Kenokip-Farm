@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Installation Orders — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#8F590A">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5EFDF; --surface:#FFFDF6; --surface-2:#FBF4E4; --border:#E4D8BC; --border-soft:#ECE2C8;
+    --ink:#20291F; --ink-2:#4B5444; --ink-3:#7A8070;
+    --accent:#B9740E; --accent-strong:#8F590A; --accent-tint:#F3E3C8; --accent-ink:#5A3806;
+    --good:#2F7D4F; --bad:#B23A32; --shadow:0 10px 30px rgba(32,30,20,.12); --radius:14px; --radius-sm:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171B14; --surface:#1F241B; --surface-2:#232819; --border:#333A28; --border-soft:#2B3121;
+      --ink:#F1ECDA; --ink-2:#C9CBB8; --ink-3:#8B9180;
+      --accent:#E7A93D; --accent-strong:#F2BE63; --accent-tint:#3A3018; --accent-ink:#F2BE63;
+      --good:#5CC685; --bad:#E2766C; --shadow:0 10px 30px rgba(0,0,0,.4);
+    }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Archivo',system-ui,sans-serif; line-height:1.5; }
+  .wrap{ max-width:900px; margin:0 auto; padding:28px 18px 64px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:24px; margin:0 0 4px; }
+  .sub{ color:var(--ink-3); font-size:13.5px; margin:0 0 22px; }
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin-bottom:16px; }
+  label{ display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:6px; }
+  input[type=text], input[type=email], input[type=password], input[type=number]{
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface-2); color:var(--ink); font-family:inherit; font-size:14.5px;
+  }
+  .field{ margin-bottom:14px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:var(--radius-sm); border:none; background:var(--accent-strong); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; }
+  .btn:hover{ filter:brightness(1.06); }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .btn.sm{ padding:7px 11px; font-size:13px; }
+  .btn.outline{ background:transparent; border:1.5px solid var(--accent-strong); color:var(--accent-strong); }
+  .msg{ font-size:13.5px; border-radius:var(--radius-sm); padding:10px 13px; margin-top:12px; }
+  .msg.good{ background:#DDF2E3; color:#235C3D; }
+  .msg.bad{ background:#FBE2DE; color:#7A2D27; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; color:var(--ink-3); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; padding:8px 10px; border-bottom:1px solid var(--border); }
+  td{ padding:10px; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  tr:last-child td{ border-bottom:none; }
+  .status-pill{ display:inline-flex; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+  .status-new{ background:var(--accent-tint); color:var(--accent-ink); }
+  .status-quoted{ background:#DDEAF6; color:#2A527A; }
+  .status-deposit_paid{ background:#FCEBC7; color:#8A5A0A; }
+  .status-paid_in_full, .status-installed{ background:#DDF2E3; color:#235C3D; }
+  .mono{ font-family:'Space Mono',monospace; font-size:12px; word-break:break-all; }
+  .muted{ color:var(--ink-3); font-size:12.5px; }
+  .quote-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:8px; }
+  .quote-row .field{ margin-bottom:0; flex:1 1 110px; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Installation Orders</h1>
+  <p class="sub">Owner-only. Sign in with the same account you use for Kenokip Farm's own app.</p>
+
+  <div class="card" id="signin-card">
+    <div class="field">
+      <label for="a-email">Email</label>
+      <input type="email" id="a-email" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="a-pass">Password</label>
+      <input type="password" id="a-pass" autocomplete="current-password">
+    </div>
+    <button class="btn" id="signin-btn">Sign in</button>
+    <div id="signin-msg"></div>
+  </div>
+
+  <div id="admin-area" hidden>
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between;">
+      <div>Signed in as <strong id="who"></strong></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn sm outline" id="refresh-btn">Refresh</button>
+        <button class="btn sm outline" id="signout-btn">Sign out</button>
+      </div>
+    </div>
+    <div class="card" id="orders-card">
+      <div id="orders-msg"></div>
+      <table>
+        <thead><tr><th>Farm / Contact</th><th>Status</th><th>Fee / Paid</th><th>License</th><th>Actions</th></tr></thead>
+        <tbody id="orders-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<script>
+(function(){
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAEsReYhd4No6-_-TxmzLaTZef9J8cTFe4",
+    authDomain: "kenokip-farm.firebaseapp.com",
+    projectId: "kenokip-farm",
+    storageBucket: "kenokip-farm.firebasestorage.app",
+    messagingSenderId: "386891888391",
+    appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
+  };
+  firebase.initializeApp(FIREBASE_CONFIG);
+  var fns = firebase.functions();
+  function call(name, data){ return fns.httpsCallable(name)(data || {}); }
+  function money(n){ return 'KSh ' + Math.round(Number(n) || 0).toLocaleString(); }
+  function showMsg(el, text, kind){ el.innerHTML = text ? ('<div class="msg ' + kind + '">' + text + '</div>') : ''; }
+
+  document.getElementById('signin-btn').addEventListener('click', function(){
+    var email = document.getElementById('a-email').value.trim();
+    var pass = document.getElementById('a-pass').value;
+    var msgEl = document.getElementById('signin-msg');
+    if (!email || !pass) { showMsg(msgEl, 'Enter your email and password.', 'bad'); return; }
+    firebase.auth().signInWithEmailAndPassword(email, pass).catch(function(err){
+      showMsg(msgEl, (err && err.message) || 'Could not sign in.', 'bad');
+    });
+  });
+  document.getElementById('signout-btn').addEventListener('click', function(){ firebase.auth().signOut(); });
+  document.getElementById('refresh-btn').addEventListener('click', loadOrders);
+
+  firebase.auth().onAuthStateChanged(function(user){
+    if (user) {
+      document.getElementById('signin-card').hidden = true;
+      document.getElementById('admin-area').hidden = false;
+      document.getElementById('who').textContent = user.email || '';
+      loadOrders();
+    } else {
+      document.getElementById('signin-card').hidden = false;
+      document.getElementById('admin-area').hidden = true;
+    }
+  });
+
+  var statusLabels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid', paid_in_full:'Paid in full', installed:'Installed' };
+
+  function loadOrders(){
+    var msgEl = document.getElementById('orders-msg');
+    showMsg(msgEl, '', '');
+    call('adminListInstallOrders', {}).then(function(res){
+      renderOrders((res.data && res.data.orders) || []);
+    }).catch(function(err){
+      showMsg(msgEl, (err && err.message) || 'Could not load orders.', 'bad');
+    });
+  }
+
+  function renderOrders(orders){
+    var body = document.getElementById('orders-body');
+    if (!orders.length) { body.innerHTML = '<tr><td colspan="5" class="muted">No installation requests yet.</td></tr>'; return; }
+    body.innerHTML = orders.map(function(o){
+      var contact = (o.farmName || '') + '<br><span class="muted">' + (o.contactName || '') + ' &middot; ' + (o.phone || '') + (o.email ? ' &middot; ' + o.email : '') + '</span>' +
+        (o.hasTechExpert ? '<br><span class="muted">Has own tech expert</span>' : '<br><span class="muted">Needs guided install</span>') +
+        (o.notes ? '<br><span class="muted">' + escapeHtml(o.notes) + '</span>' : '');
+      var fee = (o.feeTotal ? money(o.feeTotal) : '—') + (o.feeDeposit ? ' (deposit ' + money(o.feeDeposit) + ')' : '') + '<br><span class="muted">paid ' + money(o.amountPaid || 0) + '</span>';
+      var license = o.licenseKey ? '<span class="mono">' + o.licenseKey + '</span>' : '<span class="muted">—</span>';
+      var actions = '';
+      if (o.status === 'new') {
+        actions = '<div class="quote-row">' +
+          '<div class="field"><label>Total fee</label><input type="number" min="1" class="q-total" placeholder="KSh"></div>' +
+          '<div class="field"><label>Deposit (optional)</label><input type="number" min="0" class="q-deposit" placeholder="KSh"></div>' +
+          '<button class="btn sm set-fee-btn" data-id="' + o.id + '">Set price</button>' +
+          '</div><div class="set-fee-msg"></div>';
+      } else if (o.status === 'paid_in_full') {
+        actions = '<button class="btn sm outline mark-installed-btn" data-id="' + o.id + '">Mark installed</button><div class="mark-msg"></div>';
+      } else if (o.status === 'quoted' || o.status === 'deposit_paid') {
+        actions = '<span class="muted">Waiting on farmer to pay.</span>';
+      } else {
+        actions = '<span class="muted">Done.</span>';
+      }
+      return '<tr>' +
+        '<td>' + contact + '</td>' +
+        '<td><span class="status-pill status-' + o.status + '">' + (statusLabels[o.status] || o.status) + '</span></td>' +
+        '<td>' + fee + '</td>' +
+        '<td>' + license + '</td>' +
+        '<td>' + actions + '</td>' +
+        '</tr>';
+    }).join('');
+
+    body.querySelectorAll('.set-fee-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var row = btn.closest('tr');
+        var total = Number(row.querySelector('.q-total').value);
+        var deposit = Number(row.querySelector('.q-deposit').value) || 0;
+        var msgEl = row.querySelector('.set-fee-msg');
+        if (!total || total <= 0) { showMsg(msgEl, 'Enter a valid total fee.', 'bad'); return; }
+        btn.disabled = true;
+        call('adminSetOrderFee', { orderId: id, feeTotal: total, feeDeposit: deposit }).then(function(){
+          showMsg(msgEl, 'Price set.', 'good');
+          loadOrders();
+        }).catch(function(err){
+          showMsg(msgEl, (err && err.message) || 'Could not set the price.', 'bad');
+          btn.disabled = false;
+        });
+      });
+    });
+    body.querySelectorAll('.mark-installed-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var row = btn.closest('tr');
+        var msgEl = row.querySelector('.mark-msg');
+        btn.disabled = true;
+        call('adminMarkInstalled', { orderId: id }).then(function(){
+          showMsg(msgEl, 'Marked installed.', 'good');
+          loadOrders();
+        }).catch(function(err){
+          showMsg(msgEl, (err && err.message) || 'Could not update this order.', 'bad');
+          btn.disabled = false;
+        });
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+})();
+</script>
+</body>
+</html>

@@ -22,5 +22,14 @@ window.FARM_CONFIG = {
   // page's story, mission, and vision are separate — edit those from
   // Settings → About inside the app itself once signed in as the
   // administrator, not here.
-  name: 'Kenokip Farm'
+  name: 'Kenokip Farm',
+
+  // ONLY set on a farm that was sold and installed through the
+  // Installation Orders system (see HOW-TO-SELL-INSTALLATIONS.md) — the
+  // key Kenokip Farm's order-admin page generates once that farm's
+  // installation fee is paid in full. Leave this `null` for Kenokip Farm
+  // itself, and for any deployment you never want locked to a payment —
+  // app.js treats a `null` licenseKey as "never check, never lock,"
+  // so this is always safe to leave alone.
+  licenseKey: null
 };

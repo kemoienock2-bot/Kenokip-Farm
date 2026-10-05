@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Request Kenokip Farm for your farm</title>
+<meta name="description" content="Get the Kenokip Farm app installed for your own farm — request an installation and pay the setup fee.">
+<meta name="theme-color" content="#8F590A">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5EFDF; --surface:#FFFDF6; --surface-2:#FBF4E4; --border:#E4D8BC; --border-soft:#ECE2C8;
+    --ink:#20291F; --ink-2:#4B5444; --ink-3:#7A8070;
+    --accent:#B9740E; --accent-strong:#8F590A; --accent-tint:#F3E3C8; --accent-ink:#5A3806;
+    --good:#2F7D4F; --bad:#B23A32; --shadow:0 10px 30px rgba(32,30,20,.12); --radius:14px; --radius-sm:9px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171B14; --surface:#1F241B; --surface-2:#232819; --border:#333A28; --border-soft:#2B3121;
+      --ink:#F1ECDA; --ink-2:#C9CBB8; --ink-3:#8B9180;
+      --accent:#E7A93D; --accent-strong:#F2BE63; --accent-tint:#3A3018; --accent-ink:#F2BE63;
+      --good:#5CC685; --bad:#E2766C; --shadow:0 10px 30px rgba(0,0,0,.4);
+    }
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Archivo',system-ui,sans-serif; line-height:1.5; }
+  .wrap{ max-width:620px; margin:0 auto; padding:32px 18px 64px; }
+  .brand{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .brand-dot{ width:34px; height:34px; border-radius:10px; background:var(--accent-strong); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:'Fraunces',serif; }
+  .brand-name{ font-family:'Fraunces',serif; font-weight:600; font-size:18px; }
+  .brand-sub{ color:var(--ink-3); font-size:13px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:28px; margin:0 0 6px; }
+  .lead{ color:var(--ink-2); font-size:15px; margin:0 0 26px; }
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:18px; }
+  .field{ margin-bottom:16px; }
+  label{ display:block; font-size:13px; font-weight:600; color:var(--ink-2); margin-bottom:6px; }
+  input[type=text], input[type=tel], input[type=email], textarea{
+    width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface-2); color:var(--ink); font-family:inherit; font-size:15px;
+  }
+  textarea{ min-height:76px; resize:vertical; }
+  input:focus, textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .choice-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .choice-tile{ border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; cursor:pointer; background:var(--surface-2); transition:transform .12s ease, box-shadow .12s ease; }
+  .choice-tile:hover{ transform:translateY(-1px); }
+  .choice-tile:has(input:checked){ border-color:var(--accent-strong); background:var(--accent-tint); box-shadow:0 0 0 1px var(--accent-strong) inset; }
+  .choice-tile input{ margin-right:8px; }
+  .choice-tile .t-label{ font-weight:600; font-size:14px; }
+  .choice-tile .t-sub{ font-size:12px; color:var(--ink-3); margin-top:3px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px 16px; border-radius:var(--radius-sm); border:none; background:var(--accent-strong); color:#fff; font-weight:700; font-size:15.5px; cursor:pointer; font-family:inherit; transition:filter .12s ease; }
+  .btn:hover{ filter:brightness(1.06); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn.ghost{ background:transparent; color:var(--accent-strong); border:1.5px solid var(--accent-strong); }
+  .status-pill{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; padding:4px 11px; border-radius:999px; }
+  .status-new{ background:var(--accent-tint); color:var(--accent-ink); }
+  .status-quoted{ background:#DDEAF6; color:#2A527A; }
+  .status-deposit_paid{ background:#FCEBC7; color:#8A5A0A; }
+  .status-paid_in_full, .status-installed{ background:#DDF2E3; color:#235C3D; }
+  .row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:14.5px; }
+  .row:last-child{ border-bottom:none; }
+  .row .k{ color:var(--ink-3); }
+  .row .v{ font-weight:700; }
+  .msg{ font-size:14px; border-radius:var(--radius-sm); padding:12px 14px; margin-top:14px; }
+  .msg.info{ background:var(--accent-tint); color:var(--accent-ink); }
+  .msg.good{ background:#DDF2E3; color:#235C3D; }
+  .msg.bad{ background:#FBE2DE; color:#7A2D27; }
+  .license-box{ background:var(--surface-2); border:1.5px dashed var(--accent-strong); border-radius:var(--radius-sm); padding:14px; margin-top:14px; font-family:'Space Mono',monospace, monospace; font-size:14px; word-break:break-all; text-align:center; }
+  .hint{ font-size:12.5px; color:var(--ink-3); margin-top:8px; }
+  .foot{ text-align:center; color:var(--ink-3); font-size:12.5px; margin-top:28px; }
+  [hidden]{ display:none !important; }
+  .spin{ display:inline-block; width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; animation:spin 0.7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-dot">K</div>
+    <div>
+      <div class="brand-name">Kenokip Farm</div>
+      <div class="brand-sub">Request an installation for your own farm</div>
+    </div>
+  </div>
+
+  <div id="request-view">
+    <h1>Get this app for your farm</h1>
+    <p class="lead">Tell us about your farm below. We'll get back to you with the setup fee for your farm's size and needs, and you can pay securely by M-Pesa right from this page.</p>
+
+    <form class="card" id="order-form" autocomplete="off">
+      <div class="field">
+        <label for="f-farm">Farm name</label>
+        <input type="text" id="f-farm" required maxlength="80" placeholder="e.g. Green Acres Farm">
+      </div>
+      <div class="field">
+        <label for="f-contact">Your name</label>
+        <input type="text" id="f-contact" required maxlength="80" placeholder="e.g. Jane Wanjiru">
+      </div>
+      <div class="field">
+        <label for="f-phone">M-Pesa phone number</label>
+        <input type="tel" id="f-phone" required placeholder="e.g. 0712345678">
+      </div>
+      <div class="field">
+        <label for="f-email">Email (optional)</label>
+        <input type="email" id="f-email" placeholder="e.g. jane@example.com">
+      </div>
+      <div class="field">
+        <label>Do you have your own tech expert who can install and run the app?</label>
+        <div class="choice-row">
+          <label class="choice-tile"><input type="radio" name="tech" value="yes"><span class="t-label">Yes</span><div class="t-sub">I'll pay the full fee and take it from there</div></label>
+          <label class="choice-tile"><input type="radio" name="tech" value="no" checked><span class="t-label">No</span><div class="t-sub">I'd like Kenokip to guide the setup</div></label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-notes">Anything else we should know? (optional)</label>
+        <textarea id="f-notes" maxlength="1000" placeholder="e.g. number of workers, type of farm, current system..."></textarea>
+      </div>
+      <button type="submit" class="btn" id="submit-btn">Send request</button>
+      <div id="request-msg"></div>
+    </form>
+    <p class="foot">Already have a request? Use the link we sent you to check its status and pay.</p>
+  </div>
+
+  <div id="order-view" hidden>
+    <h1 id="order-farm-name">Your installation</h1>
+    <div class="card">
+      <div class="row"><span class="k">Status</span><span class="v"><span class="status-pill" id="order-status-pill">—</span></span></div>
+      <div class="row"><span class="k">Total fee</span><span class="v" id="order-fee-total">—</span></div>
+      <div class="row" id="order-deposit-row" hidden><span class="k">Deposit</span><span class="v" id="order-fee-deposit">—</span></div>
+      <div class="row"><span class="k">Paid so far</span><span class="v" id="order-amount-paid">—</span></div>
+      <div class="row"><span class="k">Amount due now</span><span class="v" id="order-amount-due">—</span></div>
+    </div>
+
+    <div class="card" id="pay-card" hidden>
+      <div class="field">
+        <label for="p-phone">M-Pesa phone to pay from</label>
+        <input type="tel" id="p-phone" placeholder="e.g. 0712345678">
+      </div>
+      <button type="button" class="btn" id="pay-btn">Pay now with M-Pesa</button>
+      <div id="pay-msg"></div>
+      <p class="hint">You'll get an M-Pesa prompt on this phone — enter your PIN there to complete the payment.</p>
+    </div>
+
+    <div class="card" id="license-card" hidden>
+      <p style="margin:0 0 6px; font-weight:700;">You're fully paid up — here's your license key</p>
+      <p class="hint" style="margin:0 0 0;">Give this key to whoever is setting up your app (or keep it if that's you) — it goes into your farm's <code>farm.config.js</code> as <code>licenseKey</code>.</p>
+      <div class="license-box" id="license-key-text">—</div>
+    </div>
+
+    <div class="card" id="waiting-card" hidden>
+      <p style="margin:0;">We haven't priced your request yet — check back soon, or we'll reach out on the phone number you gave us.</p>
+    </div>
+  </div>
+
+  <p class="foot">Kenokip Farm &middot; questions? reach us on the number you'll hear back from.</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
+<script>
+(function(){
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAEsReYhd4No6-_-TxmzLaTZef9J8cTFe4",
+    authDomain: "kenokip-farm.firebaseapp.com",
+    projectId: "kenokip-farm",
+    storageBucket: "kenokip-farm.firebasestorage.app",
+    messagingSenderId: "386891888391",
+    appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
+  };
+  firebase.initializeApp(FIREBASE_CONFIG);
+  var fns = firebase.functions();
+
+  function call(name, data){ return fns.httpsCallable(name)(data || {}); }
+  function money(n){ return 'KSh ' + Math.round(Number(n) || 0).toLocaleString(); }
+  function qs(name){ return new URLSearchParams(window.location.search).get(name); }
+  function showMsg(el, text, kind){ el.innerHTML = text ? ('<div class="msg ' + kind + '">' + text + '</div>') : ''; }
+
+  var orderId = qs('order');
+
+  if (orderId) {
+    document.getElementById('request-view').hidden = true;
+    document.getElementById('order-view').hidden = false;
+    loadOrder(true);
+  } else {
+    document.getElementById('order-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = document.getElementById('submit-btn');
+      var msgEl = document.getElementById('request-msg');
+      var tech = document.querySelector('input[name="tech"]:checked');
+      var payload = {
+        farmName: document.getElementById('f-farm').value.trim(),
+        contactName: document.getElementById('f-contact').value.trim(),
+        phone: document.getElementById('f-phone').value.trim(),
+        email: document.getElementById('f-email').value.trim(),
+        hasTechExpert: tech && tech.value === 'yes',
+        notes: document.getElementById('f-notes').value.trim(),
+      };
+      if (!payload.farmName || !payload.contactName || !payload.phone) {
+        showMsg(msgEl, 'Please fill in farm name, your name and phone number.', 'bad');
+        return;
+      }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span> Sending...';
+      showMsg(msgEl, '', '');
+      call('submitInstallRequest', payload).then(function(res){
+        var id = res.data && res.data.orderId;
+        showMsg(msgEl, "Request sent! We'll get back to you soon. Bookmark this page's link below to check status and pay once we've priced it:<br><a href=\"?order=" + id + "\">" + window.location.origin + window.location.pathname + '?order=' + id + '</a>', 'good');
+        btn.hidden = true;
+        document.getElementById('order-form').querySelectorAll('input,textarea').forEach(function(i){ i.disabled = true; });
+      }).catch(function(err){
+        showMsg(msgEl, (err && err.message) || 'Could not send your request. Try again in a moment.', 'bad');
+        btn.disabled = false;
+        btn.textContent = 'Send request';
+      });
+    });
+  }
+
+  var pollTimer = null;
+  function loadOrder(firstLoad){
+    call('getInstallOrder', { orderId: orderId }).then(function(res){
+      renderOrder(res.data);
+    }).catch(function(err){
+      document.getElementById('order-farm-name').textContent = 'Request not found';
+      document.getElementById('pay-card').hidden = true;
+      document.getElementById('waiting-card').hidden = false;
+      document.getElementById('waiting-card').innerHTML = '<p style="margin:0;">' + ((err && err.message) || "We couldn't find that request. Check the link you were sent.") + '</p>';
+    });
+  }
+
+  function renderOrder(o){
+    if (!o) return;
+    document.getElementById('order-farm-name').textContent = o.farmName || 'Your installation';
+    var pill = document.getElementById('order-status-pill');
+    var labels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid — balance due', paid_in_full:'Paid in full', installed:'Installed' };
+    pill.className = 'status-pill status-' + o.status;
+    pill.textContent = labels[o.status] || o.status;
+
+    document.getElementById('order-fee-total').textContent = o.feeTotal ? money(o.feeTotal) : 'Not set yet';
+    var depRow = document.getElementById('order-deposit-row');
+    if (o.feeDeposit > 0) { depRow.hidden = false; document.getElementById('order-fee-deposit').textContent = money(o.feeDeposit); }
+    else { depRow.hidden = true; }
+    document.getElementById('order-amount-paid').textContent = money(o.amountPaid);
+    document.getElementById('order-amount-due').textContent = money(o.amountDue);
+
+    var payCard = document.getElementById('pay-card');
+    var licenseCard = document.getElementById('license-card');
+    var waitingCard = document.getElementById('waiting-card');
+
+    if (o.status === 'paid_in_full' || o.status === 'installed') {
+      payCard.hidden = true;
+      waitingCard.hidden = true;
+      licenseCard.hidden = false;
+      document.getElementById('license-key-text').textContent = o.licenseKey || '—';
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    } else if (o.status === 'new' || !o.feeTotal) {
+      payCard.hidden = true;
+      licenseCard.hidden = true;
+      waitingCard.hidden = false;
+    } else {
+      waitingCard.hidden = true;
+      licenseCard.hidden = true;
+      payCard.hidden = false;
+    }
+  }
+
+  document.getElementById('pay-btn') && document.getElementById('pay-btn').addEventListener('click', function(){
+    var btn = this;
+    var phone = document.getElementById('p-phone').value.trim();
+    var msgEl = document.getElementById('pay-msg');
+    if (!phone) { showMsg(msgEl, 'Enter the M-Pesa number to pay from.', 'bad'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Sending prompt...';
+    showMsg(msgEl, '', '');
+    call('payOrderFee', { orderId: orderId, phone: phone }).then(function(res){
+      showMsg(msgEl, (res.data && res.data.message) || 'Check your phone to complete the payment.', 'info');
+      btn.disabled = false;
+      btn.textContent = 'Pay now with M-Pesa';
+      if (!pollTimer) pollTimer = setInterval(function(){ loadOrder(false); }, 5000);
+    }).catch(function(err){
+      showMsg(msgEl, (err && err.message) || 'Could not start the payment. Try again in a moment.', 'bad');
+      btn.disabled = false;
+      btn.textContent = 'Pay now with M-Pesa';
+    });
+  });
+})();
+</script>
+</body>
+</html>

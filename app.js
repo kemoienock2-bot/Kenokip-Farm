@@ -8667,6 +8667,13 @@
   // for the instant before this runs. A new deployment only has to touch
   // farm.config.js for both of these, not this file or index.html.
   try{ document.title = FARM_NAME; }catch(e){}
+  // Set ONLY on a farm sold/installed through the Installation Orders
+  // system (see HOW-TO-SELL-INSTALLATIONS.md) — Kenokip Farm's own
+  // farm.config.js has no licenseKey at all, so LICENSE_KEY is null here
+  // and every licence-check function below (checkLicenseAndBoot) is a
+  // complete no-op: it boots straight into the app exactly as before,
+  // with zero behavior change for this deployment.
+  var LICENSE_KEY = (window.FARM_CONFIG && window.FARM_CONFIG.licenseKey) || null;
 
   var PRISTINE_HTML = document.documentElement.outerHTML;
   var state = loadState();
@@ -8840,11 +8847,146 @@
     }
   }, 60000);
 
-  render();
-  renderGlobalSearchBar();
-  kemAiRenderShell();
-  initArtifact();
-  checkVerifyLinkOnLoad();
+  function bootApp(){
+    render();
+    renderGlobalSearchBar();
+    kemAiRenderShell();
+    initArtifact();
+    checkVerifyLinkOnLoad();
+  }
+
+  /* ===================== INSTALLATION LICENSE CHECK =====================
+     Only relevant when LICENSE_KEY (above) is set — i.e. a farm that was
+     sold and installed through the Installation Orders system (see
+     HOW-TO-SELL-INSTALLATIONS.md), running in its OWN Firebase project.
+     The order/payment records themselves live in KENOKIP's Firebase
+     project (kenokip-farm), not necessarily this farm's — so this check
+     talks to a second, independent Firebase app instance pointed at that
+     project, completely separate from this farm's own FIREBASE_CONFIG/db
+     above. Nothing here ever touches this farm's own Firestore data.
+
+     Behavior, per how this was set up to work:
+       - No LICENSE_KEY at all (Kenokip Farm itself, or any deployment
+         nobody has bothered to lock) → bootApp() immediately, no network
+         call, no lock screen. This branch can never regress an existing
+         deployment.
+       - LICENSE_KEY set and the server confirms it's active (paid in full
+         or installed) → bootApp(), and the "last confirmed active" result
+         is cached (with a timestamp) so a brief offline moment later
+         doesn't bounce a paying farm out of their own app.
+       - LICENSE_KEY set and the server explicitly says it's NOT active
+         (deposit only, or no payment yet) → full-screen "payment
+         required" lock, nothing else renders. This is the "fully
+         blocked" behavior — there is no read-only/preview mode.
+       - LICENSE_KEY set but the check itself fails (offline, Kenokip's
+         server briefly unreachable, etc.) → if a previous check this
+         farm succeeded within the last 7 days, boot normally (so a
+         paid farm losing signal for a day isn't punished); otherwise
+         show a "can't verify your installation" screen with a Retry
+         button rather than silently guessing either way.
+     ======================================================================= */
+  function licenseCacheKey(){ return 'kenokipLicenseCache:' + LICENSE_KEY; }
+  function readLicenseCache(){
+    try{ return JSON.parse(localStorage.getItem(licenseCacheKey()) || 'null'); }catch(e){ return null; }
+  }
+  function writeLicenseCache(active){
+    try{ localStorage.setItem(licenseCacheKey(), JSON.stringify({ active: active, ts: Date.now() })); }catch(e){}
+  }
+  function licenseLockStyles(){
+    if(document.getElementById('license-lock-styles')) return;
+    var s = document.createElement('style');
+    s.id = 'license-lock-styles';
+    s.textContent = '.license-lock{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg, #F5EFDF);font-family:Archivo,system-ui,sans-serif;}' +
+      '.license-lock-card{max-width:420px;width:100%;background:var(--surface,#FFFDF6);border:1px solid var(--border-soft,#ECE2C8);border-radius:var(--radius,14px);box-shadow:var(--shadow,0 10px 30px rgba(32,30,20,.12));padding:28px 26px;text-align:center;color:var(--ink,#20291F);}' +
+      '.license-lock-dot{width:46px;height:46px;border-radius:12px;background:var(--accent-strong,#8F590A);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;margin:0 auto 14px;font-family:Fraunces,serif;}' +
+      '.license-lock-card h2{font-family:Fraunces,serif;font-weight:600;font-size:20px;margin:0 0 8px;}' +
+      '.license-lock-card p{font-size:14px;color:var(--ink-2,#4B5444);margin:0 0 6px;line-height:1.5;}' +
+      '.license-lock-card .btn{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:11px 18px;border-radius:9px;border:none;background:var(--accent-strong,#8F590A);color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit;}' +
+      '.license-lock-card .btn:hover{filter:brightness(1.06);}' +
+      '.license-lock-spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(143,89,10,.25);border-top-color:var(--accent-strong,#8F590A);animation:license-lock-spin .7s linear infinite;margin:0 auto 14px;}' +
+      '@keyframes license-lock-spin{to{transform:rotate(360deg);}}';
+    document.head.appendChild(s);
+  }
+  function showLicenseScreen(kind, farmNameFromServer){
+    licenseLockStyles();
+    var body = '';
+    if(kind === 'checking'){
+      body = '<div class="license-lock-spin"></div><h2>Checking your installation…</h2><p>One moment while we confirm this app is ready to use.</p>';
+    } else if(kind === 'inactive'){
+      body = '<div class="license-lock-dot">K</div><h2>Payment required</h2>' +
+        '<p>' + (farmNameFromServer ? esc(farmNameFromServer) + ', ' : '') + 'this installation of Kenokip Farm isn\'t active yet — the installation fee hasn\'t been paid in full.</p>' +
+        '<p>Use the link you were sent to finish paying, or contact Kenokip Farm to pick up where you left off.</p>' +
+        '<button type="button" class="btn" id="license-retry-btn">I\'ve paid — recheck</button>';
+    } else {
+      body = '<div class="license-lock-dot">K</div><h2>Can\'t verify your installation</h2>' +
+        '<p>We couldn\'t reach Kenokip Farm\'s server to confirm this installation is active. Check your internet connection and try again.</p>' +
+        '<button type="button" class="btn" id="license-retry-btn">Retry</button>';
+    }
+    var existing = document.getElementById('license-lock');
+    var el = existing || document.createElement('div');
+    el.id = 'license-lock';
+    el.className = 'license-lock';
+    el.innerHTML = '<div class="license-lock-card">' + body + '</div>';
+    if(!existing) document.body.appendChild(el);
+    var retryBtn = document.getElementById('license-retry-btn');
+    if(retryBtn) retryBtn.addEventListener('click', function(){ showLicenseScreen('checking'); checkLicenseAndBoot(); });
+  }
+  function checkLicenseAndBoot(){
+    if(!LICENSE_KEY){ bootApp(); return; }
+    if(!document.getElementById('license-lock')) showLicenseScreen('checking');
+    try{
+      if(!(window.firebase && firebase.initializeApp && firebase.functions)){
+        // Firebase SDK itself didn't load — nothing we can check or boot
+        // into safely either, since the farm's own data sync needs it too.
+        showLicenseScreen('error');
+        return;
+      }
+      var licenseApp = null;
+      try{
+        licenseApp = firebase.apps.filter(function(a){ return a.name === 'kenokipLicensing'; })[0];
+      }catch(e){}
+      if(!licenseApp){
+        // A second, independent named app — deliberately NOT this farm's
+        // own FIREBASE_CONFIG above, since Installation Orders live in
+        // Kenokip's own Firebase project regardless of which project this
+        // particular farm's own data lives in.
+        licenseApp = firebase.initializeApp({
+          apiKey: "AIzaSyAEsReYhd4No6-_-TxmzLaTZef9J8cTFe4",
+          authDomain: "kenokip-farm.firebaseapp.com",
+          projectId: "kenokip-farm",
+          storageBucket: "kenokip-farm.firebasestorage.app",
+          messagingSenderId: "386891888391",
+          appId: "1:386891888391:web:d038b1fde6e4f223ff37a2"
+        }, 'kenokipLicensing');
+      }
+      licenseApp.functions().httpsCallable('checkLicense')({ licenseKey: LICENSE_KEY }).then(function(res){
+        var data = (res && res.data) || {};
+        if(data.active){
+          writeLicenseCache(true);
+          var lock = document.getElementById('license-lock');
+          if(lock) lock.remove();
+          bootApp();
+        } else {
+          writeLicenseCache(false);
+          showLicenseScreen('inactive', data.farmName);
+        }
+      }).catch(function(){
+        var cached = readLicenseCache();
+        var graceMs = 7 * 24 * 60 * 60 * 1000;
+        if(cached && cached.active && (Date.now() - (cached.ts||0)) < graceMs){
+          var lock = document.getElementById('license-lock');
+          if(lock) lock.remove();
+          bootApp();
+        } else {
+          showLicenseScreen('error');
+        }
+      });
+    }catch(e){
+      showLicenseScreen('error');
+    }
+  }
+
+  checkLicenseAndBoot();
 })();
 
 /* ---- app-update / service-worker refresh gate ---- */

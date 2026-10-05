@@ -147,7 +147,7 @@ const DEPOSIT_SECRETS = ALL_SECRETS.concat([MPESA_PAYOUT_CONSUMER_KEY, MPESA_PAY
 // this to true once B2C is confirmed working end-to-end for the Paybill —
 // no redeploy of anything else needed, just this one flag plus
 // `firebase deploy --only functions`.
-const PAYOUTS_ENABLED = true;
+const PAYOUTS_ENABLED = false;
 
 // A pre-generated SecurityCredential is a long base64 blob (a few hundred
 // characters) — same threshold used for the certificate check, so a leftover
@@ -483,6 +483,53 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
       const amount = Number(get('Amount') || 0);
       const receipt = get('MpesaReceiptNumber');
       const phone = get('PhoneNumber');
+
+      // Installation-order payments (order.html's "Pay now", handled by
+      // payOrderFee above) land on this exact same webhook — Safaricom has
+      // no idea it's a different kind of payment, it's still just a Till
+      // STK Push. The only way to tell them apart is the CheckoutRequestID:
+      // payOrderFee records one in pendingOrderPayments before returning,
+      // so check that FIRST. A match means this is YOUR business revenue
+      // for an app installation, never a farm's own deposit — handle it
+      // completely separately and return, so it's never written to any
+      // farm's `finance` collection below.
+      const pendingOrderSnap = await PENDING_ORDER_PAYMENTS_REF().doc(stk.CheckoutRequestID).get();
+      if (pendingOrderSnap.exists) {
+        const pending = pendingOrderSnap.data() || {};
+        const orderId = pending.orderId;
+        try {
+          if (orderId) {
+            const orderRef = ORDERS_REF().doc(orderId);
+            await db.runTransaction(async (tx) => {
+              const orderSnap = await tx.get(orderRef);
+              if (!orderSnap.exists) return;
+              const o = orderSnap.data() || {};
+              const amountPaid = (Number(o.amountPaid) || 0) + (amount || Number(pending.amount) || 0);
+              const feeTotal = Number(o.feeTotal) || 0;
+              const feeDeposit = Number(o.feeDeposit) || 0;
+              const update = { amountPaid };
+              if (feeTotal > 0 && amountPaid >= feeTotal) {
+                update.status = 'paid_in_full';
+                if (!o.licenseKey) update.licenseKey = randomLicenseKey();
+              } else if (feeDeposit > 0 && amountPaid >= feeDeposit) {
+                update.status = 'deposit_paid';
+              }
+              tx.set(orderRef, update, { merge: true });
+            });
+          } else {
+            logger.error('Pending order payment had no orderId', { checkoutRequestId: stk.CheckoutRequestID });
+          }
+        } catch (err) {
+          logger.error('Failed to apply installation-order payment', err, { orderId });
+        }
+        // Done either way — delete the pending marker so it's never
+        // reprocessed, and never fall through to the farm-deposit logic
+        // below for this callback.
+        await pendingOrderSnap.ref.delete().catch(() => {});
+        res.status(200).send('ok');
+        return;
+      }
+
       await addTransactionIfNew({
         id: 'mpesa_' + (receipt || stk.CheckoutRequestID),
         date: isoDateFromMpesaTimestamp(get('TransactionDate')) || new Date().toISOString().slice(0, 10),
@@ -965,4 +1012,200 @@ exports.generateDynamicQR = onCall({ secrets: ALL_SECRETS, region: 'us-central1'
     logger.error('Dynamic QR generation failed', err);
     throw new HttpsError('internal', 'Could not generate the QR code. Try again in a moment.');
   }
+});
+
+/* =====================================================================
+   INSTALLATION ORDERS & LICENSING
+   =====================================================================
+   A completely separate concern from everything above: this is YOUR
+   (the developer's) own business of selling installations of this app
+   to other farms, not any one farm's own operations. A prospective
+   farmer fills out order.html (public, no sign-in) -> you review it and
+   set a price in order-admin.html (sign in with your own account,
+   kenokip.work@gmail.com — see OWNER_EMAIL below) -> the farmer pays
+   via the SAME Till your own farm already collects on, from order.html
+   -> once paid in full, a license key is generated -> that key goes into
+   the new farm's farm.config.js (as `licenseKey`) -> app.js checks it on
+   load (checkLicense below) and shows a "payment required" screen
+   instead of the app if it's ever not active.
+
+   Kenokip Farm's own farm.config.js has no licenseKey at all, so none of
+   this is ever consulted for it — zero behavior change for the farm
+   you're already running. See HOW-TO-SELL-INSTALLATIONS.md.
+
+   Money collected here does NOT touch the `finance`/`farms` collections
+   above — it's tracked in its own `installOrders` collection so it never
+   mixes with any farm's own Finance records.
+   ===================================================================== */
+
+const ORDERS_REF = () => db.collection('installOrders');
+const PENDING_ORDER_PAYMENTS_REF = () => db.collection('pendingOrderPayments');
+
+// Only this account can manage orders/pricing. Must match the email you
+// actually sign in with on order-admin.html (the same Firebase Auth
+// project your farm app already uses) — change this if that's ever not
+// kenokip.work@gmail.com.
+const OWNER_EMAIL = 'kenokip.work@gmail.com';
+function requireOwner(request) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const email = String((request.auth.token && request.auth.token.email) || '').toLowerCase();
+  if (email !== OWNER_EMAIL) {
+    throw new HttpsError('permission-denied', 'Only the app owner can do this.');
+  }
+  return request.auth;
+}
+
+function randomLicenseKey() {
+  // Not a secret the way MPESA_* are — it's handed to the paying customer
+  // on purpose, to put in their own farm.config.js. Just needs to be hard
+  // to guess, not cryptographically hidden.
+  return require('crypto').randomBytes(9).toString('base64url');
+}
+
+// Step 1 — the public order.html form. No auth (a prospective farmer has
+// no account yet), so this only ever WRITES a new order; it can't read or
+// change anyone else's.
+exports.submitInstallRequest = onCall({ region: 'us-central1' }, async (request) => {
+  const d = request.data || {};
+  const farmName = String(d.farmName || '').trim();
+  const contactName = String(d.contactName || '').trim();
+  const phone = normalizePhone(d.phone);
+  const email = String(d.email || '').trim();
+  const hasTechExpert = !!d.hasTechExpert;
+  const notes = String(d.notes || '').trim().slice(0, 1000);
+  if (!farmName || !contactName) throw new HttpsError('invalid-argument', 'Farm name and contact name are required.');
+  if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
+  const ref = await ORDERS_REF().add({
+    farmName, contactName, phone, email, hasTechExpert, notes,
+    status: 'new',
+    feeTotal: 0, feeDeposit: 0, amountPaid: 0,
+    licenseKey: null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { ok: true, orderId: ref.id };
+});
+
+// Step 2 (order.html, using the link/orderId you send the farmer back) —
+// the public-safe view of one order: enough to show them what's owed and
+// let them pay, nothing more. orderId is a random Firestore document id,
+// not a guessable sequence, so knowing it is treated as "this is yours to
+// view" the same way a knowing a receipt link is elsewhere in this app.
+exports.getInstallOrder = onCall({ region: 'us-central1' }, async (request) => {
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  const snap = await ORDERS_REF().doc(orderId).get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+  const o = snap.data();
+  const amountDue = o.status === 'paid_in_full' || o.status === 'installed'
+    ? 0
+    : (o.feeDeposit > 0 && o.amountPaid < o.feeDeposit ? o.feeDeposit - o.amountPaid : o.feeTotal - o.amountPaid);
+  return {
+    farmName: o.farmName, status: o.status, hasTechExpert: o.hasTechExpert,
+    feeTotal: o.feeTotal, feeDeposit: o.feeDeposit, amountPaid: o.amountPaid,
+    amountDue: Math.max(0, amountDue),
+    licenseKey: (o.status === 'paid_in_full' || o.status === 'installed') ? o.licenseKey : null,
+  };
+});
+
+// Step 3 (order.html's "Pay now" button) — always charges whatever is
+// currently owed (the deposit first if one's set and not yet met,
+// otherwise the remaining balance), so the farmer never has to pick a
+// "phase" themselves. Uses the SAME Till credentials/account your own
+// farm's deposits use — see DEPOSIT_SECRETS above.
+exports.payOrderFee = onCall({ secrets: DEPOSIT_SECRETS, region: 'us-central1' }, async (request) => {
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  const phone = normalizePhone(request.data && request.data.phone);
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
+  const ref = ORDERS_REF().doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+  const o = snap.data();
+  if (o.status === 'new' || !o.feeTotal) {
+    throw new HttpsError('failed-precondition', 'This order has not been priced yet — check back once you hear from us.');
+  }
+  if (o.status === 'paid_in_full' || o.status === 'installed') {
+    throw new HttpsError('failed-precondition', 'This order is already paid in full.');
+  }
+  const amount = o.feeDeposit > 0 && o.amountPaid < o.feeDeposit ? o.feeDeposit - o.amountPaid : o.feeTotal - o.amountPaid;
+  if (!(amount > 0)) throw new HttpsError('failed-precondition', 'Nothing currently owed on this order.');
+
+  const webhookKey = sval(MPESA_WEBHOOK_SECRET);
+  const callbackUrl = `${sval(MPESA_CALLBACK_BASE_URL)}/mpesaStkCallback?acct=till` + (webhookKey ? `&key=${encodeURIComponent(webhookKey)}` : '');
+  try {
+    const result = await stkPush({
+      env: sval(MPESA_ENV, 'sandbox'),
+      consumerKey: sval(MPESA_CONSUMER_KEY),
+      consumerSecret: sval(MPESA_CONSUMER_SECRET),
+      shortcode: sval(MPESA_SHORTCODE),
+      storeNumber: sval(MPESA_STORE_NUMBER),
+      passkey: sval(MPESA_PASSKEY),
+      accountType: sval(MPESA_ACCOUNT_TYPE, 'till'),
+      phone, amount,
+      callbackUrl,
+      accountRef: 'KenokipFarmOrder',
+      description: 'Kenokip Farm app installation fee',
+    });
+    await PENDING_ORDER_PAYMENTS_REF().doc(result.CheckoutRequestID).set({
+      orderId, amount, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { ok: true, message: 'Check ' + phone + ' now — enter your M-Pesa PIN there to complete the payment.' };
+  } catch (err) {
+    logger.error('Order STK push failed', err, { orderId });
+    throw new HttpsError('internal', 'Could not reach M-Pesa. Try again in a moment.');
+  }
+});
+
+// Step 4 (order-admin.html) — the owner reviews a request and sets what
+// it costs. Setting feeDeposit equal to feeTotal (or leaving it 0, same
+// effect) means the very first payment already completes the order —
+// the right shape for a farmer with their own tech expert, who's paying
+// in full upfront rather than booking a guided install.
+exports.adminSetOrderFee = onCall({ region: 'us-central1' }, async (request) => {
+  requireOwner(request);
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  const feeTotal = Number(request.data && request.data.feeTotal) || 0;
+  const feeDeposit = Number(request.data && request.data.feeDeposit) || 0;
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  if (feeTotal <= 0) throw new HttpsError('invalid-argument', 'Enter a valid total fee.');
+  if (feeDeposit < 0 || feeDeposit > feeTotal) throw new HttpsError('invalid-argument', 'Deposit must be between 0 and the total fee.');
+  await ORDERS_REF().doc(orderId).set({ feeTotal, feeDeposit, status: 'quoted' }, { merge: true });
+  return { ok: true };
+});
+
+// Bookkeeping only — doesn't change what checkLicense returns (paid_in_full
+// already unlocks the app). Marks that you've personally finished the
+// guided setup for a no-tech-expert order, so order-admin.html can show
+// you what's actually still outstanding versus done.
+exports.adminMarkInstalled = onCall({ region: 'us-central1' }, async (request) => {
+  requireOwner(request);
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  const snap = await ORDERS_REF().doc(orderId).get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+  if (snap.data().status !== 'paid_in_full') {
+    throw new HttpsError('failed-precondition', 'This order is not fully paid yet.');
+  }
+  await ORDERS_REF().doc(orderId).set({ status: 'installed' }, { merge: true });
+  return { ok: true };
+});
+
+exports.adminListInstallOrders = onCall({ region: 'us-central1' }, async (request) => {
+  requireOwner(request);
+  const snap = await ORDERS_REF().orderBy('createdAt', 'desc').limit(200).get();
+  return { orders: snap.docs.map((d) => Object.assign({ id: d.id }, d.data())) };
+});
+
+// Called from app.js on load, ONLY when farm.config.js sets a
+// licenseKey — see HOW-TO-SELL-INSTALLATIONS.md. No auth (nobody's
+// signed in to anything yet at this point), and deliberately returns
+// nothing beyond "is this active" — not the fee amounts, contact info,
+// or anything else an order's own page already shows.
+exports.checkLicense = onCall({ region: 'us-central1' }, async (request) => {
+  const licenseKey = String((request.data && request.data.licenseKey) || '').trim();
+  if (!licenseKey) return { active: false };
+  const snap = await ORDERS_REF().where('licenseKey', '==', licenseKey).limit(1).get();
+  if (snap.empty) return { active: false };
+  const o = snap.docs[0].data();
+  return { active: o.status === 'paid_in_full' || o.status === 'installed', farmName: o.farmName || '' };
 });
