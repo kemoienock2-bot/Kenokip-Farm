@@ -902,7 +902,7 @@
     rail.innerHTML =
       '<div class="brand">'+
         '<img class="brand-mark" src="icons/logo-mark.png" alt="'+esc(FARM_NAME)+'">'+
-        '<div class="brand-text"><h1>'+esc(FARM_NAME)+'</h1><span>Poultry Keeping</span></div>'+
+        '<div class="brand-text"><h1>'+esc(FARM_NAME)+'</h1><span>'+esc(brandTagline())+'</span></div>'+
       '</div>'+
       '<ul class="nav-list">'+desktopHtml+'</ul>'+
       '<div class="rail-foot">'+accountFootHTML()+'<div class="sync-chip" id="sync-chip">'+syncChipHTML()+'</div></div>';
@@ -1057,6 +1057,19 @@
       if(mainElSetup) mainElSetup.setAttribute('data-section','overview');
       document.getElementById('topbar').innerHTML = topbarHTML('Farm Setup','Choose what this farm tracks', '', PICS.livestockNav);
       document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + farmSetupHTML();
+      return;
+    }
+    // Self-heal: if Farm Setup changed underneath an already-chosen sector
+    // (an admin turned it off, or turned the whole farm down to just one
+    // sector) since this session picked it, forget that choice rather than
+    // silently hiding the whole app behind a sector that no longer exists.
+    if(ui.sector && !availableSectors().some(function(s){ return s.key===ui.sector; })) ui.sector = null;
+    if(sectorChoicePending()){
+      renderNav();
+      var mainElSector = document.getElementById('main-content');
+      if(mainElSector) mainElSector.setAttribute('data-section','overview');
+      document.getElementById('topbar').innerHTML = topbarHTML('Choose a sector','Pick what you want to work on this session', '', PICS.overview);
+      document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + sectorChooserHTML();
       return;
     }
     if(!sectionAllowed(ui.section)){ ui.section = 'overview'; saveUIPref(); }
@@ -2079,6 +2092,20 @@
     { key:'poultry', label:'Poultry (Chickens)', icon:PICS.hen }
   ].concat(LIVESTOCK_SPECIES.map(function(sp){ return {key:sp.key, label:sp.label, icon:sp.icon}; }));
   function livestockSpecies(key){ return LIVESTOCK_SPECIES.find(function(s){ return s.key===key; }); }
+  // Only the species this farm actually ticked in Farm Setup — used
+  // everywhere the Other Livestock section lists species (the overview
+  // tiles, the "Viewing" dropdown), so a farm that only keeps Dairy
+  // Cattle never sees Goats & Sheep/Pigs/Rabbits/Horses tiles it never
+  // turned on. Falls back to every species if farmSetup is somehow
+  // missing (shouldn't happen — migrateState always backfills it) rather
+  // than showing nothing.
+  function enabledLivestockSpecies(){
+    var fs = (state.settings && state.settings.farmSetup) || null;
+    if(!fs || !fs.species) return LIVESTOCK_SPECIES;
+    var sel = fs.species;
+    var filtered = LIVESTOCK_SPECIES.filter(function(sp){ return sel.indexOf(sp.key)!==-1; });
+    return filtered.length ? filtered : LIVESTOCK_SPECIES;
+  }
   // Defensive the same way state.eggs etc. are read defensively elsewhere —
   // migrateState() already guarantees this shape on load, this is just a
   // second safety net for any code path that reaches in before that runs.
@@ -2104,17 +2131,23 @@
       .reduce(function(a,j){ return a+(j.quantity||0); }, 0);
   }
 
-  var LIVESTOCK_VIEWS = [['overview','Overview']].concat(
-    LIVESTOCK_SPECIES.reduce(function(acc, sp){
-      acc.push([sp.key+'-herd', sp.label+' — Herd']);
-      if(sp.hasJournal) acc.push([sp.key+'-journal', sp.label+' — '+sp.journalLabel+' Log']);
-      acc.push([sp.key+'-sales', sp.label+' — Sold & Lost']);
-      return acc;
-    }, [])
-  );
+  // A function, not a static array, because which species appear has to
+  // follow whatever Farm Setup currently has ticked (enabledLivestockSpecies)
+  // — that can change any time an admin edits Farm Setup, long after this
+  // file first loaded.
+  function livestockViews(){
+    return [['overview','Overview']].concat(
+      enabledLivestockSpecies().reduce(function(acc, sp){
+        acc.push([sp.key+'-herd', sp.label+' — Herd']);
+        if(sp.hasJournal) acc.push([sp.key+'-journal', sp.label+' — '+sp.journalLabel+' Log']);
+        acc.push([sp.key+'-sales', sp.label+' — Sold & Lost']);
+        return acc;
+      }, [])
+    );
+  }
 
   function livestockOverviewPanel(){
-    var cards = LIVESTOCK_SPECIES.map(function(sp){
+    var cards = enabledLivestockSpecies().map(function(sp){
       var total = livestockHerdTotal(sp.key);
       var extra = sp.hasJournal ? ('<div class="hint" style="margin-top:4px">'+sumLivestockJournal(sp.key).toLocaleString()+' '+sp.journalUnit.toLowerCase()+' this month</div>') : '';
       return '<button type="button" class="stat-tile" style="text-align:left; cursor:pointer; border:none; width:100%" data-action="view-select:livestock:'+sp.key+'-herd">'+
@@ -2271,14 +2304,18 @@
     var sub = parts.pop();
     var spKey = parts.join('-');
     var sp = livestockSpecies(spKey);
-    if(!sp) return livestockOverviewPanel();
+    // Not just "does this species exist" (livestockSpecies) but "is it
+    // still ticked in Farm Setup right now" — a species an admin just
+    // turned off shouldn't stay reachable via a stale view.
+    var stillEnabled = sp && enabledLivestockSpecies().some(function(x){ return x.key===sp.key; });
+    if(!sp || !stillEnabled) return livestockOverviewPanel();
     if(sub==='herd') return livestockHerdPageHTML(sp);
     if(sub==='journal' && sp.hasJournal) return livestockJournalPageHTML(sp);
     if(sub==='sales') return livestockSalesPageHTML(sp);
     return livestockOverviewPanel();
   }
   function livestockPanel(){
-    return sectionViewSwitcherHTML('livestock', LIVESTOCK_VIEWS) + livestockPanelBody();
+    return sectionViewSwitcherHTML('livestock', livestockViews()) + livestockPanelBody();
   }
 
   /* ============================= CROPS ============================= */
@@ -2396,6 +2433,98 @@
         '</div>'+
       '</form>'+
     '</div>';
+  }
+
+  /* ========================= SECTOR SWITCHER ========================= */
+  // Farm Setup (above) decides what this FARM tracks at all — a one-time,
+  // admin-only choice. This is a different, smaller question asked of
+  // every signed-in PERSON, every time they open the app: of the sectors
+  // Farm Setup has turned on, which one do you want a focused view of
+  // right now? Poultry, Other Livestock, and Crops each get their own
+  // tile; Finance/Income/Expenses/Reports/Customers/Team/Settings/etc.
+  // stay out of this entirely — those are "common" and always reachable
+  // no matter which sector is active (sectorForSection returns null for
+  // all of them, see below).
+  //
+  // ui.sector lives in-memory only (never saved to Firestore, never
+  // written to localStorage) — same as ui.view/navHistory — so it's
+  // naturally re-asked "every time someone signs in", i.e. every fresh
+  // page load, without needing its own storage or reset logic. A farm
+  // with 0 or 1 eligible sectors never sees this screen at all — there's
+  // nothing to choose.
+  function availableSectors(){
+    var fs = (state.settings && state.settings.farmSetup) || {};
+    var cats = fs.categories || {livestock:true, crops:false};
+    var species = fs.species || ['poultry'];
+    var list = [];
+    if(cats.livestock && species.indexOf('poultry')!==-1){
+      list.push({ key:'poultry', label:'Poultry', sub:'Flock, eggs, feed &amp; health', icon:PICS.hen, landing:'flock' });
+    }
+    if(cats.livestock && species.some(function(s){ return s!=='poultry'; })){
+      var names = LIVESTOCK_SPECIES.filter(function(sp){ return species.indexOf(sp.key)!==-1; }).map(function(sp){ return sp.label; });
+      list.push({ key:'livestock', label:'Other Livestock', sub:esc(names.join(', ')||'Dairy cattle, goats &amp; sheep, pigs, rabbits, horses'), icon:PICS.livestockNav, landing:'livestock' });
+    }
+    if(cats.crops){
+      list.push({ key:'crops', label:'Crops', sub:'Planting, harvest &amp; sales', icon:PICS.cropsNav, landing:'crops' });
+    }
+    return list;
+  }
+  // Which sector a given SECTIONS/nav key belongs to, if any — null means
+  // "common", always visible regardless of the active sector.
+  function sectorForSection(key){
+    if(key==='flock'||key==='eggs'||key==='feed'||key==='health') return 'poultry';
+    if(key==='livestock') return 'livestock';
+    if(key==='crops') return 'crops';
+    return null;
+  }
+  // Checked by sectionAllowed() below, right alongside
+  // sectionEnabledByFarmSetup — this is the session-level "which ONE
+  // sector is the current viewer focused on", not farm-wide.
+  function sectionVisibleForCurrentSector(key){
+    var owner = sectorForSection(key);
+    if(!owner) return true;
+    if(!ui.sector) return true; // chooser not shown (0-1 eligible sectors, or not signed in yet) — no extra restriction
+    return ui.sector === owner;
+  }
+  function sectorChoicePending(){
+    if(!currentUser) return false; // guests/signed-out: nothing to gate yet
+    if(farmSetupPending()) return false; // farm-wide setup takes priority over the per-person choice
+    if(ui.sector) return false; // already chosen this session
+    return availableSectors().length >= 2;
+  }
+  function sectorChooserHTML(){
+    var sectors = availableSectors();
+    var tiles = sectors.map(function(s){
+      return '<button type="button" class="sector-tile'+(ui.sector===s.key?' current':'')+'" data-action="select-sector:'+s.key+'">'+
+        '<div class="pic-badge lg">'+s.icon+'</div>'+
+        '<div class="sector-tile-label">'+esc(s.label)+'</div>'+
+        '<div class="sector-tile-sub">'+s.sub+'</div>'+
+      '</button>';
+    }).join('');
+    return '<div class="card" style="max-width:640px; margin:36px auto; text-align:center">'+
+      '<div class="card-title" style="justify-content:center"><h3>What do you want to work on?</h3></div>'+
+      '<div class="hint" style="margin-bottom:18px">Pick a sector for a focused view — Finance, Reports, and the rest stay available no matter which one you pick. Switch anytime from Settings.</div>'+
+      '<div class="sector-chooser-grid">'+tiles+'</div>'+
+    '</div>';
+  }
+  function sectorSummaryText(){
+    var s = availableSectors().find(function(x){ return x.key===ui.sector; });
+    return s ? s.label : 'Not chosen yet';
+  }
+  // The small tagline under the farm name in the sidebar (see renderNav)
+  // — this is the one piece of always-visible, literally-hardcoded
+  // "Poultry Keeping" text that actively contradicted a farm running a
+  // different or mixed sector, so it now reflects the active sector (or
+  // the farm's overall type when nothing's chosen yet). A poultry-only
+  // farm — the common case, including every deployment before this
+  // update — sees exactly the same "Poultry Keeping" text as always.
+  function brandTagline(){
+    var sectors = availableSectors();
+    var active = ui.sector && sectors.find(function(s){ return s.key===ui.sector; });
+    if(active) return active.label;
+    if(sectors.length===1) return sectors[0].key==='poultry' ? 'Poultry Keeping' : sectors[0].label;
+    if(sectors.length>1) return 'Farm Management';
+    return 'Poultry Keeping';
   }
 
   /* ============================= HEALTH ============================= */
@@ -3812,6 +3941,10 @@
       '<div class="hint" style="margin-bottom:10px">Currently: '+esc(farmSetupSummaryText())+'</div>'+
       '<button class="btn" data-action="reopen-farm-setup">Edit Farm Setup</button>'+
     '</div>' : '')+
+    (availableSectors().length>=2 ? '<div class="card"><div class="card-title"><h3>Sector</h3><span class="hint">Which one you\'re focused on this session</span></div>'+
+      '<div class="hint" style="margin-bottom:10px">Currently: '+esc(sectorSummaryText())+'</div>'+
+      '<button class="btn" data-action="switch-sector">Switch sector</button>'+
+    '</div>' : '')+
     '<div class="card"><div class="card-title"><h3>Trash</h3><span class="hint">'+trashCount+' item'+(trashCount===1?'':'s')+' — recoverable for 30 days</span></div>'+
       '<button class="btn" data-action="nav:trash">'+ICONS.trash+' Open Trash</button>'+
     '</div>'+
@@ -3937,6 +4070,7 @@
   }
   function sectionAllowed(key){
     if(!sectionEnabledByFarmSetup(key)) return false;
+    if(!sectionVisibleForCurrentSector(key)) return false;
     if(isAdminLevel() || !currentUser) return sectionAllowedUngated(key);
     switch(key){
       case 'finance':
@@ -7115,6 +7249,20 @@
           });
         });
         break;
+      // Sector switcher — a1 is the sector key (poultry/livestock/crops).
+      // Picking one jumps straight to its landing section; choosing a
+      // different one later (via "Switch sector" in Settings) just clears
+      // ui.sector and re-renders, which brings the chooser straight back
+      // up (see sectorChoicePending in render()) without touching
+      // anything about Farm Setup itself.
+      case 'select-sector': {
+        var chosen = availableSectors().find(function(s){ return s.key===a1; });
+        if(!chosen){ render(); break; }
+        ui.sector = chosen.key;
+        goToSection(chosen.landing);
+        break;
+      }
+      case 'switch-sector': ui.sector = null; render(); break;
       case 'reopen-farm-setup':
         if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
         confirmModal(
@@ -8681,7 +8829,10 @@
   // "Overview + a dropdown of dedicated pages" (Flock, Eggs, Money,
   // Health) — keyed by section, defaulting to 'overview'. In-memory only,
   // same as the rest of `ui` (a reload starting back on Overview is fine).
-  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{}, view:{} };
+  // sector: the per-sign-in "what do you want to work on" choice (see
+  // SECTOR SWITCHER section above) — in-memory only, same as view/pages
+  // below, so it's naturally re-asked on every fresh page load.
+  var ui = { section: getSavedSection(), periods:{overview:'week', reports:'month'}, pages:{}, view:{}, sector:null };
   function currentView(key){ return ui.view[key] || 'overview'; }
   function setView(key, v){ ui.view[key] = v; }
   // Where you've been, so the back arrow (see navControlsHTML) has

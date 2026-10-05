@@ -833,3 +833,20 @@
   }
   #farm-setup-species-block, #farm-setup-crops-note{ animation:app-update-fade-in .2s ease; }
   .main[data-section="overview"] .card > form[data-form="farm-setup"]{ animation:app-update-fade-in .3s ease; }
+
+  /* ---- Sector switcher (see sectorChooserHTML in app.js) — the
+     per-sign-in "what do you want to work on" screen. Reuses the same
+     new-class-names-only approach as Farm Setup's tiles above, so this
+     can't affect any existing element either. ---- */
+  .sector-chooser-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+  .sector-tile{
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px;
+    padding:24px 18px; border:2px solid var(--border-soft); border-radius:var(--radius);
+    background:var(--surface); cursor:pointer; width:100%; font-family:inherit; color:var(--ink);
+    transition:border-color .15s ease, background-color .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+  .sector-tile:hover{ border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
+  .sector-tile.current{ border-color:var(--accent-strong); background:var(--accent-tint); }
+  .sector-tile-label{ font-weight:700; font-size:15px; }
+  .sector-tile-sub{ font-size:12.5px; color:var(--ink-3); line-height:1.4; }
+  .main[data-section="overview"] .card .sector-chooser-grid{ animation:app-update-fade-in .3s ease; }
