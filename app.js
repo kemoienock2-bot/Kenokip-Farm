@@ -7117,9 +7117,13 @@
         break;
       case 'reopen-farm-setup':
         if(!isAdminLevel()){ toast('Only the administrator can do this.'); break; }
-        confirmModal('Reopen Farm Setup? Everyone on the team will briefly see the setup screen until you save it again.', function(){
-          mutate(function(s){ s.settings.farmSetup = s.settings.farmSetup || {}; s.settings.farmSetup.completed = false; });
-        });
+        confirmModal(
+          'This reopens the Farm Setup picker with your current choices pre-ticked — nothing is deleted. Everyone on the team will briefly see the setup screen (or an "almost ready" message, if they\'re not the administrator) until you save it again.',
+          function(){
+            mutate(function(s){ s.settings.farmSetup = s.settings.farmSetup || {}; s.settings.farmSetup.completed = false; });
+          },
+          { danger:false, confirmLabel:'Reopen Setup', title:'Reopen Farm Setup?' }
+        );
         break;
       case 'open-add-crop': openModal(cropEntryFormHtml()); break;
       case 'edit-crop': openModal(cropEntryFormHtml(a1)); break;
