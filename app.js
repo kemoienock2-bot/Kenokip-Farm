@@ -22,6 +22,7 @@
     edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.3-.9L18.1 9.3l-3.4-3.4L4.9 15.7 4 20z"/></svg>',
     trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M9 7V5h6v2"/><path d="M7 7l1 13h8l1-13"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 13 9.5 18.5 20 6"/></svg>',
     empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="13" rx="6" ry="8"/></svg>',
     history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3.5 2"/></svg>',
     finance:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9M9 10v9M15 10v9M19 10v9"/><path d="M3 19h18"/></svg>',
@@ -114,7 +115,7 @@
   // separate from PICS (the illustrated icon set) since these are actual
   // photos, resized/compressed to base64 data URIs so the app stays a
   // single self-contained file.
-  var FARM_PHOTOS = {"portraitHalf":"images/portraitHalf.jpg","heroHalf":"images/heroHalf.jpg","icons":{"chicksIcon":"images/icons-chicksIcon.jpg","growersIcon":"images/icons-growersIcon.jpg","hensIcon":"images/icons-hensIcon.jpg","cocksIcon":"images/icons-cocksIcon.jpg","feedIcon":"images/icons-feedIcon.jpg","eggsIcon":"images/icons-eggsIcon.jpg","flockIcon":"images/icons-flockIcon.jpg"},"banners":{"chicks":"images/banners-chicks.jpg","growers":"images/banners-growers.jpg","hens":"images/banners-hens.jpg","cocks":"images/banners-cocks.jpg","eggs":"images/banners-eggs.jpg","feed":"images/banners-feed.jpg"},"lightbox":{"chicksIcon":"images/lightbox-chicksIcon.jpg","growersIcon":"images/lightbox-growersIcon.jpg","hensIcon":"images/lightbox-hensIcon.jpg","cocksIcon":"images/lightbox-cocksIcon.jpg","feedIcon":"images/lightbox-feedIcon.jpg","eggsIcon":"images/lightbox-eggsIcon.jpg","flockIcon":"images/lightbox-flockIcon.jpg","chicksBanner":"images/banners-chicks.jpg","growersBanner":"images/banners-growers.jpg","hensBanner":"images/banners-hens.jpg","cocksBanner":"images/banners-cocks.jpg","eggsBanner":"images/banners-eggs.jpg","feedBanner":"images/banners-feed.jpg","portrait":"images/lightbox-portrait.jpg","flockHero":"images/lightbox-flockIcon.jpg","gallery1_pullets":"images/lightbox-gallery1_pullets.jpg","gallery2_feeding":"images/lightbox-gallery2_feeding.jpg","gallery3_rooster":"images/lightbox-gallery3_rooster.jpg","gallery4_chicks":"images/lightbox-gallery4_chicks.jpg","gallery5_mash":"images/lightbox-gallery5_mash.jpg","eggsBannerSrc":"images/lightbox-eggsIcon.jpg"},"gallery":[{"key":"portrait","src":"images/gallery-0-src.jpg","caption":"Enock Kiplangat \u2014 founder of Kenokip Farm"},{"key":"flockHero","src":"images/gallery-1-src.jpg","caption":"Part of the flock at Kenokip Farm"},{"key":"chicksIcon","src":"images/gallery-2-src.jpg","caption":"Day-old to 8-week chicks"},{"key":"growersIcon","src":"images/gallery-3-src.jpg","caption":"Growers, 9\u201320 weeks"},{"key":"hensIcon","src":"images/gallery-4-src.jpg","caption":"Laying hens"},{"key":"cocksIcon","src":"images/gallery-5-src.jpg","caption":"Cocks"},{"key":"gallery1_pullets","src":"images/gallery-6-src.jpg","caption":"Young pullets at the feeding trough"},{"key":"gallery2_feeding","src":"images/gallery-7-src.jpg","caption":"Hens feeding"},{"key":"gallery3_rooster","src":"images/gallery-8-src.jpg","caption":"A cock in the coop"},{"key":"gallery4_chicks","src":"images/gallery-9-src.jpg","caption":"Chicks in the brooder"},{"key":"feedIcon","src":"images/gallery-10-src.jpg","caption":"Layer feed, ready to serve"},{"key":"gallery5_mash","src":"images/gallery-11-src.jpg","caption":"Mixed feed, measured out"},{"key":"eggsIcon","src":"images/gallery-12-src.jpg","caption":"Eggs collected from the farm"},{"key":"eggsBannerSrc","src":"images/gallery-13-src.jpg","caption":"A fresh tray of eggs"}]};
+  var FARM_PHOTOS = {"portraitHalf":"images/portraitHalf.jpg","heroHalf":"images/heroHalf.jpg","icons":{"chicksIcon":"images/icons-chicksIcon.jpg","growersIcon":"images/icons-growersIcon.jpg","hensIcon":"images/icons-hensIcon.jpg","cocksIcon":"images/icons-cocksIcon.jpg","feedIcon":"images/icons-feedIcon.jpg","eggsIcon":"images/icons-eggsIcon.jpg","flockIcon":"images/icons-flockIcon.jpg"},"banners":{"chicks":"images/banners-chicks.jpg","growers":"images/banners-growers.jpg","hens":"images/banners-hens.jpg","cocks":"images/banners-cocks.jpg","eggs":"images/banners-eggs.jpg","feed":"images/banners-feed.jpg","cattle":"images/banners-cattle.svg"},"lightbox":{"chicksIcon":"images/lightbox-chicksIcon.jpg","growersIcon":"images/lightbox-growersIcon.jpg","hensIcon":"images/lightbox-hensIcon.jpg","cocksIcon":"images/lightbox-cocksIcon.jpg","feedIcon":"images/lightbox-feedIcon.jpg","eggsIcon":"images/lightbox-eggsIcon.jpg","flockIcon":"images/lightbox-flockIcon.jpg","chicksBanner":"images/banners-chicks.jpg","growersBanner":"images/banners-growers.jpg","hensBanner":"images/banners-hens.jpg","cocksBanner":"images/banners-cocks.jpg","eggsBanner":"images/banners-eggs.jpg","feedBanner":"images/banners-feed.jpg","portrait":"images/lightbox-portrait.jpg","flockHero":"images/lightbox-flockIcon.jpg","gallery1_pullets":"images/lightbox-gallery1_pullets.jpg","gallery2_feeding":"images/lightbox-gallery2_feeding.jpg","gallery3_rooster":"images/lightbox-gallery3_rooster.jpg","gallery4_chicks":"images/lightbox-gallery4_chicks.jpg","gallery5_mash":"images/lightbox-gallery5_mash.jpg","eggsBannerSrc":"images/lightbox-eggsIcon.jpg"},"gallery":[{"key":"portrait","src":"images/gallery-0-src.jpg","caption":"Enock Kiplangat \u2014 founder of Kenokip Farm"},{"key":"flockHero","src":"images/gallery-1-src.jpg","caption":"Part of the flock at Kenokip Farm"},{"key":"chicksIcon","src":"images/gallery-2-src.jpg","caption":"Day-old to 8-week chicks"},{"key":"growersIcon","src":"images/gallery-3-src.jpg","caption":"Growers, 9\u201320 weeks"},{"key":"hensIcon","src":"images/gallery-4-src.jpg","caption":"Laying hens"},{"key":"cocksIcon","src":"images/gallery-5-src.jpg","caption":"Cocks"},{"key":"gallery1_pullets","src":"images/gallery-6-src.jpg","caption":"Young pullets at the feeding trough"},{"key":"gallery2_feeding","src":"images/gallery-7-src.jpg","caption":"Hens feeding"},{"key":"gallery3_rooster","src":"images/gallery-8-src.jpg","caption":"A cock in the coop"},{"key":"gallery4_chicks","src":"images/gallery-9-src.jpg","caption":"Chicks in the brooder"},{"key":"feedIcon","src":"images/gallery-10-src.jpg","caption":"Layer feed, ready to serve"},{"key":"gallery5_mash","src":"images/gallery-11-src.jpg","caption":"Mixed feed, measured out"},{"key":"eggsIcon","src":"images/gallery-12-src.jpg","caption":"Eggs collected from the farm"},{"key":"eggsBannerSrc","src":"images/gallery-13-src.jpg","caption":"A fresh tray of eggs"}]};
 
   /* ============================= UTILS ============================= */
   function uid(p){ return p+'_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-5); }
@@ -1036,9 +1037,16 @@
   function navControlsHTML(){
     if(ui.section==='overview') return '';
     var canBack = navHistory.length>0;
+    // Same button either way — just repointed. Once a sector's actually in
+    // play this session, "home" IS the sector chooser, so this takes you
+    // there instead of Overview; a farm with 0-1 sectors (ui.sector never
+    // set) keeps the original "Back to homepage" behavior untouched.
+    var homeBtn = ui.sector
+      ? '<button class="btn ghost sm" data-action="switch-sector"><span class="inline-ico" style="width:15px; height:15px">'+ICONS.home+'</span>Switch sector</button>'
+      : '<button class="btn ghost sm" data-action="nav-home"><span class="inline-ico" style="width:15px; height:15px">'+ICONS.home+'</span>'+t('btn.backhome','Back to homepage')+'</button>';
     return '<div class="page-nav-controls">'+
       '<button class="icon-btn" data-action="nav-back" title="Back"'+(canBack?'':' disabled')+'>'+ICONS.chevronLeft+'</button>'+
-      '<button class="btn ghost sm" data-action="nav-home"><span class="inline-ico" style="width:15px; height:15px">'+ICONS.home+'</span>'+t('btn.backhome','Back to homepage')+'</button>'+
+      homeBtn+
     '</div>';
   }
   // Shown instead of the normal app the very first time a brand-new farm
@@ -2452,20 +2460,34 @@
   // page load, without needing its own storage or reset logic. A farm
   // with 0 or 1 eligible sectors never sees this screen at all — there's
   // nothing to choose.
+  // theme: a CSS color pair (used for the band's photo overlay + accent
+  // glow) per sector — deliberately fixed hex values, not the usual
+  // var(--accent) system, since these bands carry their own colors/photos
+  // on purpose and need to look the same in light and dark mode.
+  // image: a real photo where one exists (Poultry, reusing the same
+  // images/banners-hens.jpg used elsewhere in the app) — Cattle gets a
+  // drawn placeholder (images/banners-cattle.svg) since there's no real
+  // photo yet; see HOW-TO-SECTOR-SWITCHER.md. A species with neither gets
+  // no image at all — the band falls back to a plain colored panel with
+  // its icon rather than showing a broken image.
   function availableSectors(){
     var fs = (state.settings && state.settings.farmSetup) || {};
     var cats = fs.categories || {livestock:true, crops:false};
     var species = fs.species || ['poultry'];
     var list = [];
     if(cats.livestock && species.indexOf('poultry')!==-1){
-      list.push({ key:'poultry', label:'Poultry', sub:'Flock, eggs, feed &amp; health', icon:PICS.hen, landing:'flock' });
+      list.push({ key:'poultry', label:'Poultry', sub:'Flock, eggs, feed &amp; health', icon:PICS.hen, landing:'flock',
+        image:FARM_PHOTOS.banners.hens, theme:{from:'#8F590A', to:'#B9740E'} });
     }
     if(cats.livestock && species.some(function(s){ return s!=='poultry'; })){
       var names = LIVESTOCK_SPECIES.filter(function(sp){ return species.indexOf(sp.key)!==-1; }).map(function(sp){ return sp.label; });
-      list.push({ key:'livestock', label:'Other Livestock', sub:esc(names.join(', ')||'Dairy cattle, goats &amp; sheep, pigs, rabbits, horses'), icon:PICS.livestockNav, landing:'livestock' });
+      var hasCattleArt = species.indexOf('cattle')!==-1;
+      list.push({ key:'livestock', label:'Other Livestock', sub:esc(names.join(', ')||'Dairy cattle, goats &amp; sheep, pigs, rabbits, horses'), icon:PICS.livestockNav, landing:'livestock',
+        image: hasCattleArt ? FARM_PHOTOS.banners.cattle : null, theme:{from:'#1D5C3D', to:'#2F7D4F'} });
     }
     if(cats.crops){
-      list.push({ key:'crops', label:'Crops', sub:'Planting, harvest &amp; sales', icon:PICS.cropsNav, landing:'crops' });
+      list.push({ key:'crops', label:'Crops', sub:'Planting, harvest &amp; sales', icon:PICS.cropsNav, landing:'crops',
+        image:null, theme:{from:'#6B5112', to:'#A4791E'} });
     }
     return list;
   }
@@ -2492,19 +2514,33 @@
     if(ui.sector) return false; // already chosen this session
     return availableSectors().length >= 2;
   }
+  // Full-width stacked bands, one per enabled sector — a photo (or a
+  // plain colored panel, if there's no photo for it — see availableSectors)
+  // behind a color-tinted gradient so the label text reads cleanly over
+  // any image, in each sector's own theme color.
   function sectorChooserHTML(){
     var sectors = availableSectors();
-    var tiles = sectors.map(function(s){
-      return '<button type="button" class="sector-tile'+(ui.sector===s.key?' current':'')+'" data-action="select-sector:'+s.key+'">'+
-        '<div class="pic-badge lg">'+s.icon+'</div>'+
-        '<div class="sector-tile-label">'+esc(s.label)+'</div>'+
-        '<div class="sector-tile-sub">'+s.sub+'</div>'+
+    var bands = sectors.map(function(s){
+      var bg = s.image ? 'background-image:url(\''+s.image+'\');' : '';
+      var style = bg+'--band-from:'+s.theme.from+';--band-to:'+s.theme.to+';';
+      return '<button type="button" class="sector-band'+(s.image?'':' no-photo')+(ui.sector===s.key?' current':'')+'" style="'+style+'" data-action="select-sector:'+s.key+'">'+
+        '<span class="sector-band-overlay"></span>'+
+        (s.image ? '' : '<span class="sector-band-icon">'+s.icon+'</span>')+
+        '<span class="sector-band-content">'+
+          '<span class="sector-band-label">'+esc(s.label)+'</span>'+
+          '<span class="sector-band-sub">'+s.sub+'</span>'+
+        '</span>'+
+        (ui.sector===s.key ? '<span class="sector-band-check">'+ICONS.check+'</span>' : '')+
       '</button>';
     }).join('');
-    return '<div class="card" style="max-width:640px; margin:36px auto; text-align:center">'+
-      '<div class="card-title" style="justify-content:center"><h3>What do you want to work on?</h3></div>'+
-      '<div class="hint" style="margin-bottom:18px">Pick a sector for a focused view — Finance, Reports, and the rest stay available no matter which one you pick. Switch anytime from Settings.</div>'+
-      '<div class="sector-chooser-grid">'+tiles+'</div>'+
+    var manageLink = isAdminLevel()
+      ? '<button type="button" class="linklike" data-action="reopen-farm-setup" style="margin-top:16px">+ Add or change what this farm tracks</button>'
+      : '';
+    return '<div style="max-width:720px; margin:36px auto 0; text-align:center">'+
+      '<h3 style="margin-bottom:6px">What do you want to work on?</h3>'+
+      '<div class="hint" style="margin-bottom:20px">Finance, Reports, and the rest stay available no matter which one you pick — switch anytime from Settings.</div>'+
+      '<div class="sector-stack">'+bands+'</div>'+
+      manageLink+
     '</div>';
   }
   function sectorSummaryText(){

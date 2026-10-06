@@ -23,26 +23,58 @@ a one-time, admin-only choice. But two things were still wrong:
 **A per-sign-in sector switcher.** Every time anyone opens the app
 (every fresh sign-in — not repeatedly during the same session), if
 Farm Setup has 2 or more sectors turned on, they now see a "What do you
-want to work on?" screen first, with one tile per enabled sector:
+want to work on?" screen first — one big, full-width photo banner per
+enabled sector, stacked top to bottom (matching the sketch you sent):
 
-- **Poultry** — Flock, Eggs, Feed, Health
-- **Other Livestock** — whichever species you've ticked (Dairy Cattle,
-  Goats & Sheep, Pigs, Rabbits, Horses)
-- **Crops**
+- **Poultry** — a real photo from your own flock (the same
+  `images/banners-hens.jpg` already used elsewhere in the app), warm
+  amber/brown overlay, "Flock, eggs, feed & health."
+- **Other Livestock** — Dairy Cattle, Goats & Sheep, Pigs, Rabbits,
+  Horses, whichever you've ticked, green pasture overlay. If Dairy
+  Cattle is one of them, the banner shows a drawn cow illustration — see
+  "About the cow image" below.
+- **Crops** — gold overlay, no photo yet, so it falls back to a plain
+  colored banner with a leaf icon rather than showing anything broken.
 
-Picking one takes you straight into that sector and hides the other
-sectors' sections from the sidebar for the rest of that session —
-**Finance, Income, Expenses, Reports, Customers, Team, Messages,
-Settings, About stay exactly where they were, for everyone, regardless
-of which sector is active** — those are "common," never sector-gated.
-You can switch anytime from **Settings → Sector → Switch sector**,
-without signing out — it just brings the chooser back up.
+Whichever one you already have active shows a small checkmark badge in
+the corner. Picking a banner takes you straight into that sector and
+hides the other sectors' sections from the sidebar for the rest of that
+session — **Finance, Income, Expenses, Reports, Customers, Team,
+Messages, Settings, About stay exactly where they were, for everyone,
+regardless of which sector is active** — those are "common," never
+sector-gated.
 
-**A farm with 0 or 1 sectors enabled never sees this at all.** If
+**Switching back is the same "Back to homepage" button that was already
+in the topbar** — you asked for this specifically rather than a new
+button: once a sector's active, that existing button relabels itself
+"Switch sector" and takes you back to this same banner screen instead
+of Overview. A farm with 0-1 sectors never sees this change — the
+button still says "Back to homepage" and goes to Overview, exactly like
+before.
+
+**A quiet "+ Add or change what this farm tracks" link sits right under
+the banners** (administrator only) — that's the "portal to add more
+later" you asked for. It opens the same Farm Setup editor as Settings →
+Edit Farm Setup; nothing new to maintain, just a second, more
+discoverable door to the same place.
+
+**A farm with 0 or 1 sectors enabled never sees any of this.** If
 Poultry is the only thing turned on, the app behaves exactly as it
 always has — straight in, no extra screen, no behavior change. This
 only appears once a farm has actually turned on a second thing to
 choose between.
+
+## About the cow image
+
+I don't have a tool in this environment that generates real photos — so
+instead of a photo, the Other Livestock banner uses a cow I drew as
+flat-color SVG artwork (`images/banners-cattle.svg`), in the same style
+as the rest of the app's hand-drawn icons, sized to match your sketch's
+wide banner shape. It's a deliberate, clearly-a-placeholder illustration,
+not an attempt to pass as a real photo. Swapping in a real one later is
+one line: drop a wide photo (roughly 1100×344, same shape as
+`banners-hens.jpg`) into `images/`, and change the `"cattle"` path in
+`FARM_PHOTOS.banners` near the top of `app.js` to point at it.
 
 **The sidebar tagline now matches what's actually enabled.** A
 poultry-only farm still says "Poultry Keeping," same as always. A farm
@@ -76,29 +108,39 @@ that's a reasonable next step once this round's been tried for a bit.
 
 1. **Kenokip Farm itself** — since Farm Setup there already has Poultry
    *and* Dairy Cattle on (from the farm Setup screenshot earlier), you
-   should now see the sector chooser the next time you sign in. Pick
+   should now see the two banners the next time you sign in: Poultry
+   (real photo) on top, Other Livestock (cow illustration) below. Pick
    Poultry — you should land on Flock, and the sidebar should hide
-   Other Livestock/Crops but keep Finance/Settings/etc. Go to Settings
-   → Sector → Switch sector, pick Other Livestock instead — you should
-   land on that section showing only Dairy Cattle (not Goats/Pigs/
-   Rabbits/Horses, since those were never ticked), and now Flock/Eggs/
-   Feed/Health should be hidden from the sidebar instead.
-2. **A single-sector farm** (temporarily uncheck Dairy Cattle/Crops in
+   Other Livestock/Crops but keep Finance/Settings/etc. Now tap "Switch
+   sector" at the top of any page (the button that used to say "Back to
+   homepage") — you should land back on the two banners, pick Other
+   Livestock this time — you should land on that section showing only
+   Dairy Cattle, and now Flock/Eggs/Feed/Health should be hidden from
+   the sidebar instead.
+2. **The "+ Add or change" link** — tap it from the banner screen; it
+   should open the same Farm Setup editor Settings → Edit Farm Setup
+   already opens, with your current choices pre-ticked.
+3. **A single-sector farm** (temporarily uncheck Dairy Cattle/Crops in
    Farm Setup, leaving just Poultry) — reload. You should NOT see the
-   chooser at all, and Settings should not show the "Sector" card
-   either — confirms the zero-sector-to-choose case stays a no-op.
-   Turn Dairy Cattle back on afterward.
-3. **Species filtering** — in Farm Setup, tick only Pigs (untick
-   Cattle). Open Other Livestock (via the sector chooser or Settings →
-   Switch sector) — you should see only a Pigs tile, and the "Viewing"
-   dropdown should only list Pigs' own pages.
-4. **A non-admin account** — sign in as a Supervisor/Farmhand on a
-   multi-sector farm; they should see the same chooser, and afterward
-   the same sector-based sidebar filtering, with their existing
-   role-based restrictions (e.g. a Farmhand still can't open Finance)
-   completely unchanged underneath it.
-5. **Guest/demo mode** — confirm guest browsing skips the chooser
+   banners at all, "Back to homepage" should say exactly that again
+   (not "Switch sector"), and Settings should not show the "Sector"
+   card either — confirms the zero-sector-to-choose case stays a
+   complete no-op. Turn Dairy Cattle back on afterward.
+4. **Species filtering** — in Farm Setup, tick only Pigs (untick
+   Cattle). The Other Livestock banner should now show its plain
+   colored fallback (no cow — Pigs has no photo of its own yet) rather
+   than a broken image; open the section and you should see only a Pigs
+   tile, with the "Viewing" dropdown only listing Pigs' own pages.
+5. **A non-admin account** — sign in as a Supervisor/Farmhand on a
+   multi-sector farm; they should see the same banners (minus the
+   "+ Add or change" link, admin-only), and afterward the same
+   sector-based sidebar filtering, with their existing role-based
+   restrictions (e.g. a Farmhand still can't open Finance) completely
+   unchanged underneath it.
+6. **Guest/demo mode** — confirm guest browsing skips the banners
    entirely and goes straight to Overview, same as before.
+7. **Small screens** — check the banners on a phone-width browser; the
+   label/subtitle should wrap cleanly rather than overflowing.
 
 ## Not included this round
 
@@ -124,12 +166,12 @@ that's a reasonable next step once this round's been tried for a bit.
 Front-end only — no Cloud Functions touched this round:
 
 ```
-git add app.js styles.css sw.js HOW-TO-SECTOR-SWITCHER.md
-git commit -m "Add per-sign-in sector switcher; fix Other Livestock to respect Farm Setup's species list"
+git add app.js styles.css sw.js images/banners-cattle.svg HOW-TO-SECTOR-SWITCHER.md
+git commit -m "Redesign sector switcher as photo banners; repurpose Back-to-homepage; add manage-sectors link"
 git push
 ```
 
 (GitHub Pages redeploys automatically — no `firebase deploy` needed for
 this one, same as the Farm Setup/Crops/Horses round.)
 
-Service worker cache bumped again (`kenokip-farm-v62` → `kenokip-farm-v63`).
+Service worker cache bumped again (`kenokip-farm-v63` → `kenokip-farm-v64`).

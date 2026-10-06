@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 344" width="1100" height="344">
+  <defs>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#CDE7D8"/>
+      <stop offset="100%" stop-color="#EAF3DD"/>
+    </linearGradient>
+    <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8FBF8A"/>
+      <stop offset="100%" stop-color="#6FA866"/>
+    </linearGradient>
+    <linearGradient id="hillFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5B9A52"/>
+      <stop offset="100%" stop-color="#4A8A42"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1100" height="344" fill="url(#skyGrad)"/>
+
+  <!-- sun -->
+  <circle cx="955" cy="78" r="46" fill="#F4D06F" opacity="0.85"/>
+
+  <!-- soft clouds -->
+  <g fill="#FFFFFF" opacity="0.6">
+    <ellipse cx="160" cy="62" rx="46" ry="16"/>
+    <ellipse cx="195" cy="54" rx="34" ry="14"/>
+    <ellipse cx="128" cy="56" rx="28" ry="12"/>
+    <ellipse cx="560" cy="40" rx="38" ry="13"/>
+    <ellipse cx="592" cy="34" rx="26" ry="11"/>
+  </g>
+
+  <!-- distant hills -->
+  <path d="M0,200 C130,160 250,220 400,190 C560,158 680,210 820,185 C930,165 1020,195 1100,180 L1100,344 L0,344 Z" fill="url(#hillBack)"/>
+
+  <!-- fence -->
+  <g stroke="#8A6A45" stroke-width="7" stroke-linecap="round" opacity="0.85">
+    <line x1="40" y1="190" x2="40" y2="238"/>
+    <line x1="95" y1="186" x2="95" y2="234"/>
+    <line x1="150" y1="183" x2="150" y2="231"/>
+    <line x1="205" y1="181" x2="205" y2="229"/>
+    <line x1="25" y1="202" x2="220" y2="196" stroke-width="6"/>
+    <line x1="25" y1="222" x2="220" y2="216" stroke-width="6"/>
+  </g>
+
+  <!-- front pasture -->
+  <path d="M0,246 C150,214 300,260 460,236 C640,210 760,252 920,232 C1000,222 1050,228 1100,224 L1100,344 L0,344 Z" fill="url(#hillFront)"/>
+
+  <!-- grass tufts -->
+  <g stroke="#3C7A38" stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <path d="M70,322 q4,-16 0,-24"/>
+    <path d="M80,324 q6,-14 2,-22"/>
+    <path d="M90,322 q-2,-15 -6,-20"/>
+    <path d="M980,330 q4,-16 0,-24"/>
+    <path d="M992,332 q6,-14 2,-22"/>
+    <path d="M1004,330 q-2,-15 -6,-20"/>
+  </g>
+
+  <!-- ===================== the cow ===================== -->
+  <g transform="translate(610,120)">
+    <!-- shadow -->
+    <ellipse cx="90" cy="206" rx="140" ry="16" fill="#2E5A2A" opacity="0.25"/>
+
+    <!-- tail -->
+    <path d="M198,70 C222,96 224,140 210,172" stroke="#3A3430" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <circle cx="208" cy="176" r="9" fill="#3A3430"/>
+
+    <!-- back legs -->
+    <rect x="48" y="150" width="20" height="58" rx="8" fill="#F6F1E7"/>
+    <rect x="150" y="150" width="20" height="58" rx="8" fill="#EDE6D6"/>
+    <rect x="46" y="196" width="24" height="14" rx="5" fill="#2E2A26"/>
+    <rect x="148" y="196" width="24" height="14" rx="5" fill="#2E2A26"/>
+
+    <!-- body -->
+    <ellipse cx="110" cy="128" rx="98" ry="56" fill="#FBF7EE"/>
+    <!-- body patches -->
+    <path d="M40,100 C60,84 92,86 100,106 C108,124 84,138 62,134 C44,130 30,114 40,100 Z" fill="#2E2A26"/>
+    <path d="M150,158 C168,150 192,156 196,172 C200,186 178,196 160,190 C146,186 138,166 150,158 Z" fill="#2E2A26"/>
+    <path d="M120,92 C134,86 150,92 150,104 C150,116 132,120 122,112 C114,106 112,96 120,92 Z" fill="#2E2A26" opacity="0.85"/>
+
+    <!-- front legs -->
+    <rect x="70" y="150" width="20" height="62" rx="8" fill="#FBF7EE"/>
+    <rect x="128" y="150" width="20" height="62" rx="8" fill="#F6F1E7"/>
+    <rect x="68" y="200" width="24" height="14" rx="5" fill="#2E2A26"/>
+    <rect x="126" y="200" width="24" height="14" rx="5" fill="#2E2A26"/>
+
+    <!-- udder -->
+    <ellipse cx="108" cy="176" rx="22" ry="14" fill="#F3C8C2"/>
+
+    <!-- neck + head -->
+    <path d="M14,104 C2,86 6,62 26,52 C46,42 62,56 60,76 C58,92 32,104 14,104 Z" fill="#FBF7EE"/>
+    <ellipse cx="26" cy="58" rx="30" ry="26" fill="#FBF7EE"/>
+    <path d="M6,48 C2,34 10,22 22,24 C30,26 30,38 24,44 Z" fill="#2E2A26" opacity="0.9"/>
+
+    <!-- ears -->
+    <ellipse cx="2" cy="42" rx="12" ry="7" fill="#F1D9C8" transform="rotate(-18 2 42)"/>
+    <ellipse cx="44" cy="36" rx="12" ry="7" fill="#F1D9C8" transform="rotate(14 44 36)"/>
+
+    <!-- horns -->
+    <path d="M8,30 C2,22 2,14 8,10" stroke="#E5DCC8" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M40,24 C46,16 46,8 40,4" stroke="#E5DCC8" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <!-- muzzle -->
+    <ellipse cx="14" cy="72" rx="16" ry="12" fill="#F1D9C8"/>
+    <ellipse cx="9" cy="72" rx="2.4" ry="3" fill="#6B5A4E"/>
+    <ellipse cx="19" cy="72" rx="2.4" ry="3" fill="#6B5A4E"/>
+
+    <!-- eye -->
+    <circle cx="28" cy="52" r="3.2" fill="#2E2A26"/>
+    <circle cx="29" cy="51" r="1" fill="#FFFFFF"/>
+  </g>
+
+  <!-- small grazing detail bottom-left -->
+  <g opacity="0.9">
+    <ellipse cx="150" cy="300" rx="4" ry="3" fill="#FFE9A8"/>
+    <ellipse cx="170" cy="310" rx="4" ry="3" fill="#FFE9A8"/>
+    <ellipse cx="130" cy="312" rx="4" ry="3" fill="#FFE9A8"/>
+  </g>
+</svg>
