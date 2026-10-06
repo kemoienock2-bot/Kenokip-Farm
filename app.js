@@ -1057,10 +1057,22 @@
   function farmSetupPending(){
     return !!currentUser && !(state.settings && state.settings.farmSetup && state.settings.farmSetup.completed);
   }
+  // Both full-screen gates below (Farm Setup, then the sector chooser)
+  // should show nothing BUT the choice itself — no sidebar, no search
+  // bar, no mobile tab bar, no floating Kem AI button — there's nothing
+  // in any of those someone can usefully do before making this choice
+  // anyway, and showing them was just clutter/confusion. This toggles
+  // one class that CSS uses to hide all of it; .main already fills the
+  // freed-up width on its own (it's a plain flex:1 next to .rail).
+  function setAppChromeHidden(hidden){
+    var appEl = document.getElementById('app');
+    if(appEl) appEl.classList.toggle('gate-active', !!hidden);
+    kemAiSetVisible(!hidden && !!currentUser);
+  }
   function render(){
     updateAuthGate();
     if(farmSetupPending()){
-      renderNav();
+      setAppChromeHidden(true);
       var mainElSetup = document.getElementById('main-content');
       if(mainElSetup) mainElSetup.setAttribute('data-section','overview');
       document.getElementById('topbar').innerHTML = topbarHTML('Farm Setup','Choose what this farm tracks', '', PICS.livestockNav);
@@ -1073,13 +1085,14 @@
     // silently hiding the whole app behind a sector that no longer exists.
     if(ui.sector && !availableSectors().some(function(s){ return s.key===ui.sector; })) ui.sector = null;
     if(sectorChoicePending()){
-      renderNav();
+      setAppChromeHidden(true);
       var mainElSector = document.getElementById('main-content');
       if(mainElSector) mainElSector.setAttribute('data-section','overview');
       document.getElementById('topbar').innerHTML = topbarHTML('Choose a sector','Pick what you want to work on this session', '', PICS.overview);
       document.getElementById('panel').innerHTML = '<div id="global-banner">'+bannerHTML()+'</div>' + sectorChooserHTML();
       return;
     }
+    setAppChromeHidden(false);
     if(!sectionAllowed(ui.section)){ ui.section = 'overview'; saveUIPref(); }
     renderNav();
     var sec = SECTIONS[ui.section] || SECTIONS.overview;

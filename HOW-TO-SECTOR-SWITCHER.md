@@ -64,6 +64,19 @@ always has — straight in, no extra screen, no behavior change. This
 only appears once a farm has actually turned on a second thing to
 choose between.
 
+## Fixed: the sidebar/search/tab bar used to stay visible behind the chooser
+
+The first version of this still showed the full sidebar (every section
+— Flock, Eggs, Other Livestock, Income, Finance, Customers, the lot),
+the search bar, and the mobile tab bar behind the two banners — so the
+chooser looked like an overlay on top of the normal app rather than its
+own clean screen. That's fixed: while either the sector chooser or the
+Farm Setup screen is showing, the sidebar, search bar, and mobile tab
+bar (and the floating "Kem AI" button) are all hidden completely — the
+banners are the only thing on screen, same as Farm Setup already looked
+on a brand-new farm. They all come back the instant you pick a sector
+(or finish Farm Setup), exactly as before.
+
 ## About the cow image
 
 I don't have a tool in this environment that generates real photos — so
@@ -167,11 +180,11 @@ Front-end only — no Cloud Functions touched this round:
 
 ```
 git add app.js styles.css sw.js images/banners-cattle.svg HOW-TO-SECTOR-SWITCHER.md
-git commit -m "Redesign sector switcher as photo banners; repurpose Back-to-homepage; add manage-sectors link"
+git commit -m "Redesign sector switcher as photo banners; hide app chrome behind full-screen gates"
 git push
 ```
 
 (GitHub Pages redeploys automatically — no `firebase deploy` needed for
 this one, same as the Farm Setup/Crops/Horses round.)
 
-Service worker cache bumped again (`kenokip-farm-v63` → `kenokip-farm-v64`).
+Service worker cache bumped again (`kenokip-farm-v64` → `kenokip-farm-v65`).

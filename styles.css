@@ -147,6 +147,14 @@
   @media (prefers-reduced-motion: reduce){ *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; } }
 
   .app{ display:flex; min-height:100vh; }
+  /* ---- full-screen gate (Farm Setup / sector chooser) — see
+     setAppChromeHidden in app.js. Hides every other piece of chrome so
+     the gate's own card is the only thing on screen; .main picks up the
+     freed width on its own since it's already flex:1 next to .rail. ---- */
+  .app.gate-active .rail,
+  .app.gate-active .mobile-tabbar,
+  .app.gate-active .mobile-subtabs,
+  .app.gate-active .global-search-bar{ display:none !important; }
 
   /* ---- nav rail ---- */
   .rail{
