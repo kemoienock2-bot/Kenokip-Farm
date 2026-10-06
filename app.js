@@ -1390,8 +1390,10 @@
         '<div class="card"><div class="card-title"><h3>Mission</h3></div><p style="white-space:pre-wrap; margin:0">'+esc(a.mission||'')+'</p></div>'+
         '<div class="card"><div class="card-title"><h3>Vision</h3></div><p style="white-space:pre-wrap; margin:0">'+esc(a.vision||'')+'</p></div>'+
       '</div>'+
-      farmGalleryHtml()+
-      '<p class="hint" style="text-align:center; margin-top:24px">&copy; '+new Date().getFullYear()+' Kenokip Farm. All rights reserved.</p>';
+      farmGalleryHtml();
+      // The "&copy; ... All rights reserved" line that used to live only
+      // here now shows under every page (see appFooterHTML/#app-footer) —
+      // no longer repeated a second time on this one specifically.
   }
   function aboutFormHtml(){
     var a = state.settings.about || {};
@@ -2273,6 +2275,7 @@
     var rows = page.items.map(function(x){
       return '<tr><td>'+fmtDate(parseISO(x.date))+'</td><td class="num">'+x.count+'</td><td>'+livestockReasonLabel(x.reason)+'</td><td>'+esc(x.batchLabel||'—')+'</td><td>'+esc(x.note||'—')+'</td>'+
       '<td><div class="row-actions">'+
+        (x.reason==='sold' ? '<button class="icon-btn" data-action="view-livestock-receipt:'+sp.key+':'+x.batchId+':'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
         '<button class="icon-btn" data-action="edit-livestock-removal:'+sp.key+':'+x.batchId+':'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
         '<button class="icon-btn" data-action="delete-livestock-removal:'+sp.key+':'+x.batchId+':'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
       '</div></td></tr>';
@@ -2393,6 +2396,7 @@
         '<td class="num">'+(x.type==='sold' && x.amount ? fmtMoney(x.amount) : '—')+'</td>'+
         '<td>'+esc(x.note||'—')+'</td>'+
         '<td><div class="row-actions">'+
+          (x.type==='sold' ? '<button class="icon-btn" data-action="view-crop-receipt:'+x.id+'" title="View receipt">'+ICONS.receipt+'</button>' : '')+
           '<button class="icon-btn" data-action="edit-crop:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.edit+'</button>'+
           '<button class="icon-btn" data-action="delete-crop:'+x.id+'" '+(readOnly?'disabled':'')+'>'+ICONS.trash+'</button>'+
         '</div></td></tr>';
@@ -2922,6 +2926,45 @@
     });
     sections.push({title:'Feed', rows: feedRows});
 
+    // One combined "Livestock" section covering whichever species this
+    // farm has enabled (Dairy Cattle, Goats & Sheep, Pigs, Rabbits,
+    // Horses) — same two-pass pattern as Flock above (batches added, then
+    // every removal/sale), just prefixed with the species' own name since
+    // several can appear in the same statement.
+    var livestockRows = [];
+    enabledLivestockSpecies().forEach(function(sp){
+      var d = livestockData(sp.key);
+      d.herd.forEach(function(b){
+        if(inRange(b.dateAdded, startISO, endISO)){
+          pushRow(livestockRows, sp.label+' added', b.dateAdded, 'Added '+b.count+' '+(b.count>1?sp.plural:sp.singular)+(b.source?' ('+b.source+')':''), '');
+        }
+        (b.removals||[]).forEach(function(rm){
+          if(inRange(rm.date, startISO, endISO)){
+            var lvLbl = livestockReasonLabel(rm.reason);
+            var lvDesc = sp.label+' — '+lvLbl+' '+rm.count+' '+(rm.count>1?sp.plural:sp.singular)+(rm.reason==='sold' && rm.buyer ? ' to '+rm.buyer : '');
+            var lvAmt = (rm.reason==='sold' && rm.saleAmount>0) ? fmtMoney(rm.saleAmount) : '';
+            pushRow(livestockRows, sp.label+' activity', rm.date, lvDesc, lvAmt);
+          }
+        });
+      });
+      if(sp.hasJournal){
+        d.journal.forEach(function(j){
+          if(inRange(j.date, startISO, endISO)) pushRow(livestockRows, sp.label+' '+sp.journalLabel, j.date, sp.journalLabel+': '+j.quantity+' '+sp.journalUnit.toLowerCase()+(j.note?' — '+j.note:''), '');
+        });
+      }
+    });
+    sections.push({title:'Livestock', rows: livestockRows});
+
+    var cropRows = [];
+    (state.crops && state.crops.entries || []).forEach(function(x){
+      if(inRange(x.date, startISO, endISO)){
+        var cDesc = cropEntryTypeLabel(x.type)+' '+x.cropName+(x.quantity!=null && x.quantity!=='' ? ' — '+x.quantity+(x.unit?' '+x.unit:'') : '')+(x.note?' — '+x.note:'');
+        var cAmt = (x.type==='sold' && x.amount>0) ? fmtMoney(x.amount) : '';
+        pushRow(cropRows, 'Crops', x.date, cDesc, cAmt);
+      }
+    });
+    sections.push({title:'Crops', rows: cropRows});
+
     var healthRows = [];
     (state.healthRecords||[]).forEach(function(h){
       if(inRange(h.date, startISO, endISO)) pushRow(healthRows, 'Health', h.date, h.title+' — '+healthTypeLabel(h.type)+' ('+healthBatchLabel(h.batchId)+')'+(h.note?' — '+h.note:''), '');
@@ -3196,6 +3239,56 @@
       rows: rows,
       amountLabel: 'Amount',
       amount: x.saleAmount>0 ? fmtMoney(x.saleAmount) : 'Not recorded',
+      signatures: receiptSignaturesFor(x.recordedByRole),
+      mandatory: false
+    };
+  }
+  // Same shape as flockReceiptOpts, for a sold entry on a generic
+  // livestock species' herd (Dairy Cattle, Goats & Sheep, Pigs, Rabbits,
+  // Horses) — see livestockSalesPageHTML's "View receipt" button and the
+  // 'livestock-removal' handleForm case, which opens this automatically
+  // right after a sale is saved, same as Flock/Eggs already do.
+  function livestockReceiptOpts(spKey, herdId, remId){
+    var sp = livestockSpecies(spKey);
+    if(!sp) return null;
+    var d = livestockData(spKey);
+    var b = d.herd.find(function(x){return x.id===herdId;});
+    if(!b) return null;
+    var r = (b.removals||[]).find(function(x){return x.id===remId;});
+    if(!r || r.reason!=='sold') return null;
+    var rows = [
+      {label:'Item', value: r.count+' '+(r.count>1?sp.plural:sp.singular)},
+      {label:'Sold to', value: r.buyer || 'Walk-in customer'},
+      {label:'From batch added', value: fmtDate(parseISO(b.dateAdded))}
+    ];
+    if(r.note) rows.push({label:'Note', value:r.note});
+    return {
+      title: 'SALES RECEIPT',
+      receiptNo: receiptNoFrom(r.id),
+      date: r.date,
+      rows: rows,
+      amountLabel: 'Amount',
+      amount: r.saleAmount>0 ? fmtMoney(r.saleAmount) : 'Not recorded',
+      signatures: receiptSignaturesFor(r.recordedByRole),
+      mandatory: false
+    };
+  }
+  // Crop entries are a simpler flat journal (see "CROPS" above) with no
+  // buyer field of their own, unlike flock/egg/livestock sales — so this
+  // receipt just omits a "Sold to" row rather than inventing one.
+  function cropReceiptOpts(id){
+    var x = (state.crops||{entries:[]}).entries.find(function(i){return i.id===id;});
+    if(!x || x.type!=='sold') return null;
+    var rows = [{label:'Item', value: x.cropName}];
+    if(x.quantity!=null && x.quantity!=='') rows.push({label:'Quantity', value: x.quantity+(x.unit?' '+x.unit:'')});
+    if(x.note) rows.push({label:'Note', value:x.note});
+    return {
+      title: 'SALES RECEIPT',
+      receiptNo: receiptNoFrom(x.id),
+      date: x.date,
+      rows: rows,
+      amountLabel: 'Amount',
+      amount: x.amount>0 ? fmtMoney(x.amount) : 'Not recorded',
       signatures: receiptSignaturesFor(x.recordedByRole),
       mandatory: false
     };
@@ -7421,6 +7514,9 @@
       case 'view-finance-receipt': viewReceipt(financeReceiptOpts(a1)); break;
       case 'view-flock-receipt': viewReceipt(flockReceiptOpts(a1, a2)); break;
       case 'view-egg-receipt': viewReceipt(eggReceiptOpts(a1)); break;
+      // a1=species key, a2=herd batch id, a3=removal entry id.
+      case 'view-livestock-receipt': viewReceipt(livestockReceiptOpts(a1, a2, a3)); break;
+      case 'view-crop-receipt': viewReceipt(cropReceiptOpts(a1)); break;
       case 'view-expense-receipt': viewReceipt(expenseReceiptOpts(a1)); break;
       case 'view-income-receipt': viewReceipt(incomeReceiptOpts(a1)); break;
       case 'view-feed-receipt': viewReceipt(feedReceiptOpts(a1)); break;
@@ -8178,6 +8274,7 @@
       var lrBuyer = (val('buyer')||'').trim();
       var lrSp = livestockSpecies(lrSpKey);
       var lrError = null;
+      var lrNewRemId = null;
       mutate(function(s){
         s.livestock = s.livestock || {};
         var d = s.livestock[lrSpKey]; if(!d) return;
@@ -8205,9 +8302,12 @@
         } else {
           rem.buyer = null; rem.customerId = null; rem.saleAmount = 0; rem.recordedByRole = null;
         }
+        lrNewRemId = rem.id;
       });
       if(lrError){ toast(lrError); return; }
-      closeModal(); toast(lrId?'Saved.':'Recorded.');
+      closeModal();
+      if(lrReason==='sold' && lrNewRemId){ viewReceipt(livestockReceiptOpts(lrSpKey, lrHerdId, lrNewRemId)); }
+      else { toast(lrId?'Saved.':'Recorded.'); }
       return;
     }
     if(name==='livestock-journal'){
@@ -8245,6 +8345,7 @@
       var ceUnit = val('unit') || '';
       var ceAmountRaw = Number(val('amount')||0), ceAmountCurrency = val('amountCurrency');
       if(!ceCropName){ toast('Enter a crop name.'); return; }
+      var ceNewId = null;
       mutate(function(s){
         s.crops = s.crops || {entries:[]};
         if(!Array.isArray(s.crops.entries)) s.crops.entries = [];
@@ -8255,6 +8356,10 @@
         x.quantity = ceQuantity; x.unit = ceUnit;
         if(ceType==='sold'){
           x.amount = ceAmountRaw>0 ? fromCurrency(ceAmountRaw, ceAmountCurrency) : 0;
+          // Same "who recorded this" tracking flock/eggs/livestock sales
+          // already carry — needed so the receipt knows whether a second,
+          // non-administrator signature is required (receiptSignaturesFor).
+          x.recordedByRole = x.recordedByRole || roleLabel(currentUser);
           if(x.amount>0){
             var incRec = {id:uid('inc'), date:ceDate, category:'Crop Sales', amount:x.amount, note: ceNote || ('Sale of '+ceCropName), recordedByRole: roleLabel(currentUser)};
             s.incomes.push(incRec);
@@ -8262,9 +8367,13 @@
           }
         } else {
           x.amount = 0;
+          x.recordedByRole = null;
         }
+        ceNewId = x.id;
       });
-      closeModal(); toast(ceId?'Saved.':'Added.');
+      closeModal();
+      if(ceType==='sold'){ viewReceipt(cropReceiptOpts(ceNewId)); }
+      else { toast(ceId?'Saved.':'Added.'); }
       return;
     }
     if(name==='resex'){
@@ -9131,10 +9240,24 @@
     }
   }, 60000);
 
+  // The one copyright line, now shown under every page (see the
+  // #app-footer element in index.html, right after #panel, and the
+  // .gate-active CSS rule that hides it along with the rest of the chrome
+  // during Farm Setup/the sector chooser). Static for the life of the
+  // page load — FARM_NAME never changes without a reload — so it's set
+  // once here rather than re-rendered on every render() call. Uses
+  // FARM_NAME (from farm.config.js) rather than a hardcoded "Kenokip
+  // Farm", so a sold/installed deployment shows its own name correctly;
+  // see HOW-TO-DEPLOY-FOR-A-NEW-FARM.md.
+  function appFooterHTML(){
+    return '<p>&copy; '+new Date().getFullYear()+' '+esc(FARM_NAME)+'. All rights reserved.</p>';
+  }
   function bootApp(){
     render();
     renderGlobalSearchBar();
     kemAiRenderShell();
+    var footerEl = document.getElementById('app-footer');
+    if(footerEl) footerEl.innerHTML = appFooterHTML();
     initArtifact();
     checkVerifyLinkOnLoad();
   }

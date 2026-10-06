@@ -154,7 +154,18 @@
   .app.gate-active .rail,
   .app.gate-active .mobile-tabbar,
   .app.gate-active .mobile-subtabs,
-  .app.gate-active .global-search-bar{ display:none !important; }
+  .app.gate-active .global-search-bar,
+  .app.gate-active .app-footer{ display:none !important; }
+
+  /* ---- footer: a quiet copyright line under every page's content (not
+     shown behind the Farm Setup / sector-chooser gates above, so those
+     stay exactly as clean as requested). Text itself comes from
+     appFooterHTML() in app.js, set once at boot — see bootApp(). ---- */
+  .app-footer{ padding:18px 32px 28px; text-align:center; }
+  .app-footer p{ margin:0; font-size:12.5px; color:var(--ink-3); }
+  @media (max-width:860px){
+    .app-footer{ padding:14px 18px 96px; } /* clears the fixed mobile tab bar, same as .panel's own bottom padding */
+  }
 
   /* ---- nav rail ---- */
   .rail{

@@ -102,8 +102,10 @@ date, buyer, amount, reason, or note, and the linked Income entry (if
 any) is added, updated, or removed to match.
 
 **Downloading a signed receipt.** Click the receipt icon next to any
-flock sale, egg sale, Finance deposit, expense, feed log, or health
-record. You'll see a preview first — check the numbers are right — then
+flock sale, egg sale, livestock sale (Dairy Cattle, Goats & Sheep, Pigs,
+Rabbits, Horses — under that species' own Sold & Lost page), crop sale,
+Finance deposit, expense, feed log, or health record. You'll see a
+preview first — check the numbers are right — then
 "Sign & download" asks you to draw your signature (mouse or finger) on a
 small pad. After that, the final receipt appears with your signature, a
 verification code, and a QR code, ready to print or "Save as PDF".
@@ -111,9 +113,9 @@ verification code, and a QR code, ready to print or "Save as PDF".
 **Generating an Activity Statement.** Reports page → "Generate Activity
 Statement" → pick a date range → preview → sign it the same way as a
 single receipt. It bundles everything that happened in that period —
-Flock, Eggs, Feed, Health, Expenses, Income, and Finance if you can see
-it — into one document, with the same signature/code/QR treatment at the
-end.
+Flock, Eggs, Feed, Livestock (whichever species you keep), Crops, Health,
+Expenses, Income, and Finance if you can see it — into one document, with
+the same signature/code/QR treatment at the end.
 
 **Verifying a receipt.** Reports page → "Verify a receipt" → paste the
 text printed under "Verification code" on the paper (or scan its QR code,
