@@ -889,13 +889,32 @@
 
     // ---- Desktop sidebar: every section still listed, just organized
     // under its group's header now instead of one long flat list. ----
-    function navT(item){ return t('title.'+item.key, item.label); }
+    function navT(item){
+      // Special-cased so the sidebar/tab-bar label for "Other Livestock"
+      // follows the active sector — when a sign-in has specifically picked
+      // one species (ui.sector === 'livestock-cattle', etc.), that species'
+      // own name shows here instead of the generic group label, matching
+      // the dedicated portal they're actually inside. Every other item,
+      // and a farm that hasn't picked a species sector, is unaffected.
+      if(item.key==='livestock'){
+        var activeSp = activeLivestockSpecies();
+        if(ui.sector && ui.sector.indexOf('livestock-')===0 && activeSp.length===1) return activeSp[0].label;
+      }
+      return t('title.'+item.key, item.label);
+    }
+    function navIcon(item){
+      if(item.key==='livestock'){
+        var activeSp = activeLivestockSpecies();
+        if(ui.sector && ui.sector.indexOf('livestock-')===0 && activeSp.length===1) return activeSp[0].icon;
+      }
+      return item.icon;
+    }
     var desktopHtml = groups.map(function(g){
       if(!g.children){
-        return '<li><button class="nav-item '+(ui.section===g.key?'active':'')+'" data-nav-section="'+g.key+'" data-action="nav:'+g.key+'"><span class="nav-ico">'+g.icon+'</span>'+badgeHtml(badgeFor(g.key))+'<span class="nav-label">'+esc(navT(g))+'</span></button></li>';
+        return '<li><button class="nav-item '+(ui.section===g.key?'active':'')+'" data-nav-section="'+g.key+'" data-action="nav:'+g.key+'"><span class="nav-ico">'+navIcon(g)+'</span>'+badgeHtml(badgeFor(g.key))+'<span class="nav-label">'+esc(navT(g))+'</span></button></li>';
       }
       var kidsHtml = g.children.map(function(c){
-        return '<li><button class="nav-item nav-item-sub '+(ui.section===c.key?'active':'')+'" data-nav-section="'+c.key+'" data-action="nav:'+c.key+'"><span class="nav-ico">'+c.icon+'</span>'+badgeHtml(badgeFor(c.key))+'<span class="nav-label">'+esc(navT(c))+'</span></button></li>';
+        return '<li><button class="nav-item nav-item-sub '+(ui.section===c.key?'active':'')+'" data-nav-section="'+c.key+'" data-action="nav:'+c.key+'"><span class="nav-ico">'+navIcon(c)+'</span>'+badgeHtml(badgeFor(c.key))+'<span class="nav-label">'+esc(navT(c))+'</span></button></li>';
       }).join('');
       return '<li class="nav-group"><div class="nav-group-label">'+esc(navT(g))+'</div><ul class="nav-sublist">'+kidsHtml+'</ul></li>';
     }).join('');
@@ -2127,6 +2146,20 @@
     var filtered = LIVESTOCK_SPECIES.filter(function(sp){ return sel.indexOf(sp.key)!==-1; });
     return filtered.length ? filtered : LIVESTOCK_SPECIES;
   }
+  // Narrower than enabledLivestockSpecies() — when the sector chooser has
+  // put the viewer specifically on one species' own sector/portal (e.g.
+  // "Dairy Cattle", ui.sector === 'livestock-cattle'), this returns just
+  // that one, so the Other Livestock section shows ONLY Dairy Cattle, not
+  // every enabled species lumped together. Falls back to every enabled
+  // species when no specific one is active — the farm-with-0-or-1-sector
+  // case where the chooser never ran, or a farm that hasn't picked yet.
+  function activeLivestockSpecies(){
+    if(ui.sector && ui.sector.indexOf('livestock-')===0){
+      var sp = livestockSpecies(ui.sector.slice('livestock-'.length));
+      if(sp) return [sp];
+    }
+    return enabledLivestockSpecies();
+  }
   // Defensive the same way state.eggs etc. are read defensively elsewhere —
   // migrateState() already guarantees this shape on load, this is just a
   // second safety net for any code path that reaches in before that runs.
@@ -2158,7 +2191,7 @@
   // file first loaded.
   function livestockViews(){
     return [['overview','Overview']].concat(
-      enabledLivestockSpecies().reduce(function(acc, sp){
+      activeLivestockSpecies().reduce(function(acc, sp){
         acc.push([sp.key+'-herd', sp.label+' — Herd']);
         if(sp.hasJournal) acc.push([sp.key+'-journal', sp.label+' — '+sp.journalLabel+' Log']);
         acc.push([sp.key+'-sales', sp.label+' — Sold & Lost']);
@@ -2168,7 +2201,7 @@
   }
 
   function livestockOverviewPanel(){
-    var cards = enabledLivestockSpecies().map(function(sp){
+    var cards = activeLivestockSpecies().map(function(sp){
       var total = livestockHerdTotal(sp.key);
       var extra = sp.hasJournal ? ('<div class="hint" style="margin-top:4px">'+sumLivestockJournal(sp.key).toLocaleString()+' '+sp.journalUnit.toLowerCase()+' this month</div>') : '';
       return '<button type="button" class="stat-tile" style="text-align:left; cursor:pointer; border:none; width:100%" data-action="view-select:livestock:'+sp.key+'-herd">'+
@@ -2326,9 +2359,12 @@
     var spKey = parts.join('-');
     var sp = livestockSpecies(spKey);
     // Not just "does this species exist" (livestockSpecies) but "is it
-    // still ticked in Farm Setup right now" — a species an admin just
-    // turned off shouldn't stay reachable via a stale view.
-    var stillEnabled = sp && enabledLivestockSpecies().some(function(x){ return x.key===sp.key; });
+    // still ticked in Farm Setup right now, AND is it the one this sector
+    // is siloed to" — a species an admin just turned off shouldn't stay
+    // reachable via a stale view, and neither should a different species
+    // reached by, say, an old bookmarked link while a species-specific
+    // sector (ui.sector === 'livestock-cattle') is active.
+    var stillEnabled = sp && activeLivestockSpecies().some(function(x){ return x.key===sp.key; });
     if(!sp || !stillEnabled) return livestockOverviewPanel();
     if(sub==='herd') return livestockHerdPageHTML(sp);
     if(sub==='journal' && sp.hasJournal) return livestockJournalPageHTML(sp);
@@ -2483,6 +2519,20 @@
   // photo yet; see HOW-TO-SECTOR-SWITCHER.md. A species with neither gets
   // no image at all — the band falls back to a plain colored panel with
   // its icon rather than showing a broken image.
+  // Per-species theme colors for the livestock sectors below — fixed hex
+  // pairs, same reasoning as the poultry/crops ones above. Only Dairy
+  // Cattle has artwork today (banners-cattle.svg); the rest intentionally
+  // have no `image` and fall back to a plain colored band with their own
+  // icon (sectorChooserHTML's "no-photo" style) rather than a broken image.
+  // Swap in a real photo later the same one-line way described in
+  // HOW-TO-SECTOR-SWITCHER.md for cattle.
+  var LIVESTOCK_SECTOR_THEME = {
+    cattle:    {from:'#1D5C3D', to:'#2F7D4F'}, // pasture green (unchanged from the old combined sector)
+    goatsheep: {from:'#7A3B1E', to:'#A6572E'}, // rust / terracotta
+    pigs:      {from:'#8B3A4B', to:'#B5566B'}, // dusty rose
+    rabbits:   {from:'#5B3A6B', to:'#7D5590'}, // violet / plum
+    horses:    {from:'#5C3A28', to:'#7A4F35'}  // chestnut brown
+  };
   function availableSectors(){
     var fs = (state.settings && state.settings.farmSetup) || {};
     var cats = fs.categories || {livestock:true, crops:false};
@@ -2492,11 +2542,21 @@
       list.push({ key:'poultry', label:'Poultry', sub:'Flock, eggs, feed &amp; health', icon:PICS.hen, landing:'flock',
         image:FARM_PHOTOS.banners.hens, theme:{from:'#8F590A', to:'#B9740E'} });
     }
-    if(cats.livestock && species.some(function(s){ return s!=='poultry'; })){
-      var names = LIVESTOCK_SPECIES.filter(function(sp){ return species.indexOf(sp.key)!==-1; }).map(function(sp){ return sp.label; });
-      var hasCattleArt = species.indexOf('cattle')!==-1;
-      list.push({ key:'livestock', label:'Other Livestock', sub:esc(names.join(', ')||'Dairy cattle, goats &amp; sheep, pigs, rabbits, horses'), icon:PICS.livestockNav, landing:'livestock',
-        image: hasCattleArt ? FARM_PHOTOS.banners.cattle : null, theme:{from:'#1D5C3D', to:'#2F7D4F'} });
+    // One sector per enabled non-poultry species — each its own fully
+    // separate portal (siloed by activeLivestockSpecies() once chosen),
+    // instead of one combined "Other Livestock" tile covering all of
+    // them. landing stays 'livestock' (the one section/sidebar entry
+    // they all share); `species` tells the select-sector handler below
+    // which species' own herd page to jump straight into.
+    if(cats.livestock){
+      LIVESTOCK_SPECIES.forEach(function(sp){
+        if(species.indexOf(sp.key)===-1) return;
+        var theme = LIVESTOCK_SECTOR_THEME[sp.key] || LIVESTOCK_SECTOR_THEME.cattle;
+        var image = sp.key==='cattle' ? FARM_PHOTOS.banners.cattle : null;
+        list.push({ key:'livestock-'+sp.key, label:sp.label,
+          sub:'Herd, sales &amp; losses'+(sp.hasJournal ? ', and a '+esc(sp.journalLabel.toLowerCase())+' log' : ''),
+          icon:sp.icon, landing:'livestock', species:sp.key, image:image, theme:theme });
+      });
     }
     if(cats.crops){
       list.push({ key:'crops', label:'Crops', sub:'Planting, harvest &amp; sales', icon:PICS.cropsNav, landing:'crops',
@@ -2505,7 +2565,11 @@
     return list;
   }
   // Which sector a given SECTIONS/nav key belongs to, if any — null means
-  // "common", always visible regardless of the active sector.
+  // "common", always visible regardless of the active sector. 'livestock'
+  // is still the one answer for the section/sidebar key even though the
+  // sector itself is now one of several compound 'livestock:<species>'
+  // keys — sectionVisibleForCurrentSector below is what actually matches
+  // on the prefix.
   function sectorForSection(key){
     if(key==='flock'||key==='eggs'||key==='feed'||key==='health') return 'poultry';
     if(key==='livestock') return 'livestock';
@@ -2519,6 +2583,7 @@
     var owner = sectorForSection(key);
     if(!owner) return true;
     if(!ui.sector) return true; // chooser not shown (0-1 eligible sectors, or not signed in yet) — no extra restriction
+    if(owner==='livestock') return ui.sector.indexOf('livestock-')===0;
     return ui.sector === owner;
   }
   function sectorChoicePending(){
@@ -6463,7 +6528,21 @@
     flock:{ topbar:function(){ return topbarHTML(t('title.flock','Flock'),t('sub.flock','Current inventory by age and gender'), '<button class="btn" data-action="open-record-loss" '+(readOnly?'disabled':'')+'>Record loss</button>'+addBtn('open-add-flock','Add birds'), flockPhotoIcon('flockIcon')); }, panel:flockPanel },
     eggs:{ topbar:function(){ return topbarHTML(t('title.eggs','Eggs'),t('sub.eggs','Daily production, tallied up'), addBtn('open-add-egg','Log eggs'), eggsPhotoIcon()); }, panel:eggsPanel },
     feed:{ topbar:function(){ return topbarHTML(t('title.feed','Feed'),t('sub.feed','Consumption, cost, and feed-per-egg'), addBtn('open-add-feed','Log feed'), flockPhotoIcon('feedIcon')); }, panel:feedPanel },
-    livestock:{ topbar:function(){ return topbarHTML(t('title.livestock','Other Livestock'),t('sub.livestock','Dairy cattle, goats & sheep, pigs, rabbits, and horses'), '', PICS.livestockNav); }, panel:livestockPanel },
+    livestock:{ topbar:function(){
+      // When a species-specific sector is active (ui.sector ===
+      // 'livestock-cattle', etc.) this reads as that species' own page —
+      // "Dairy Cattle" / "Herd, sales, and milk log" — rather than the
+      // generic "Other Livestock" heading, matching the dedicated portal
+      // the viewer actually picked. Falls back to the generic heading
+      // whenever more than one species is in play here (no sector chosen
+      // yet, or a 0/1-sector farm where the chooser never ran).
+      var sp = activeLivestockSpecies();
+      if(ui.sector && ui.sector.indexOf('livestock-')===0 && sp.length===1){
+        var one = sp[0];
+        return topbarHTML(esc(one.label), 'Herd, sales &amp; losses'+(one.hasJournal?', and the '+esc(one.journalLabel.toLowerCase())+' log':''), '', one.icon);
+      }
+      return topbarHTML(t('title.livestock','Other Livestock'),t('sub.livestock','Dairy cattle, goats & sheep, pigs, rabbits, and horses'), '', PICS.livestockNav);
+    }, panel:livestockPanel },
     crops:{ topbar:function(){ return topbarHTML(t('title.crops','Crops'),t('sub.crops','Planting, harvest, and sales — the basics'), '', PICS.cropsNav); }, panel:cropsPanel },
     health:{ topbar:function(){ return topbarHTML(t('title.health','Health'),t('sub.health','Vaccinations, treatments &amp; reminders'), addBtn('open-add-health','Add record'), PICS.health); }, panel:healthPanel },
     reports:{ topbar:function(){ return topbarHTML(t('title.reports','Reports'),t('sub.reports','Print or export a period summary'), '', PICS.reports); }, panel:reportsPanel },
@@ -7298,8 +7377,12 @@
           });
         });
         break;
-      // Sector switcher — a1 is the sector key (poultry/livestock/crops).
-      // Picking one jumps straight to its landing section; choosing a
+      // Sector switcher — a1 is the sector key: 'poultry', 'crops', or
+      // 'livestock:<species>' (one per species ticked in Farm Setup, e.g.
+      // 'livestock-cattle'). Picking one jumps straight to its landing
+      // section — for a species sector, straight into that species' own
+      // Herd page, not the (now single-tile, redundant) Overview — so set
+      // the view *before* goToSection's render() runs. Choosing a
       // different one later (via "Switch sector" in Settings) just clears
       // ui.sector and re-renders, which brings the chooser straight back
       // up (see sectorChoicePending in render()) without touching
@@ -7308,6 +7391,7 @@
         var chosen = availableSectors().find(function(s){ return s.key===a1; });
         if(!chosen){ render(); break; }
         ui.sector = chosen.key;
+        if(chosen.species) setView('livestock', chosen.species+'-herd');
         goToSection(chosen.landing);
         break;
       }
