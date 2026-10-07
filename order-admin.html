@@ -54,10 +54,20 @@
   .status-quoted{ background:#DDEAF6; color:#2A527A; }
   .status-deposit_paid{ background:#FCEBC7; color:#8A5A0A; }
   .status-paid_in_full, .status-installed{ background:#DDF2E3; color:#235C3D; }
+  .status-cancelled{ background:#FBE2DE; color:#7A2D27; }
   .mono{ font-family:'Space Mono',monospace; font-size:12px; word-break:break-all; }
   .muted{ color:var(--ink-3); font-size:12.5px; }
   .quote-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:8px; }
   .quote-row .field{ margin-bottom:0; flex:1 1 110px; }
+  textarea{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-2); color:var(--ink); font-family:inherit; font-size:14.5px; min-height:50px; resize:vertical; }
+  .manage-row{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .edit-panel{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:12px; margin-top:8px; }
+  .edit-panel .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .edit-panel .field{ margin-bottom:10px; }
+  .refund-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+  .refund-row .field{ margin-bottom:0; flex:1 1 110px; }
+  .refund-log{ font-size:12px; color:var(--ink-3); margin-top:6px; }
+  label.check{ display:flex; align-items:center; gap:6px; font-weight:400; }
   [hidden]{ display:none !important; }
 </style>
 </head>
@@ -140,7 +150,7 @@
     }
   });
 
-  var statusLabels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid', paid_in_full:'Paid in full', installed:'Installed' };
+  var statusLabels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid', paid_in_full:'Paid in full', installed:'Installed', cancelled:'Cancelled' };
 
   function loadOrders(){
     var msgEl = document.getElementById('orders-msg');
@@ -160,6 +170,13 @@
         (o.hasTechExpert ? '<br><span class="muted">Has own tech expert</span>' : '<br><span class="muted">Needs guided install</span>') +
         (o.notes ? '<br><span class="muted">' + escapeHtml(o.notes) + '</span>' : '');
       var fee = (o.feeTotal ? money(o.feeTotal) : '—') + (o.feeDeposit ? ' (deposit ' + money(o.feeDeposit) + ')' : '') + '<br><span class="muted">paid ' + money(o.amountPaid || 0) + '</span>';
+      if (Array.isArray(o.refunds) && o.refunds.length) {
+        fee += '<div class="refund-log">' + o.refunds.map(function(r){
+          return 'Refunded ' + money(r.amount) + (r.note ? ' — ' + escapeHtml(r.note) : '');
+        }).join('<br>') + '</div>';
+      }
+      var statusCell = '<span class="status-pill status-' + o.status + '">' + (statusLabels[o.status] || o.status) + '</span>' +
+        (o.status === 'cancelled' && o.cancelReason ? '<div class="muted" style="margin-top:4px;">' + escapeHtml(o.cancelReason) + '</div>' : '');
       var license = o.licenseKey ? '<span class="mono">' + o.licenseKey + '</span>' : '<span class="muted">—</span>';
       var actions = '';
       if (o.status === 'new') {
@@ -172,12 +189,44 @@
         actions = '<button class="btn sm outline mark-installed-btn" data-id="' + o.id + '">Mark installed</button><div class="mark-msg"></div>';
       } else if (o.status === 'quoted' || o.status === 'deposit_paid') {
         actions = '<span class="muted">Waiting on farmer to pay.</span>';
+      } else if (o.status === 'cancelled') {
+        actions = '<span class="muted">Cancelled.</span>';
       } else {
         actions = '<span class="muted">Done.</span>';
       }
+      actions += '<div class="manage-row">' +
+        '<button class="btn sm outline edit-toggle-btn" data-id="' + o.id + '">Edit</button>' +
+        (o.status !== 'cancelled' ? '<button class="btn sm outline cancel-btn" data-id="' + o.id + '" style="color:var(--bad); border-color:var(--bad);">Cancel order</button>' : '') +
+        ((o.amountPaid || 0) > 0 ? '<button class="btn sm outline refund-toggle-btn" data-id="' + o.id + '">Record refund</button>' : '') +
+        '</div>' +
+        '<div class="cancel-msg"></div>' +
+        '<div class="edit-panel" id="edit-panel-' + o.id + '" hidden>' +
+          '<div class="grid2">' +
+            '<div class="field"><label>Farm name</label><input type="text" class="e-farm" value="' + escapeAttr(o.farmName) + '"></div>' +
+            '<div class="field"><label>Contact name</label><input type="text" class="e-contact" value="' + escapeAttr(o.contactName) + '"></div>' +
+            '<div class="field"><label>Phone</label><input type="text" class="e-phone" value="' + escapeAttr(o.phone) + '"></div>' +
+            '<div class="field"><label>Email</label><input type="text" class="e-email" value="' + escapeAttr(o.email) + '"></div>' +
+          '</div>' +
+          '<div class="field"><label>Notes</label><textarea class="e-notes">' + escapeHtml(o.notes || '') + '</textarea></div>' +
+          '<label class="check"><input type="checkbox" class="e-tech" ' + (o.hasTechExpert ? 'checked' : '') + '> Has own tech expert</label>' +
+          '<div style="margin-top:10px; display:flex; gap:8px;">' +
+            '<button class="btn sm save-edit-btn" data-id="' + o.id + '">Save changes</button>' +
+            '<button class="btn sm outline edit-toggle-btn" data-id="' + o.id + '">Cancel</button>' +
+          '</div>' +
+          '<div class="edit-msg"></div>' +
+        '</div>' +
+        '<div class="edit-panel" id="refund-panel-' + o.id + '" hidden>' +
+          '<div class="refund-row">' +
+            '<div class="field"><label>Refund amount</label><input type="number" min="1" class="r-amount" placeholder="KSh"></div>' +
+            '<div class="field"><label>Note (optional)</label><input type="text" class="r-note" placeholder="e.g. cancelled before install"></div>' +
+            '<button class="btn sm record-refund-btn" data-id="' + o.id + '">Record refund</button>' +
+          '</div>' +
+          '<p class="hint" style="margin:8px 0 0; color:var(--ink-3); font-size:12.5px;">This only updates this order\'s own records — it does not send any money. Send the farmer their refund the same way you normally would (M-Pesa Send Money, etc) first.</p>' +
+          '<div class="refund-msg"></div>' +
+        '</div>';
       return '<tr>' +
         '<td>' + contact + '</td>' +
-        '<td><span class="status-pill status-' + o.status + '">' + (statusLabels[o.status] || o.status) + '</span></td>' +
+        '<td>' + statusCell + '</td>' +
         '<td>' + fee + '</td>' +
         '<td>' + license + '</td>' +
         '<td>' + actions + '</td>' +
@@ -217,12 +266,89 @@
         });
       });
     });
+    body.querySelectorAll('.edit-toggle-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var panel = document.getElementById('edit-panel-' + id);
+        panel.hidden = !panel.hidden;
+      });
+    });
+    body.querySelectorAll('.refund-toggle-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var panel = document.getElementById('refund-panel-' + id);
+        panel.hidden = !panel.hidden;
+      });
+    });
+    body.querySelectorAll('.save-edit-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var panel = document.getElementById('edit-panel-' + id);
+        var msgEl = panel.querySelector('.edit-msg');
+        var payload = {
+          orderId: id,
+          farmName: panel.querySelector('.e-farm').value.trim(),
+          contactName: panel.querySelector('.e-contact').value.trim(),
+          phone: panel.querySelector('.e-phone').value.trim(),
+          email: panel.querySelector('.e-email').value.trim(),
+          notes: panel.querySelector('.e-notes').value.trim(),
+          hasTechExpert: panel.querySelector('.e-tech').checked,
+        };
+        btn.disabled = true;
+        call('adminUpdateOrderDetails', payload).then(function(){
+          showMsg(msgEl, 'Saved.', 'good');
+          loadOrders();
+        }).catch(function(err){
+          showMsg(msgEl, (err && err.message) || 'Could not save changes.', 'bad');
+          btn.disabled = false;
+        });
+      });
+    });
+    body.querySelectorAll('.cancel-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var row = btn.closest('tr');
+        var msgEl = row.querySelector('.cancel-msg');
+        var reason = window.prompt('Cancel this order — optional reason (shown to the farmer):', '') || '';
+        if (reason === null) return;
+        if (!window.confirm('Cancel this installation order? This revokes its license key if one was issued.')) return;
+        btn.disabled = true;
+        call('adminCancelOrder', { orderId: id, reason: reason }).then(function(){
+          showMsg(msgEl, 'Order cancelled.', 'good');
+          loadOrders();
+        }).catch(function(err){
+          showMsg(msgEl, (err && err.message) || 'Could not cancel this order.', 'bad');
+          btn.disabled = false;
+        });
+      });
+    });
+    body.querySelectorAll('.record-refund-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var id = btn.getAttribute('data-id');
+        var panel = document.getElementById('refund-panel-' + id);
+        var msgEl = panel.querySelector('.refund-msg');
+        var amount = Number(panel.querySelector('.r-amount').value);
+        var note = panel.querySelector('.r-note').value.trim();
+        if (!amount || amount <= 0) { showMsg(msgEl, 'Enter a valid refund amount.', 'bad'); return; }
+        btn.disabled = true;
+        call('adminRecordRefund', { orderId: id, amount: amount, note: note }).then(function(){
+          showMsg(msgEl, 'Refund recorded.', 'good');
+          loadOrders();
+        }).catch(function(err){
+          showMsg(msgEl, (err && err.message) || 'Could not record this refund.', 'bad');
+          btn.disabled = false;
+        });
+      });
+    });
   }
 
   function escapeHtml(s){
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+  }
+  function escapeAttr(s){
+    return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 })();
 </script>

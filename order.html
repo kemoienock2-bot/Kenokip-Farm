@@ -233,7 +233,7 @@
     if (!o) return;
     document.getElementById('order-farm-name').textContent = o.farmName || 'Your installation';
     var pill = document.getElementById('order-status-pill');
-    var labels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid — balance due', paid_in_full:'Paid in full', installed:'Installed' };
+    var labels = { new:'Awaiting pricing', quoted:'Priced — payment due', deposit_paid:'Deposit paid — balance due', paid_in_full:'Paid in full', installed:'Installed', cancelled:'Cancelled' };
     pill.className = 'status-pill status-' + o.status;
     pill.textContent = labels[o.status] || o.status;
 
@@ -248,7 +248,13 @@
     var licenseCard = document.getElementById('license-card');
     var waitingCard = document.getElementById('waiting-card');
 
-    if (o.status === 'paid_in_full' || o.status === 'installed') {
+    if (o.status === 'cancelled') {
+      payCard.hidden = true;
+      licenseCard.hidden = true;
+      waitingCard.hidden = false;
+      waitingCard.innerHTML = '<p style="margin:0;">This installation request has been cancelled. Reach out on the number you heard back from if that doesn\'t seem right.</p>';
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    } else if (o.status === 'paid_in_full' || o.status === 'installed') {
       payCard.hidden = true;
       waitingCard.hidden = true;
       licenseCard.hidden = false;

@@ -174,6 +174,200 @@ function sval(secretRef, fallback) {
   return v || fallback || '';
 }
 
+// ---------------------------------------------------------------------------
+// Installation-order notifications — email via SendGrid, SMS via Africa's
+// Talking. Entirely best-effort: sendOrderNotification() below never throws
+// (it catches its own errors and just logs them), so a missing or
+// misconfigured secret, a bounced email, or Africa's Talking being down can
+// NEVER block the underlying order action — the price still gets set, the
+// payment still gets recorded, the order still gets marked installed,
+// exactly like MPESA_WEBHOOK_SECRET being unset is a safe no-op elsewhere
+// in this file. See HOW-TO-ORDER-NOTIFICATIONS.md for the one-time setup
+// for each (creating an account, verifying a sender, getting an API key).
+//
+// Defined up here (rather than down by the rest of the Installation Orders
+// code, near ORDERS_REF) specifically so mpesaStkCallback below — which is
+// defined earlier in the file — can reference ORDER_NOTIFICATION_SECRETS
+// without a "cannot access before initialization" error: a const used
+// inside a function body is fine to reference before its declaration (the
+// function doesn't run until later), but mpesaStkCallback's own onRequest()
+// OPTIONS OBJECT is evaluated immediately, at module-load time, as soon as
+// this file is require()'d — so every const it touches has to already be
+// initialized by the time that line runs, not just by the time the handler
+// itself is called.
+const SENDGRID_API_KEY = defineSecret('SENDGRID_API_KEY');
+const SENDGRID_FROM_EMAIL = defineSecret('SENDGRID_FROM_EMAIL'); // must be a verified sender in your SendGrid account
+const AFRICASTALKING_USERNAME = defineSecret('AFRICASTALKING_USERNAME'); // "sandbox" while testing
+const AFRICASTALKING_API_KEY = defineSecret('AFRICASTALKING_API_KEY');
+const AFRICASTALKING_SENDER_ID = defineSecret('AFRICASTALKING_SENDER_ID'); // optional — leave unset to use the shared Africa's Talking shortcode
+// Africa's Talking's WhatsApp Business number for your account — a separate
+// one-time setup in the AT dashboard (Chat > WhatsApp) from plain SMS, and
+// needed in addition to AFRICASTALKING_USERNAME/AFRICASTALKING_API_KEY
+// above (those two are reused as-is for WhatsApp — same AT account, same
+// API key). Leave unset and WhatsApp sending is simply skipped; SMS and
+// email still go out as normal. See HOW-TO-ORDER-NOTIFICATIONS.md.
+const AFRICASTALKING_WA_NUMBER = defineSecret('AFRICASTALKING_WA_NUMBER');
+// Where order.html is actually hosted, so a notification can link back to
+// the farmer's own status/pay page, e.g. https://kenokip-farm.web.app —
+// leave unset to just omit the link from messages.
+const ORDER_PAGE_BASE_URL = defineSecret('ORDER_PAGE_BASE_URL');
+
+const ORDER_NOTIFICATION_SECRETS = [
+  SENDGRID_API_KEY, SENDGRID_FROM_EMAIL,
+  AFRICASTALKING_USERNAME, AFRICASTALKING_API_KEY, AFRICASTALKING_SENDER_ID,
+  AFRICASTALKING_WA_NUMBER,
+  ORDER_PAGE_BASE_URL,
+];
+
+function moneyKsh(n) { return 'KSh ' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+
+function orderLinkFor(orderId) {
+  const base = sval(ORDER_PAGE_BASE_URL);
+  if (!base || !orderId) return '';
+  return base.replace(/\/+$/, '') + '/order.html?order=' + orderId;
+}
+
+function orderNotificationText(order, orderId, kind, extra) {
+  extra = extra || {};
+  const name = order.farmName || 'your farm';
+  const link = orderLinkFor(orderId);
+  const linkLine = link ? (' ' + link) : '';
+  switch (kind) {
+    case 'quoted': {
+      const total = moneyKsh(order.feeTotal);
+      const dep = order.feeDeposit > 0 ? (' (deposit ' + moneyKsh(order.feeDeposit) + ')') : '';
+      return 'Kenokip Farm: your installation request for ' + name + ' has been priced at ' + total + dep + '. Pay here:' + linkLine;
+    }
+    case 'deposit_paid':
+      return 'Kenokip Farm: deposit received for ' + name + '. Remaining balance: ' + moneyKsh(extra.amountDue || 0) + '. Pay the rest here:' + linkLine;
+    case 'paid_in_full':
+      return 'Kenokip Farm: payment complete for ' + name + '! Your license key: ' + (order.licenseKey || extra.licenseKey || '—') + '. Full details:' + linkLine;
+    case 'installed':
+      return 'Kenokip Farm: your app for ' + name + ' has been marked installed. Welcome aboard!';
+    case 'cancelled':
+      return 'Kenokip Farm: your installation request for ' + name + ' has been cancelled.' + (extra.reason ? (' Reason: ' + extra.reason) : '');
+    case 'refunded':
+      return 'Kenokip Farm: a refund of ' + moneyKsh(extra.amount || 0) + ' has been recorded for ' + name + '.';
+    default:
+      return 'Kenokip Farm: there is an update on your installation request for ' + name + '.' + linkLine;
+  }
+}
+
+async function sendOrderEmail(order, text, subject) {
+  const apiKey = sval(SENDGRID_API_KEY);
+  const from = sval(SENDGRID_FROM_EMAIL);
+  const to = String(order.email || '').trim();
+  if (!apiKey || !from || !to) return; // not configured, or no email on file — safe no-op
+  const fetch = require('node-fetch');
+  const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: from, name: 'Kenokip Farm' },
+      subject: subject,
+      content: [{ type: 'text/plain', value: text }],
+    }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '');
+    throw new Error('SendGrid ' + resp.status + ': ' + body.slice(0, 300));
+  }
+}
+
+// order.phone is stored digits-only (e.g. "254711222333" — see
+// normalizePhone above); Africa's Talking's JSON APIs (bulk SMS, WhatsApp)
+// want it in full E.164 with a leading "+" (e.g. "+254711222333"), as shown
+// in their own sample payloads.
+function e164Phone(phone) {
+  const digits = String(phone || '').trim();
+  if (!digits) return '';
+  return digits.charAt(0) === '+' ? digits : '+' + digits;
+}
+
+// Uses Africa's Talking's classic /version1/messaging endpoint (form-encoded,
+// not JSON) — this one has been stable on both sandbox and live accounts for
+// years. The newer JSON /version1/messaging/bulk endpoint 404'd on this
+// sandbox account, so we don't use it.
+async function sendOrderSms(order, text) {
+  const username = sval(AFRICASTALKING_USERNAME);
+  const apiKey = sval(AFRICASTALKING_API_KEY);
+  const senderId = sval(AFRICASTALKING_SENDER_ID);
+  const to = e164Phone(order.phone);
+  if (!username || !apiKey || !to) return; // not configured, or no phone on file — safe no-op
+  const fetch = require('node-fetch');
+  const isSandbox = username === 'sandbox';
+  const url = isSandbox
+    ? 'https://api.sandbox.africastalking.com/version1/messaging'
+    : 'https://api.africastalking.com/version1/messaging';
+  const form = new URLSearchParams();
+  form.set('username', username);
+  form.set('to', to);
+  form.set('message', text);
+  if (senderId) form.set('from', senderId);
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'apiKey': apiKey,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: form.toString(),
+  });
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '');
+    throw new Error("Africa's Talking " + resp.status + ': ' + body.slice(0, 300));
+  }
+}
+
+async function sendOrderWhatsapp(order, text) {
+  const username = sval(AFRICASTALKING_USERNAME);
+  const apiKey = sval(AFRICASTALKING_API_KEY);
+  const waNumber = sval(AFRICASTALKING_WA_NUMBER);
+  const to = e164Phone(order.phone);
+  // A placeholder value like "not-set-yet" (used as a workaround for
+  // Firebase's "secret payload cannot be empty" error when this secret was
+  // first created) is non-empty but obviously not a real number — skip
+  // quietly rather than making a doomed API call every time.
+  if (!username || !apiKey || !waNumber || !to || waNumber.charAt(0) !== '+') return;
+  const fetch = require('node-fetch');
+  const resp = await fetch('https://chat.africastalking.com/whatsapp/message/send', {
+    method: 'POST',
+    headers: { 'apikey': apiKey, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      username: username,
+      waNumber: waNumber,
+      phoneNumber: to,
+      body: { message: text },
+    }),
+  });
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '');
+    throw new Error("Africa's Talking WhatsApp " + resp.status + ': ' + body.slice(0, 300));
+  }
+}
+
+// The one function every order-status change below calls. Fires email,
+// SMS, and WhatsApp all in parallel and swallows every failure itself (on
+// top of each call site's own try/catch) — see the comment above
+// ORDER_NOTIFICATION_SECRETS. A farmer with no email on file simply never
+// gets the email leg; no AFRICASTALKING_WA_NUMBER set simply skips
+// WhatsApp; SMS is the one channel that's been live the longest and acts
+// as the fallback that's most likely to actually reach someone.
+async function sendOrderNotification(order, orderId, kind, extra) {
+  try {
+    const text = orderNotificationText(order, orderId, kind, extra);
+    const subject = 'Kenokip Farm — update on your installation request';
+    await Promise.all([
+      sendOrderEmail(order, text, subject).catch((err) => logger.error('Order email notification failed', err, { orderId, kind })),
+      sendOrderSms(order, text).catch((err) => logger.error('Order SMS notification failed', err, { orderId, kind })),
+      sendOrderWhatsapp(order, text).catch((err) => logger.error('Order WhatsApp notification failed', err, { orderId, kind })),
+    ]);
+  } catch (err) {
+    logger.error('sendOrderNotification failed', err, { orderId, kind });
+  }
+}
+
 const FINANCE_REF = () => db.collection('finance').doc('kenokip');
 const FARM_REF = () => db.collection('farms').doc('kenokip');
 const MPESA_QUERIES_REF = () => db.collection('mpesaQueries');
@@ -466,7 +660,7 @@ exports.initiateDeposit = onCall({ secrets: DEPOSIT_SECRETS, region: 'us-central
 
 // Safaricom calls this once the customer (owner, in this flow) responds to
 // the STK Push prompt on their phone, whether they completed it or not.
-exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async (req, res) => {
+exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET, ...ORDER_NOTIFICATION_SECRETS] }, async (req, res) => {
   if (!checkWebhookSecret(req, res)) return;
   try {
     const stk = req.body && req.body.Body && req.body.Body.stkCallback;
@@ -500,6 +694,9 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
         try {
           if (orderId) {
             const orderRef = ORDERS_REF().doc(orderId);
+            let notifyKind = null;
+            let notifyExtra = {};
+            let orderDataForNotify = null;
             await db.runTransaction(async (tx) => {
               const orderSnap = await tx.get(orderRef);
               if (!orderSnap.exists) return;
@@ -515,7 +712,18 @@ exports.mpesaStkCallback = onRequest({ secrets: [MPESA_WEBHOOK_SECRET] }, async 
                 update.status = 'deposit_paid';
               }
               tx.set(orderRef, update, { merge: true });
+              // Notification fires AFTER the transaction commits (below,
+              // outside this callback) — never from inside it, since a
+              // transaction can retry and we'd risk emailing/texting twice.
+              if (update.status) {
+                notifyKind = update.status;
+                notifyExtra = { amountDue: Math.max(0, feeTotal - amountPaid), licenseKey: update.licenseKey || o.licenseKey };
+                orderDataForNotify = Object.assign({}, o, update);
+              }
             });
+            if (notifyKind && orderDataForNotify) {
+              await sendOrderNotification(orderDataForNotify, orderId, notifyKind, notifyExtra);
+            }
           } else {
             logger.error('Pending order payment had no orderId', { checkoutRequestId: stk.CheckoutRequestID });
           }
@@ -1121,6 +1329,9 @@ exports.payOrderFee = onCall({ secrets: DEPOSIT_SECRETS, region: 'us-central1' }
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
   const o = snap.data();
+  if (o.status === 'cancelled') {
+    throw new HttpsError('failed-precondition', 'This order has been cancelled.');
+  }
   if (o.status === 'new' || !o.feeTotal) {
     throw new HttpsError('failed-precondition', 'This order has not been priced yet — check back once you hear from us.');
   }
@@ -1161,7 +1372,7 @@ exports.payOrderFee = onCall({ secrets: DEPOSIT_SECRETS, region: 'us-central1' }
 // effect) means the very first payment already completes the order —
 // the right shape for a farmer with their own tech expert, who's paying
 // in full upfront rather than booking a guided install.
-exports.adminSetOrderFee = onCall({ region: 'us-central1' }, async (request) => {
+exports.adminSetOrderFee = onCall({ region: 'us-central1', secrets: ORDER_NOTIFICATION_SECRETS }, async (request) => {
   requireOwner(request);
   const orderId = String((request.data && request.data.orderId) || '').trim();
   const feeTotal = Number(request.data && request.data.feeTotal) || 0;
@@ -1169,7 +1380,104 @@ exports.adminSetOrderFee = onCall({ region: 'us-central1' }, async (request) => 
   if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
   if (feeTotal <= 0) throw new HttpsError('invalid-argument', 'Enter a valid total fee.');
   if (feeDeposit < 0 || feeDeposit > feeTotal) throw new HttpsError('invalid-argument', 'Deposit must be between 0 and the total fee.');
-  await ORDERS_REF().doc(orderId).set({ feeTotal, feeDeposit, status: 'quoted' }, { merge: true });
+  const ref = ORDERS_REF().doc(orderId);
+  await ref.set({ feeTotal, feeDeposit, status: 'quoted' }, { merge: true });
+  const snap = await ref.get();
+  if (snap.exists) await sendOrderNotification(snap.data(), orderId, 'quoted', {});
+  return { ok: true };
+});
+
+// Owner-only edit of the farmer-supplied contact details — for fixing a
+// typo'd phone/email or updating notes after a request was already
+// submitted. Deliberately does NOT touch feeTotal/feeDeposit/status/
+// amountPaid/licenseKey — those stay behind their own dedicated functions
+// above/below so every money-affecting path stays narrow and auditable.
+exports.adminUpdateOrderDetails = onCall({ region: 'us-central1' }, async (request) => {
+  requireOwner(request);
+  const d = request.data || {};
+  const orderId = String(d.orderId || '').trim();
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  const update = {};
+  if (d.farmName !== undefined) update.farmName = String(d.farmName).trim().slice(0, 80);
+  if (d.contactName !== undefined) update.contactName = String(d.contactName).trim().slice(0, 80);
+  if (d.phone !== undefined) {
+    const phone = normalizePhone(d.phone);
+    if (!phone) throw new HttpsError('invalid-argument', 'Enter a valid Safaricom number, e.g. 0712345678.');
+    update.phone = phone;
+  }
+  if (d.email !== undefined) update.email = String(d.email).trim().slice(0, 200);
+  if (d.notes !== undefined) update.notes = String(d.notes).trim().slice(0, 1000);
+  if (d.hasTechExpert !== undefined) update.hasTechExpert = !!d.hasTechExpert;
+  if (!Object.keys(update).length) throw new HttpsError('invalid-argument', 'Nothing to update.');
+  const ref = ORDERS_REF().doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+  await ref.set(update, { merge: true });
+  return { ok: true };
+});
+
+// New 'cancelled' status — closes out a request that won't go ahead
+// (farmer backed out, duplicate request, etc). checkLicense below only
+// ever treats 'paid_in_full'/'installed' orders as active, so cancelling
+// an order immediately revokes its license even if one was already
+// issued — nothing extra needed there.
+exports.adminCancelOrder = onCall({ region: 'us-central1', secrets: ORDER_NOTIFICATION_SECRETS }, async (request) => {
+  requireOwner(request);
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  const reason = String((request.data && request.data.reason) || '').trim().slice(0, 500);
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  const ref = ORDERS_REF().doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+  if (snap.data().status === 'cancelled') throw new HttpsError('failed-precondition', 'This order is already cancelled.');
+  await ref.set({
+    status: 'cancelled',
+    cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+    cancelReason: reason,
+  }, { merge: true });
+  const after = await ref.get();
+  await sendOrderNotification(after.data(), orderId, 'cancelled', { reason });
+  return { ok: true };
+});
+
+// Bookkeeping only — M-Pesa has no simple small-business API to actually
+// reverse a Till payment, so this just records that a refund happened and
+// adjusts amountPaid/status to match what you've already sent back by hand
+// (M-Pesa Send Money, cash, etc). It does NOT move any real money itself.
+exports.adminRecordRefund = onCall({ region: 'us-central1', secrets: ORDER_NOTIFICATION_SECRETS }, async (request) => {
+  requireOwner(request);
+  const orderId = String((request.data && request.data.orderId) || '').trim();
+  const amount = Number(request.data && request.data.amount) || 0;
+  const note = String((request.data && request.data.note) || '').trim().slice(0, 500);
+  if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
+  if (!(amount > 0)) throw new HttpsError('invalid-argument', 'Enter a valid refund amount.');
+  const ref = ORDERS_REF().doc(orderId);
+  let afterData = null;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
+    const o = snap.data() || {};
+    const amountPaid = Math.max(0, (Number(o.amountPaid) || 0) - amount);
+    const feeTotal = Number(o.feeTotal) || 0;
+    const feeDeposit = Number(o.feeDeposit) || 0;
+    // Demote status downward the same way the payment webhook promotes it
+    // upward — but only while the order is still in an ordinary paid
+    // state. 'installed' and 'cancelled' keep their status: the install
+    // (or the cancellation) already happened, and a refund afterward is
+    // bookkeeping on top of that history, not a reversal of it.
+    let status = o.status;
+    if (status === 'paid_in_full' || status === 'deposit_paid' || status === 'quoted') {
+      if (feeTotal > 0 && amountPaid >= feeTotal) status = 'paid_in_full';
+      else if (feeDeposit > 0 && amountPaid >= feeDeposit) status = 'deposit_paid';
+      else status = 'quoted';
+    }
+    const refunds = Array.isArray(o.refunds) ? o.refunds.slice() : [];
+    refunds.push({ amount, note, at: new Date().toISOString() });
+    const update = { amountPaid, status, refunds };
+    tx.set(ref, update, { merge: true });
+    afterData = Object.assign({}, o, update);
+  });
+  if (afterData) await sendOrderNotification(afterData, orderId, 'refunded', { amount });
   return { ok: true };
 });
 
@@ -1177,16 +1485,19 @@ exports.adminSetOrderFee = onCall({ region: 'us-central1' }, async (request) => 
 // already unlocks the app). Marks that you've personally finished the
 // guided setup for a no-tech-expert order, so order-admin.html can show
 // you what's actually still outstanding versus done.
-exports.adminMarkInstalled = onCall({ region: 'us-central1' }, async (request) => {
+exports.adminMarkInstalled = onCall({ region: 'us-central1', secrets: ORDER_NOTIFICATION_SECRETS }, async (request) => {
   requireOwner(request);
   const orderId = String((request.data && request.data.orderId) || '').trim();
   if (!orderId) throw new HttpsError('invalid-argument', 'Missing order id.');
-  const snap = await ORDERS_REF().doc(orderId).get();
+  const ref = ORDERS_REF().doc(orderId);
+  const snap = await ref.get();
   if (!snap.exists) throw new HttpsError('not-found', 'Order not found.');
   if (snap.data().status !== 'paid_in_full') {
     throw new HttpsError('failed-precondition', 'This order is not fully paid yet.');
   }
-  await ORDERS_REF().doc(orderId).set({ status: 'installed' }, { merge: true });
+  await ref.set({ status: 'installed' }, { merge: true });
+  const after = await ref.get();
+  await sendOrderNotification(after.data(), orderId, 'installed', {});
   return { ok: true };
 });
 
